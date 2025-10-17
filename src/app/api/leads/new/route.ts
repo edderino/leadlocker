@@ -41,8 +41,13 @@ export async function POST(request: NextRequest) {
     // Send SMS alert via Twilio
     const defaultPhone = process.env.LL_DEFAULT_USER_PHONE;
     if (defaultPhone) {
-      const message = `🔔 New Lead: ${validatedData.name} from ${validatedData.source}\nPhone: ${validatedData.phone}\nMark done: ${process.env.NEXT_PUBLIC_APP_URL}/api/leads/status?id=${lead.id}`;
-      await sendSMS(defaultPhone, message);
+      await sendSMS(defaultPhone, [
+        `🔔 New Lead — ${validatedData.source}`,
+        validatedData.name ? `Name: ${validatedData.name}` : undefined,
+        validatedData.description ? `Job: ${validatedData.description}` : undefined,
+        validatedData.phone ? `Call: ${validatedData.phone}` : undefined,
+        `Mark done: ${process.env.NEXT_PUBLIC_APP_URL!}/api/leads/status?id=${lead.id}`
+      ].filter(Boolean).join('\n'));
     }
 
     return NextResponse.json(

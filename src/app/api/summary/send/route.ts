@@ -35,12 +35,10 @@ async function handleSummary() {
     const newLeads = leads?.filter((l) => l.status === 'NEW').length || 0;
     const doneLeads = leads?.filter((l) => l.status === 'DONE').length || 0;
 
-    const summary = `📊 Daily Lead Summary\n\nTotal: ${totalLeads}\nNew: ${newLeads}\nDone: ${doneLeads}\n\nView dashboard: ${process.env.NEXT_PUBLIC_APP_URL}`;
-
     // Send SMS
     const defaultPhone = process.env.LL_DEFAULT_USER_PHONE;
     if (defaultPhone) {
-      await sendSMS(defaultPhone, summary);
+      await sendSMS(defaultPhone, `📊 Daily Summary:\nLeads: ${totalLeads}\nDone: ${doneLeads}`);
     }
 
     return NextResponse.json(
