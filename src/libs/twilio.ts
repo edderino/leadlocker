@@ -11,21 +11,14 @@ function getTwilioClient(): Twilio | null {
   return _client
 }
 
-/**
- * Safe SMS sender. If Twilio is not configured, it logs and no-ops.
- */
+/** Safe sender: no-ops if Twilio isn't configured. */
 export async function sendSMS(to: string, body: string) {
   const from = process.env.TWILIO_FROM_NUMBER
   const client = getTwilioClient()
-
   if (!client || !from) {
-    console.warn('[LeadLocker] Twilio not configured. Skipping SMS.', {
-      hasClient: !!client,
-      hasFrom: !!from,
-    })
+    console.warn('[LeadLocker] Twilio not configured. Skipping SMS.', { hasClient: !!client, hasFrom: !!from })
     return { skipped: true }
   }
-
   return client.messages.create({ from, to, body })
 }
 
