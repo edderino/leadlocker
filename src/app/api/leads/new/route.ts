@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/libs/supabaseAdmin';
 import { sendSMS } from '@/libs/twilio';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 const leadSchema = z.object({
   user_id: z.string().uuid(),
   source: z.string(),
