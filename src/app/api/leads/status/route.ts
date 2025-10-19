@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/libs/supabaseAdmin';
+import { log } from '@/libs/log';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -8,8 +9,10 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
+    log("GET /api/leads/status - Status update request", id);
 
     if (!id) {
+      log("GET /api/leads/status - Missing lead ID");
       return NextResponse.json(
         { error: 'Missing lead ID' },
         { status: 400 }
@@ -25,19 +28,20 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
+      log("GET /api/leads/status - Supabase error", error.message);
       return NextResponse.json(
         { error: 'Failed to update lead status' },
         { status: 500 }
       );
     }
 
+    log("GET /api/leads/status - Lead status updated successfully", id);
     return NextResponse.json(
       { success: true, lead: data },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Unexpected error:', error);
+    log("GET /api/leads/status - Unexpected error", error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

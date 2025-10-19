@@ -1,4 +1,5 @@
 import twilio, { Twilio } from 'twilio'
+import { log } from './log'
 
 let _client: Twilio | null = null
 
@@ -13,13 +14,17 @@ function getTwilioClient(): Twilio | null {
 
 /** Safe sender: no-ops if Twilio isn't configured. */
 export async function sendSMS(to: string, body: string) {
-  const from = process.env.TWILIO_FROM_NUMBER
-  const client = getTwilioClient()
-  if (!client || !from) {
-    console.warn('[LeadLocker] Twilio not configured. Skipping SMS.', { hasClient: !!client, hasFrom: !!from })
-    return { skipped: true }
+  try {
+    const from = process.env.TWILIO_FROM_NUMBER
+    const client = getTwilioClient()
+    if (!client || !from) throw new Error("Twilio not configured")
+    const res = await client.messages.create({ from, to, body })
+    log("SMS sent", to)
+    return res
+  } catch (err: any) {
+    log("SMS send failed", err.message)
+    return { error: err.message }
   }
-  return client.messages.create({ from, to, body })
 }
 
 export function isTwilioConfigured() {

@@ -1,0 +1,9 @@
+export function log(...msg: any[]) {
+  const text = `[LeadLocker ${process.env.NEXT_PUBLIC_APP_ENV}] ${msg.join(" ")}`
+  if (process.env.NODE_ENV === "development") console.log(text)
+  else fetch("https://api.betterstack.com/logs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: text }),
+  }).catch(() => {})
+}
