@@ -18,53 +18,60 @@ async function handleSummary() {
   try {
     log("POST/GET /api/summary/send - Daily summary request");
     
-    // Query leads from the last 24 hours
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    const userId = 'c96933ac-8a2b-484b-b9df-8e25d04e7f29';
+    
+    // Query leads from today (midnight to now)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     const { data: leads, error } = await supabaseAdmin
       .from('leads')
       .select('*')
-      .gte('created_at', yesterday.toISOString())
+      .eq('user_id', userId)
+      .gte('created_at', today.toISOString())
       .order('created_at', { ascending: false });
 
     if (error) {
       log("POST/GET /api/summary/send - Supabase error", error.message);
       return NextResponse.json(
-        { error: 'Failed to fetch leads' },
+        { success: false, error: 'Failed to fetch leads' },
         { status: 500 }
       );
     }
 
     // Format summary
-    const totalLeads = leads?.length || 0;
-    const newLeads = leads?.filter((l) => l.status === 'NEW').length || 0;
-    const doneLeads = leads?.filter((l) => l.status === 'DONE').length || 0;
+    const total = leads?.length || 0;
+    const newCount = leads?.filter((l) => l.status === 'NEW').length || 0;
+    const approvedCount = leads?.filter((l) => l.status === 'APPROVED').length || 0;
+    const completedCount = leads?.filter((l) => l.status === 'COMPLETED').length || 0;
 
-    log("POST/GET /api/summary/send - Summary generated", { total: totalLeads, new: newLeads, done: doneLeads });
+    const byStatus = {
+      NEW: newCount,
+      APPROVED: approvedCount,
+      COMPLETED: completedCount,
+    };
 
-    // Send SMS
+    log("POST/GET /api/summary/send - Summary generated", { total, byStatus });
+
+    // Send SMS (keep it <= 140 chars)
+    const smsBody = `Leads today: ${total} (new ${newCount}, ok ${approvedCount}, done ${completedCount})`;
+    
     const defaultPhone = process.env.LL_DEFAULT_USER_PHONE;
     if (defaultPhone) {
-      await sendSMS(defaultPhone, `📊 Daily Summary:\nLeads: ${totalLeads}\nDone: ${doneLeads}`);
+      await sendSMS(defaultPhone, smsBody);
+      log("POST/GET /api/summary/send - SMS sent", { length: smsBody.length });
     }
 
     log("POST/GET /api/summary/send - Summary sent successfully");
-    return NextResponse.json(
-      {
-        success: true,
-        summary: {
-          total: totalLeads,
-          new: newLeads,
-          done: doneLeads,
-        },
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      success: true,
+      total,
+      byStatus,
+    });
   } catch (error) {
     log("POST/GET /api/summary/send - Unexpected error", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

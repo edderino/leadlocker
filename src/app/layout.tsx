@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import BuildInfo from '@/components/BuildInfo';
+import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   title: 'LeadLocker - Lead Management',
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body>
         {children}
         <BuildInfo />
+        <Toaster position="top-right" />
       </body>
     </html>
   );

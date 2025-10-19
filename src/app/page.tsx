@@ -1,3 +1,5 @@
+import SummaryCard from '@/components/SummaryCard';
+import LeadForm from '@/components/LeadForm';
 import LeadList from '@/components/LeadList';
 
 export default function Home() {
@@ -11,7 +13,21 @@ export default function Home() {
               Manage your leads with real-time SMS alerts
             </p>
           </div>
+
+          {/* Daily Summary */}
+          <div className="mb-6">
+            <SummaryCard />
+          </div>
+
+          {/* Lead Creation Form */}
+          <div className="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              Add New Lead
+            </h2>
+            <LeadForm />
+          </div>
           
+          {/* Lead List */}
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
               Recent Leads

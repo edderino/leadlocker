@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         description: payload.description ?? null,
         status: 'NEW',
       })
-      .select('id')
+      .select('*')
       .single();
 
     if (error) {
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       ].filter(Boolean).join('\n'));
     }
 
-    return NextResponse.json({ ok: true, id: data.id });
+    return NextResponse.json({ success: true, lead: data });
   } catch (error) {
     if (error instanceof z.ZodError) {
       log("POST /api/leads/new - Validation error", error.errors);
