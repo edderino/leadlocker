@@ -1,6 +1,7 @@
 import SummaryCard from '@/components/SummaryCard';
 import LeadForm from '@/components/LeadForm';
 import LeadList from '@/components/LeadList';
+import ActivityFeed from '@/components/ActivityFeed';
 
 export default function Home() {
   return (
@@ -27,6 +28,11 @@ export default function Home() {
             <LeadForm />
           </div>
           
+          {/* Activity Feed */}
+          <div className="mb-6">
+            <ActivityFeed />
+          </div>
+
           {/* Lead List */}
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
