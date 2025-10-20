@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/libs/supabaseClient';
 import toast from 'react-hot-toast';
 import { timeAgo } from '@/libs/time';
 
@@ -51,13 +50,10 @@ export default function LeadList() {
   useEffect(() => {
     async function fetchLeads() {
       try {
-        const { data, error } = await supabase
-          .from('leads')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
+        const res = await fetch('/api/leads');
+        if (!res.ok) throw new Error('Failed to fetch leads');
+        
+        const data = await res.json();
         setLeads(data || []);
       } catch (err) {
         console.error('Error fetching leads:', err);

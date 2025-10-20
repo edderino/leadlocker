@@ -44,6 +44,25 @@ export async function GET(request: NextRequest) {
     }
 
     log("GET /api/leads/status - Lead status updated successfully", id);
+
+    // Log event (silent failure)
+    try {
+      const actorId = data.user_id && typeof data.user_id === "string" ? data.user_id : null;
+      
+      await supabaseAdmin.from("events").insert({
+        event_type: "lead.status_updated",
+        lead_id: data.id,
+        actor_id: actorId,
+        metadata: {
+          old_status: data.status, // Note: data already has new status, this is a legacy endpoint
+          new_status: "DONE",
+          updated_via: "sms_link",
+        },
+      });
+    } catch (eventError) {
+      console.error("[EventLayer] GET /api/leads/status - Event logging failed:", eventError);
+    }
+
     return NextResponse.json(
       { success: true, lead: data },
       { status: 200 }
@@ -118,6 +137,25 @@ export async function PATCH(request: NextRequest) {
     }
 
     log("PATCH /api/leads/status - Status updated successfully", payload.id, payload.status);
+
+    // Log event (silent failure)
+    try {
+      const actorId = data.user_id && typeof data.user_id === "string" ? data.user_id : null;
+      
+      await supabaseAdmin.from("events").insert({
+        event_type: "lead.status_updated",
+        lead_id: data.id,
+        actor_id: actorId,
+        metadata: {
+          old_status: currentLead.status,
+          new_status: payload.status,
+          updated_via: "dashboard",
+        },
+      });
+    } catch (eventError) {
+      console.error("[EventLayer] PATCH /api/leads/status - Event logging failed:", eventError);
+    }
+
     return NextResponse.json({ success: true, lead: data });
   } catch (error) {
     if (error instanceof z.ZodError) {

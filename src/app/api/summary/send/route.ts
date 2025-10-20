@@ -60,6 +60,40 @@ async function handleSummary() {
     if (defaultPhone) {
       await sendSMS(defaultPhone, smsBody);
       log("POST/GET /api/summary/send - SMS sent", { length: smsBody.length });
+
+      // Log SMS event (silent failure)
+      try {
+        await supabaseAdmin.from("events").insert({
+          event_type: "sms.sent",
+          lead_id: null, // No specific lead for summary
+          actor_id: userId,
+          metadata: {
+            recipient: defaultPhone,
+            message_type: "daily_summary",
+            body_length: smsBody.length,
+            summary_data: { total, byStatus },
+          },
+        });
+      } catch (eventError) {
+        console.error("[EventLayer] /api/summary/send - SMS event logging failed:", eventError);
+      }
+    }
+
+    // Log summary.sent event (silent failure)
+    try {
+      await supabaseAdmin.from("events").insert({
+        event_type: "summary.sent",
+        lead_id: null,
+        actor_id: userId,
+        metadata: {
+          date: today.toISOString().split('T')[0],
+          total,
+          byStatus,
+          recipient: defaultPhone || null,
+        },
+      });
+    } catch (eventError) {
+      console.error("[EventLayer] /api/summary/send - Summary event logging failed:", eventError);
     }
 
     log("POST/GET /api/summary/send - Summary sent successfully");
