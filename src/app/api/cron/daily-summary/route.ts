@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/libs/supabaseAdmin';
 import { sendSMS } from '@/libs/twilio';
 import { log } from '@/libs/log';
+import { notifyAdmin } from '@/libs/notifyAdmin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -142,6 +143,9 @@ async function handleDailySummaryCron(request: NextRequest) {
 
   } catch (error: any) {
     console.error('[Cron] Daily summary job failed:', error);
+    
+    // Notify admin of the error
+    await notifyAdmin('/api/cron/daily-summary', error);
     
     return NextResponse.json(
       { 

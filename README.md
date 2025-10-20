@@ -8,6 +8,9 @@ A Next.js application for managing leads with real-time SMS alerts via Twilio an
 - **SMS Alerts**: Instant notifications via Twilio when new leads arrive
 - **Status Updates**: Mark leads as done via SMS link clicks
 - **Daily Summaries**: Automated daily SMS summaries via Vercel Cron
+- **Auto-Cleanup**: Automatic removal of old completed leads and events
+- **Error Monitoring**: SMS alerts to admin when cron jobs fail
+- **Event Tracking**: Full audit trail of all system actions
 - **Dashboard**: View all leads in a clean, modern interface
 
 ## Tech Stack
@@ -29,19 +32,29 @@ leadlocker/
 │   │   │   ├── leads/
 │   │   │   │   ├── new/route.ts       # POST - Create new lead
 │   │   │   │   └── status/route.ts    # GET - Update lead status
-│   │   │   └── summary/
-│   │   │       └── send/route.ts      # GET/POST - Send daily summary
+│   │   │   ├── summary/
+│   │   │   │   └── send/route.ts      # GET/POST - Manual daily summary
+│   │   │   └── cron/
+│   │   │       ├── daily-summary/route.ts  # Automated daily summary
+│   │   │       └── cleanup/route.ts        # Automated data cleanup
 │   │   ├── layout.tsx
 │   │   ├── page.tsx
 │   │   └── globals.css
 │   ├── components/
-│   │   └── LeadList.tsx               # Lead display component
+│   │   ├── LeadList.tsx               # Lead display component
+│   │   ├── LeadForm.tsx               # Lead creation form
+│   │   ├── SummaryCard.tsx            # Dashboard summary stats
+│   │   └── SendSummaryButton.tsx      # Manual summary trigger
 │   └── libs/
 │       ├── supabaseAdmin.ts           # Server-side Supabase client
 │       ├── supabaseClient.ts          # Client-side Supabase client
-│       └── twilio.ts                  # Twilio SMS helper
+│       ├── twilio.ts                  # Twilio SMS helper
+│       ├── log.ts                     # Logging utility
+│       └── time.ts                    # Time utilities
 └── docs/
-    └── schema.sql                     # Database schema
+    ├── schema.sql                     # Database schema
+    ├── phase4_step1_testing.md        # Daily summary cron tests
+    └── phase4_step2_testing.md        # Cleanup cron tests
 ```
 
 ## Local Setup
@@ -89,17 +102,27 @@ cp .env.example .env.local
 Fill in your credentials:
 
 ```env
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
+# Twilio
 TWILIO_ACCOUNT_SID=your-twilio-sid
 TWILIO_AUTH_TOKEN=your-twilio-auth-token
 TWILIO_FROM_NUMBER=+1234567890
 
+# LeadLocker Config
 LL_DEFAULT_USER_PHONE=+1234567890
 LL_DAILY_SUMMARY_HOUR=18
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Cron Security (Phase 4)
+CRON_SECRET=your-secure-random-secret-here
+
+# Auto-Cleanup (Phase 4)
+CLEANUP_LEAD_RETENTION_DAYS=30
+CLEANUP_EVENT_RETENTION_DAYS=60
 ```
 
 ### 6. Run Development Server
@@ -152,16 +175,59 @@ Mark a lead as done (designed for SMS link clicks).
 
 ### GET/POST /api/summary/send
 
-Send daily summary SMS (triggered by Vercel Cron).
+Send daily summary SMS (manual trigger).
 
 **Response:**
 ```json
 {
   "success": true,
-  "summary": {
-    "total": 10,
-    "new": 5,
-    "done": 5
+  "total": 10,
+  "byStatus": {
+    "NEW": 5,
+    "APPROVED": 3,
+    "COMPLETED": 2
+  }
+}
+```
+
+### GET/POST /api/cron/daily-summary
+
+Automated daily summary SMS (triggered by Vercel Cron).
+
+**Headers Required:**
+- `x-cron-secret`: Must match `CRON_SECRET` environment variable
+
+**Response:**
+```json
+{
+  "success": true,
+  "total": 10,
+  "byStatus": {
+    "NEW": 5,
+    "APPROVED": 3,
+    "COMPLETED": 2
+  },
+  "timestamp": "2025-10-20T17:00:00.000Z"
+}
+```
+
+### GET/POST /api/cron/cleanup
+
+Automated cleanup of old leads and events (triggered by Vercel Cron).
+
+**Headers Required:**
+- `x-cron-secret`: Must match `CRON_SECRET` environment variable
+
+**Response:**
+```json
+{
+  "success": true,
+  "leadsDeleted": 4,
+  "eventsDeleted": 12,
+  "timestamp": "2025-10-20T03:00:00.000Z",
+  "retention": {
+    "leadDays": 30,
+    "eventDays": 60
   }
 }
 ```
