@@ -34,6 +34,7 @@ async function resolveDefaultUserId(): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("🔥 Lead creation endpoint triggered");
     const body = await request.json();
     const payload = LeadPayload.parse(body);
     log("POST /api/leads/new - Lead creation request", payload.source, payload.name);
@@ -64,16 +65,61 @@ export async function POST(request: NextRequest) {
 
     log("POST /api/leads/new - Lead created successfully", data.id);
 
+    // Log event (silent failure)
+    try {
+      const actorId = data.user_id && typeof data.user_id === "string" ? data.user_id : null;
+      
+      const result = await supabaseAdmin.from("events").insert({
+        event_type: "lead.created",
+        lead_id: data.id,
+        actor_id: actorId,
+        metadata: {
+          source: data.source,
+          name: data.name,
+          phone: data.phone,
+          created_via: "form",
+        },
+      });
+      console.log("🧾 Event insert result:", result);
+    } catch (eventError) {
+      log("POST /api/leads/new - Event logging failed (non-fatal)", eventError);
+    }
+
     // Send SMS alert via Twilio
     const defaultPhone = process.env.LL_DEFAULT_USER_PHONE;
     if (defaultPhone) {
-      await sendSMS(defaultPhone, [
+      // Ensure base URL has proper protocol
+      const rawUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const baseUrl = rawUrl.startsWith('http') ? rawUrl : `http://${rawUrl}`;
+      
+      const smsBody = [
         `🔔 New Lead — ${payload.source}`,
         payload.name ? `Name: ${payload.name}` : undefined,
         payload.description ? `Job: ${payload.description}` : undefined,
         payload.phone ? `Call: ${payload.phone}` : undefined,
-        `Mark done: ${process.env.NEXT_PUBLIC_APP_URL!}/api/leads/status?id=${data.id}`
-      ].filter(Boolean).join('\n'));
+        `Mark done: ${baseUrl}/api/leads/status?id=${data.id}`
+      ].filter(Boolean).join('\n');
+      
+      await sendSMS(defaultPhone, smsBody);
+
+      // Log SMS event (silent failure)
+      try {
+        const actorId = data.user_id && typeof data.user_id === "string" ? data.user_id : null;
+        
+        await supabaseAdmin.from("events").insert({
+          event_type: "sms.sent",
+          lead_id: data.id,
+          actor_id: actorId,
+          metadata: {
+            recipient: defaultPhone,
+            message_type: "new_lead_alert",
+            body_length: smsBody.length,
+            source: payload.source,
+          },
+        });
+      } catch (eventError) {
+        console.error("[EventLayer] POST /api/leads/new - SMS event logging failed:", eventError);
+      }
     }
 
     return NextResponse.json({ success: true, lead: data });
