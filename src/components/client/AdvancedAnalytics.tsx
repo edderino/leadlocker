@@ -2,8 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  PieChart, 
+  Pie, 
+  Cell,
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
 } from 'recharts';
 import { TrendingUp, BarChart3, PieChart as PieChartIcon, Clock, Loader2, RefreshCw } from 'lucide-react';
 
@@ -101,23 +112,27 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
     setError(null);
 
     try {
+      console.log(`[AdvancedAnalytics] Fetching analytics for org: ${orgId}, range: ${timeRange}d`);
       const response = await fetch(`/api/analytics/advanced?orgId=${orgId}&range=${timeRange}`);
       const data: AnalyticsData = await response.json();
+
+      console.log('[AdvancedAnalytics] API response:', { success: data.success, hasData: !!data.data });
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch analytics');
       }
 
-      if (data.success) {
+      if (data.success && data.data) {
         setAnalyticsData(data);
-        console.log(`[AdvancedAnalytics] Loaded analytics for org: ${orgId}, range: ${timeRange}d`);
+        console.log(`[AdvancedAnalytics] ✅ Loaded analytics for org: ${orgId}, range: ${timeRange}d, trends: ${data.data.lead_trends?.length || 0}`);
       } else {
-        setError(data.error || 'Failed to load analytics');
+        console.warn('[AdvancedAnalytics] ⚠️ No data returned');
+        setError(data.error || 'No analytics data available');
         setAnalyticsData(null);
       }
     } catch (err: any) {
-      console.error('[AdvancedAnalytics] Error fetching analytics:', err);
-      setError(err.message);
+      console.error('[AdvancedAnalytics] ❌ Error fetching analytics:', err);
+      setError(err.message || 'Failed to load analytics');
       setAnalyticsData(null);
     } finally {
       setLoading(false);
@@ -168,6 +183,7 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
 
   // No data state
   if (!analyticsData || !analyticsData.data) {
+    console.log('[AdvancedAnalytics] No data available, showing fallback');
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
         <div className="text-center">
@@ -181,8 +197,27 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
     );
   }
 
+  console.log('[AdvancedAnalytics] Rendering with data:', {
+    hasTrends: !!analyticsData.data?.lead_trends,
+    hasApprovalMetrics: !!analyticsData.data?.approval_metrics,
+    hasSources: !!analyticsData.data?.source_distribution,
+    hasSummary: !!analyticsData.data?.summary
+  });
+
   const { data, generated_at } = analyticsData;
-  const { lead_trends, approval_metrics, source_distribution, summary } = data;
+  
+  // Defensive extraction with defaults
+  const lead_trends = data?.lead_trends || [];
+  const approval_metrics = data?.approval_metrics || [];
+  const source_distribution = data?.source_distribution || [];
+  const summary = data?.summary || {
+    total_leads: 0,
+    total_approved: 0,
+    total_completed: 0,
+    avg_approval_time_hours: 0,
+    approval_rate: 0,
+    followup_completion_rate: 0
+  };
 
   // Format date for display
   const formatDate = (dateStr: string) => {
@@ -196,43 +231,47 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
     return `W${week}`;
   };
 
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <TrendingUp className="h-6 w-6 text-blue-600" />
-            Advanced Analytics
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">
-            Generated {new Date(generated_at).toLocaleTimeString()}
-            {refreshing && <span className="ml-2 text-blue-600">• Refreshing...</span>}
-          </p>
+  // Wrap entire render in try/catch
+  try {
+    console.log('[AdvancedAnalytics] Beginning render');
+    
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <TrendingUp className="h-6 w-6 text-blue-600" />
+              Advanced Analytics
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Generated {new Date(generated_at).toLocaleTimeString()}
+              {refreshing && <span className="ml-2 text-blue-600">• Refreshing...</span>}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Time Range Selector */}
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(parseInt(e.target.value, 10))}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={7}>Last 7 days</option>
+              <option value={14}>Last 14 days</option>
+              <option value={30}>Last 30 days</option>
+            </select>
+            
+            {/* Manual Refresh Button */}
+            <button
+              onClick={() => fetchAnalytics(true)}
+              disabled={refreshing}
+              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50"
+              title="Refresh analytics"
+            >
+              <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Time Range Selector */}
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(parseInt(e.target.value, 10))}
-            className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value={7}>Last 7 days</option>
-            <option value={14}>Last 14 days</option>
-            <option value={30}>Last 30 days</option>
-          </select>
-          
-          {/* Manual Refresh Button */}
-          <button
-            onClick={() => fetchAnalytics(true)}
-            disabled={refreshing}
-            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50"
-            title="Refresh analytics"
-          >
-            <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -399,5 +438,31 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
         </div>
       </div>
     </div>
-  );
+    );
+  } catch (renderError) {
+    console.error('[AdvancedAnalytics] ❌ Render error:', renderError);
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <svg className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-red-800">Error rendering analytics</h3>
+            <p className="text-sm text-red-600 mt-1">
+              {renderError instanceof Error ? renderError.message : 'An unexpected error occurred'}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 text-sm text-red-700 hover:text-red-800 underline"
+            >
+              Reload page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 }
