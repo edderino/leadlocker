@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import ClientDashboard from '@/components/client/ClientDashboard';
 import { relativeTime } from '@/libs/time';
 
@@ -64,6 +65,57 @@ async function fetchClientLeads(orgId: string): Promise<ApiResponse> {
 export default async function ClientPortalPage({ params }: PageProps) {
   const { orgId } = params;
   const fetchedAt = new Date();
+
+  // Gate access if REQUIRE_CLIENT_INVITE is enabled
+  const requireInvite = process.env.REQUIRE_CLIENT_INVITE === 'true';
+  
+  if (requireInvite) {
+    const cookieStore = cookies();
+    const clientOrgCookie = cookieStore.get('ll_client_org');
+    
+    if (!clientOrgCookie || clientOrgCookie.value !== orgId) {
+      console.log('[ClientPortal] Access denied - missing or invalid cookie for orgId:', orgId);
+      
+      return (
+        <main className="min-h-screen bg-gray-50 py-8">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-white shadow-md rounded-lg border border-gray-200 p-8 text-center">
+              <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <svg
+                  className="w-8 h-8 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                Access Required
+              </h1>
+              <p className="text-gray-600 mb-4">
+                You need an invite link to access this organization&apos;s dashboard.
+              </p>
+              <div className="bg-gray-50 rounded p-4 text-sm text-gray-700">
+                <p className="font-medium mb-1">Organization:</p>
+                <p className="font-mono text-xs">{orgId}</p>
+              </div>
+              <p className="text-sm text-gray-500 mt-6">
+                Ask your provider to send a fresh invite link to access this portal.
+              </p>
+            </div>
+          </div>
+        </main>
+      );
+    }
+    
+    console.log('[ClientPortal] Access granted for orgId:', orgId);
+  }
 
   const response = await fetchClientLeads(orgId);
 
