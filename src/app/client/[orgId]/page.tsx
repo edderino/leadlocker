@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import ClientDashboard from '@/components/client/ClientDashboard';
 import NotificationManager from '@/components/client/NotificationManager';
 import AISuggestions from '@/components/client/AISuggestions';
+import AdvancedAnalytics from '@/components/client/AdvancedAnalytics';
 import { relativeTime } from '@/libs/time';
 
 interface Lead {
@@ -182,6 +183,11 @@ export default async function ClientPortalPage({
         {/* AI Suggestions */}
         <div className="mb-6">
           <AISuggestions orgId={orgId} />
+        </div>
+
+        {/* Advanced Analytics Dashboard */}
+        <div className="mb-6">
+          <AdvancedAnalytics orgId={orgId} />
         </div>
 
         {/* Dashboard Content */}
