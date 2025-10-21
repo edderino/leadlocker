@@ -77,3 +77,4 @@ We execute one step at a time. Each step finishes with a verification before mov
 - Environment: ensure `CRON_SECRET` is set in Vercel before enabling scheduled hits.
 - Verification after each step: demonstrate events logged + UI behavior (where applicable).
 
+

@@ -12,6 +12,9 @@ A Next.js application for managing leads with real-time SMS alerts via Twilio an
 - **Error Monitoring**: SMS alerts to admin when cron jobs fail
 - **Event Tracking**: Full audit trail of all system actions
 - **Dashboard**: View all leads in a clean, modern interface
+- **Client Portal**: Secure, invite-based client access with analytics
+- **PWA Support**: Installable web app with offline capabilities
+- **Push Notifications**: Real-time browser notifications for new leads (Phase 6)
 
 ## Tech Stack
 
@@ -19,8 +22,11 @@ A Next.js application for managing leads with real-time SMS alerts via Twilio an
 - **Styling**: TailwindCSS
 - **Database**: Supabase (Postgres)
 - **SMS Service**: Twilio
+- **Push Notifications**: Web Push API with VAPID
 - **Deployment**: Vercel
 - **Validation**: Zod
+- **Charts**: Recharts
+- **Icons**: Lucide React
 
 ## Project Structure
 
@@ -123,15 +129,52 @@ CRON_SECRET=your-secure-random-secret-here
 # Auto-Cleanup (Phase 4)
 CLEANUP_LEAD_RETENTION_DAYS=30
 CLEANUP_EVENT_RETENTION_DAYS=60
+
+# Client Portal (Phase 5)
+REQUIRE_CLIENT_INVITE=true
+CLIENT_PORTAL_SECRET=your-secure-portal-secret-here
+
+# Push Notifications (Phase 6 Step 2)
+WEB_PUSH_PUBLIC_KEY=your-vapid-public-key-here
+WEB_PUSH_PRIVATE_KEY=your-vapid-private-key-here
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=your-vapid-public-key-here
+VAPID_SUBJECT=mailto:admin@yourdomain.com
 ```
 
-### 6. Run Development Server
+### 7. Generate VAPID Keys (Phase 6)
+
+For push notifications to work, you need to generate VAPID keys:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Copy the output keys to your `.env.local` file.
+
+### 8. Run Database Migrations
+
+Run migrations for Phase 5 and Phase 6 features:
+
+```sql
+-- In Supabase SQL Editor:
+-- Run: /docs/migrations/phase5_rls_policies.sql
+-- Run: /docs/migrations/phase6_push_subscriptions.sql
+```
+
+### 9. Run Development Server
 
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the dashboard.
+
+**Note:** Push notifications require production mode:
+
+```bash
+npm run build
+npm run start
+```
 
 ## API Endpoints
 
@@ -232,6 +275,66 @@ Automated cleanup of old leads and events (triggered by Vercel Cron).
 }
 ```
 
+### POST /api/notifications/subscribe
+
+Subscribe to push notifications for an organization (Phase 6).
+
+**Headers Required:**
+- Cookie: `ll_client_org` must match the orgId
+
+**Request Body:**
+```json
+{
+  "orgId": "demo-org",
+  "subscription": {
+    "endpoint": "https://fcm.googleapis.com/...",
+    "keys": {
+      "p256dh": "...",
+      "auth": "..."
+    }
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "subscriptionId": "uuid",
+  "message": "Successfully subscribed to push notifications"
+}
+```
+
+### POST /api/notifications/trigger
+
+Send push notifications to all subscribers of an organization (Phase 6).
+
+**Headers Required:**
+- `x-cron-secret`: Must match `CRON_SECRET` environment variable
+
+**Request Body:**
+```json
+{
+  "orgId": "demo-org",
+  "eventType": "lead.created",
+  "title": "New Lead Arrived!",
+  "message": "John Doe is interested in your services",
+  "url": "/client/demo-org"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "sent": 2,
+  "failed": 0,
+  "total": 2,
+  "cleaned": 0,
+  "message": "Sent 2 notification(s), 0 failed"
+}
+```
+
 ## Deployment to Vercel
 
 ### 1. Push to GitHub
@@ -309,15 +412,33 @@ curl http://localhost:3000/api/summary/send
 
 You should receive a summary SMS!
 
-## Next Steps for Production
+## Phase Implementation Status
 
-- [ ] Add authentication (Supabase Auth)
-- [ ] Implement proper RLS policies
-- [ ] Add lead assignment to multiple users
-- [ ] Create admin dashboard for user management
-- [ ] Add lead tags and filtering
-- [ ] Implement webhook support for integrations
-- [ ] Add analytics and reporting
+- ✅ **Phase 1-2**: Core lead management + SMS alerts
+- ✅ **Phase 3**: Event logging and audit trail
+- ✅ **Phase 4**: Automation (daily summaries, cleanup, error alerts)
+- ✅ **Phase 5**: Client portal with invite system and analytics
+- ✅ **Phase 6 Step 1**: PWA foundation (manifest, service worker, offline)
+- ✅ **Phase 6 Step 2**: Push notifications (Web Push API, subscriptions)
+- 🚧 **Phase 6 Step 3**: AI suggestion engine (planned)
+- 🚧 **Phase 6 Step 4**: Follow-up system (planned)
+
+## Documentation
+
+- **Phase 6 Step 1**: `/docs/phase6_step1_testing.md` - PWA testing guide
+- **Phase 6 Step 2**: `/docs/phase6_step2_testing.md` - Push notifications testing
+- **Phase 6 Context**: `/docs/phase6_context.md` - Architecture overview
+- **Database Schema**: `/docs/schema.sql`
+- **Migrations**: `/docs/migrations/`
+
+## Next Steps
+
+- [ ] AI suggestion engine for lead scoring
+- [ ] Follow-up scheduling system
+- [ ] Advanced analytics (conversion funnels, engagement)
+- [ ] Client-side actions (approve/reject from portal)
+- [ ] Multi-language support
+- [ ] Email integration
 
 ## License
 
