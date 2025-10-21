@@ -1,3 +1,5 @@
+import { formatDistanceToNow } from 'date-fns';
+
 export function timeAgo(iso: string) {
   const d = new Date(iso);
   const s = Math.floor((Date.now() - d.getTime()) / 1000);
@@ -9,5 +11,9 @@ export function timeAgo(iso: string) {
   if (h < 24) return t(h, 'hour');
   const d2 = Math.floor(h / 24);
   return t(d2, 'day');
+}
+
+export function relativeTime(date: string | Date): string {
+  return formatDistanceToNow(new Date(date), { addSuffix: true });
 }
 
