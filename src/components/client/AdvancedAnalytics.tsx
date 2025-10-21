@@ -102,6 +102,12 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<number>(7);
   const [refreshing, setRefreshing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchAnalytics = async (showRefreshing = false) => {
     if (showRefreshing) {
@@ -145,6 +151,16 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
     const interval = setInterval(() => fetchAnalytics(true), 60000); // Auto-refresh every 60 seconds
     return () => clearInterval(interval);
   }, [orgId, timeRange]);
+
+  // Prevent hydration mismatch - don't render until mounted
+  if (!mounted) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-8 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mr-3" />
+        <p className="text-gray-600">Initializing analytics...</p>
+      </div>
+    );
+  }
 
   // Loading state
   if (loading) {
