@@ -1,4 +1,5 @@
 import { relativeTime } from '@/libs/time';
+import { Phone, MapPin } from 'lucide-react';
 
 interface Lead {
   id: string;
@@ -14,22 +15,22 @@ interface ClientLeadListProps {
   leads: Lead[];
 }
 
+const statusColors = {
+  NEW: 'bg-red-100 text-red-700 border-red-200',
+  APPROVED: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  COMPLETED: 'bg-green-100 text-green-700 border-green-200',
+};
+
+const statusLabels = {
+  NEW: 'Needs Attention',
+  APPROVED: 'Approved',
+  COMPLETED: 'Completed',
+};
+
 const getStatusBadge = (status: Lead['status']) => {
-  const styles = {
-    NEW: 'bg-red-100 text-red-800',
-    APPROVED: 'bg-yellow-100 text-yellow-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-  };
-
-  const labels = {
-    NEW: 'Needs Attention',
-    APPROVED: 'Approved',
-    COMPLETED: 'Completed',
-  };
-
   return (
-    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${styles[status]}`}>
-      {labels[status]}
+    <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${statusColors[status]}`}>
+      {statusLabels[status]}
     </span>
   );
 };
@@ -44,17 +45,17 @@ export default function ClientLeadList({ leads }: ClientLeadListProps) {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
+    <div className="bg-white shadow-md rounded-lg border border-gray-200 overflow-hidden">
       {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
+                Lead
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Phone
+                Contact
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Source
@@ -63,31 +64,40 @@ export default function ClientLeadList({ leads }: ClientLeadListProps) {
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Created
+                Time
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {leads.map((lead) => (
-              <tr key={lead.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{lead.name}</div>
-                  {lead.description && (
-                    <div className="text-sm text-gray-500 truncate max-w-xs">
-                      {lead.description}
-                    </div>
-                  )}
+            {leads.map((lead, index) => (
+              <tr 
+                key={lead.id} 
+                className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
+              >
+                <td className="px-6 py-4">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">{lead.name}</div>
+                    {lead.description && (
+                      <div className="text-sm text-gray-500 truncate max-w-xs mt-1">
+                        {lead.description}
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <a
                     href={`tel:${lead.phone}`}
-                    className="text-sm text-blue-600 hover:text-blue-800"
+                    className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 hover:underline"
                   >
+                    <Phone className="h-3.5 w-3.5" />
                     {lead.phone}
                   </a>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{lead.source}</div>
+                  <div className="inline-flex items-center gap-1.5 text-sm text-gray-700">
+                    <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                    {lead.source}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {getStatusBadge(lead.status)}
@@ -103,28 +113,35 @@ export default function ClientLeadList({ leads }: ClientLeadListProps) {
 
       {/* Mobile Stacked List View */}
       <div className="md:hidden divide-y divide-gray-200">
-        {leads.map((lead) => (
-          <div key={lead.id} className="p-4 hover:bg-gray-50">
-            <div className="flex justify-between items-start mb-2">
-              <div className="font-medium text-gray-900">{lead.name}</div>
+        {leads.map((lead, index) => (
+          <div 
+            key={lead.id} 
+            className={`p-4 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
+          >
+            <div className="flex justify-between items-start mb-3">
+              <div className="font-semibold text-gray-900">{lead.name}</div>
               {getStatusBadge(lead.status)}
             </div>
-            <div className="space-y-1 text-sm">
-              <div>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5 text-gray-400" />
                 <a
                   href={`tel:${lead.phone}`}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-blue-600 hover:text-blue-800 hover:underline"
                 >
                   {lead.phone}
                 </a>
               </div>
-              <div className="text-gray-500">
-                <span className="font-medium">Source:</span> {lead.source}
+              <div className="flex items-center gap-1.5 text-gray-600">
+                <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                {lead.source}
               </div>
               {lead.description && (
-                <div className="text-gray-500">{lead.description}</div>
+                <div className="text-gray-500 mt-2 text-xs">
+                  {lead.description}
+                </div>
               )}
-              <div className="text-gray-400 text-xs">
+              <div className="text-gray-400 text-xs mt-2">
                 {relativeTime(lead.created_at)}
               </div>
             </div>

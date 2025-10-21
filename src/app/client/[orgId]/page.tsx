@@ -1,5 +1,4 @@
-import ClientSummary from '@/components/client/ClientSummary';
-import ClientLeadList from '@/components/client/ClientLeadList';
+import ClientDashboard from '@/components/client/ClientDashboard';
 import { relativeTime } from '@/libs/time';
 
 interface PageProps {
@@ -117,26 +116,20 @@ export default async function ClientPortalPage({ params }: PageProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Client Portal</h1>
-          <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-gray-600">
-              Organization: <span className="font-mono font-medium">{orgId}</span>
-            </p>
-            <p className="text-xs text-gray-500 mt-1 sm:mt-0">
-              Last updated: {relativeTime(fetchedAt)}
-            </p>
-          </div>
+          <h1 className="text-2xl font-semibold text-gray-900">Client Dashboard</h1>
+          <p className="text-gray-600 mt-1">
+            Organization: <span className="font-mono font-medium">{orgId}</span>
+          </p>
         </div>
 
-        {/* Summary Cards */}
-        <ClientSummary leads={leads} />
+        {/* Dashboard Content */}
+        <ClientDashboard leads={leads} orgId={orgId} />
 
-        {/* Leads List */}
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            Recent Leads ({leads.length})
-          </h2>
-          <ClientLeadList leads={leads} />
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-gray-500">
+            Last updated {relativeTime(fetchedAt)}
+          </p>
         </div>
       </div>
     </main>
