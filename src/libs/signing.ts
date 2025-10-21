@@ -21,7 +21,8 @@ export function createInviteToken(orgId: string, ttlHours: number = 24): string 
   const secret = process.env.CLIENT_PORTAL_SECRET;
   
   if (!secret) {
-    throw new Error('CLIENT_PORTAL_SECRET not configured');
+    console.error('[Signing] CLIENT_PORTAL_SECRET not configured in environment');
+    throw new Error('CLIENT_PORTAL_SECRET not configured - check .env.local file');
   }
 
   // Create payload with expiration
@@ -38,7 +39,11 @@ export function createInviteToken(orgId: string, ttlHours: number = 24): string 
   const signature = hmac.digest('base64url');
 
   // Combine payload.signature
-  return `${payloadB64}.${signature}`;
+  const token = `${payloadB64}.${signature}`;
+  
+  console.log('[Signing] Created invite token for orgId:', orgId, 'expires in', ttlHours, 'hours');
+  
+  return token;
 }
 
 /**
