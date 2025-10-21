@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
+import AnalyticsWidget from './AnalyticsWidget';
 import ClientSummary from './ClientSummary';
 import ClientLeadList from './ClientLeadList';
 
@@ -92,6 +93,9 @@ export default function ClientDashboard({ leads, orgId }: ClientDashboardProps) 
           Refresh
         </button>
       </div>
+
+      {/* Analytics Widget */}
+      <AnalyticsWidget orgId={orgId} />
 
       {/* Grid Layout */}
       <div className="grid gap-6 md:grid-cols-3">
