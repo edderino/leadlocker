@@ -10,10 +10,15 @@ export default function PWARegistration() {
       'serviceWorker' in navigator &&
       process.env.NODE_ENV === 'production'
     ) {
+      console.log('[PWA] Registering service worker...');
+      
       navigator.serviceWorker
-        .register('/sw.js')
+        .register('/sw.js', { scope: '/' })
         .then((registration) => {
-          console.log('[PWA] Service Worker registered successfully:', registration.scope);
+          console.log('✅ Service worker registered successfully');
+          console.log('[PWA] Scope:', registration.scope);
+          console.log('[PWA] Installing:', registration.installing);
+          console.log('[PWA] Active:', registration.active);
           
           // Check for updates periodically
           setInterval(() => {
@@ -21,10 +26,12 @@ export default function PWARegistration() {
           }, 60000); // Check every minute
         })
         .catch((error) => {
-          console.error('[PWA] Service Worker registration failed:', error);
+          console.error('❌ SW registration failed:', error);
+          console.error('[PWA] Error details:', error.message);
         });
     } else if (process.env.NODE_ENV === 'development') {
       console.log('[PWA] Service Worker disabled in development mode');
+      console.log('[PWA] Use production build (npm run build && npm run start) to enable push notifications');
     }
   }, []);
 

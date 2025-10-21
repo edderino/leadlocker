@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     // 2. Verify authentication (cookie must match orgId)
     // ========================================
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const clientOrgCookie = cookieStore.get('ll_client_org');
 
     if (!clientOrgCookie || clientOrgCookie.value !== orgId) {
@@ -242,7 +242,7 @@ export async function DELETE(req: NextRequest) {
     // 2. Verify authentication
     // ========================================
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const clientOrgCookie = cookieStore.get('ll_client_org');
 
     if (!clientOrgCookie || clientOrgCookie.value !== orgId) {

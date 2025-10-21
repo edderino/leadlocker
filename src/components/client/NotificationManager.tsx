@@ -43,51 +43,62 @@ export default function NotificationManager({ orgId }: NotificationManagerProps)
   // ========================================
 
   useEffect(() => {
-    checkSubscriptionStatus();
-  }, []);
-
-  // ========================================
-  // CHECK SUBSCRIPTION STATUS
-  // ========================================
-
-  const checkSubscriptionStatus = async () => {
-    try {
-      // Check browser support
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.log('[NotificationManager] Push notifications not supported');
+    async function init() {
+      console.log('[NotificationManager] Initializing...');
+      
+      // Check ServiceWorker API
+      if (!('serviceWorker' in navigator)) {
+        console.error('❌ ServiceWorker API not available.');
         setState('unsupported');
+        setError('ServiceWorker not supported in this browser');
+        return;
+      }
+      
+      // Check PushManager API
+      if (!('PushManager' in window)) {
+        console.error('❌ PushManager API not available.');
+        setState('unsupported');
+        setError('Push notifications not supported in this browser');
         return;
       }
 
-      // Check permission
-      const permission = Notification.permission;
+      console.log('[NotificationManager] APIs available: ServiceWorker ✓, PushManager ✓');
 
-      if (permission === 'denied') {
-        console.log('[NotificationManager] Permission denied');
-        setState('denied');
-        return;
-      }
+      try {
+        // Wait for service worker to be ready
+        console.log('[NotificationManager] Waiting for service worker...');
+        const reg = await navigator.serviceWorker.ready;
+        console.log('[NotificationManager] Service worker ready:', reg.scope);
 
-      // Check if service worker is ready
-      const registration = await navigator.serviceWorker.ready;
+        // Check current permission
+        const perm = Notification.permission;
+        console.log('[NotificationManager] Current permission:', perm);
 
-      // Check if already subscribed
-      const subscription = await registration.pushManager.getSubscription();
+        if (perm === 'denied') {
+          setState('denied');
+          setError('Notification permission denied');
+          return;
+        }
 
-      if (subscription) {
-        console.log('[NotificationManager] Already subscribed');
-        setState('subscribed');
-      } else {
-        console.log('[NotificationManager] Not subscribed');
+        // Check if already subscribed
+        const subscription = await reg.pushManager.getSubscription();
+        if (subscription) {
+          console.log('[NotificationManager] Already subscribed');
+          setState('subscribed');
+        } else {
+          console.log('[NotificationManager] Ready to subscribe');
+          setState('unsubscribed');
+        }
+
+      } catch (err: any) {
+        console.error('❌ Init error:', err);
         setState('unsubscribed');
+        setError(err.message);
       }
-
-    } catch (err: any) {
-      console.error('[NotificationManager] Error checking status:', err);
-      setError(err.message);
-      setState('unsubscribed');
     }
-  };
+    
+    init();
+  }, []);
 
   // ========================================
   // SUBSCRIBE TO PUSH NOTIFICATIONS
@@ -129,7 +140,7 @@ export default function NotificationManager({ orgId }: NotificationManagerProps)
       // Subscribe to push manager
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
       });
 
       console.log('[NotificationManager] Browser subscription created');
@@ -264,7 +275,11 @@ export default function NotificationManager({ orgId }: NotificationManagerProps)
               Notifications Not Supported
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Your browser doesn&apos;t support push notifications
+              Your browser doesn&apos;t support push notifications.
+              {error && <><br /><span className="text-red-600">{error}</span></>}
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Please use Chrome/Firefox on localhost or deploy to HTTPS.
             </p>
           </div>
         </div>
@@ -346,7 +361,6 @@ export default function NotificationManager({ orgId }: NotificationManagerProps)
             {state === 'subscribed' && (
               <button
                 onClick={unsubscribe}
-                disabled={state === 'loading'}
                 className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Disable
@@ -356,20 +370,20 @@ export default function NotificationManager({ orgId }: NotificationManagerProps)
             {state === 'unsubscribed' && (
               <button
                 onClick={subscribe}
-                disabled={state === 'loading'}
                 className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
               >
-                {state === 'loading' ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Enabling...
-                  </>
-                ) : (
-                  <>
-                    <Bell className="h-3 w-3" />
-                    Enable
-                  </>
-                )}
+                <Bell className="h-3 w-3" />
+                Enable
+              </button>
+            )}
+            
+            {state === 'loading' && (
+              <button
+                disabled
+                className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md opacity-50 cursor-not-allowed flex items-center gap-1"
+              >
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Processing...
               </button>
             )}
           </div>

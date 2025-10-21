@@ -7,20 +7,7 @@
   "background_color": "#FFFFFF",
   "theme_color": "#2563EB",
   "orientation": "portrait-primary",
-  "icons": [
-    {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
+  "icons": [],
   "categories": ["business", "productivity"],
   "screenshots": [],
   "shortcuts": [
@@ -29,12 +16,7 @@
       "short_name": "Dashboard",
       "description": "View your leads dashboard",
       "url": "/client",
-      "icons": [
-        {
-          "src": "/icons/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": []
     }
   ]
 }

@@ -3,9 +3,9 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Smartphone, TrendingUp, Shield, Zap } from 'lucide-react';
 
-export default function ClientAppPage() {
+export default async function ClientAppPage() {
   // Auto-redirect if already authenticated
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const clientOrgCookie = cookieStore.get('ll_client_org');
   
   if (clientOrgCookie?.value) {

@@ -6,8 +6,6 @@ const RUNTIME_CACHE = 'leadlocker-runtime';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
-  '/',
-  '/client',
   '/manifest.json',
 ];
 

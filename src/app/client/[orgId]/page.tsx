@@ -1,12 +1,8 @@
 import { cookies } from 'next/headers';
 import ClientDashboard from '@/components/client/ClientDashboard';
+import NotificationManager from '@/components/client/NotificationManager';
+import AISuggestions from '@/components/client/AISuggestions';
 import { relativeTime } from '@/libs/time';
-
-interface PageProps {
-  params: {
-    orgId: string;
-  };
-}
 
 interface Lead {
   id: string;
@@ -62,15 +58,19 @@ async function fetchClientLeads(orgId: string): Promise<ApiResponse> {
   }
 }
 
-export default async function ClientPortalPage({ params }: PageProps) {
-  const { orgId } = params;
+export default async function ClientPortalPage({
+  params,
+}: {
+  params: Promise<{ orgId: string }>
+}) {
+  const { orgId } = await params;
   const fetchedAt = new Date();
 
   // Gate access if REQUIRE_CLIENT_INVITE is enabled
   const requireInvite = process.env.REQUIRE_CLIENT_INVITE === 'true';
   
   if (requireInvite) {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const clientOrgCookie = cookieStore.get('ll_client_org');
     
     if (!clientOrgCookie || clientOrgCookie.value !== orgId) {
@@ -172,6 +172,16 @@ export default async function ClientPortalPage({ params }: PageProps) {
           <p className="text-gray-600 mt-1">
             Organization: <span className="font-mono font-medium">{orgId}</span>
           </p>
+        </div>
+
+        {/* Push Notification Manager */}
+        <div className="mb-6">
+          <NotificationManager orgId={orgId} />
+        </div>
+
+        {/* AI Suggestions */}
+        <div className="mb-6">
+          <AISuggestions orgId={orgId} />
         </div>
 
         {/* Dashboard Content */}

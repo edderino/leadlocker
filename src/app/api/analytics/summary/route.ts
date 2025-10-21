@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     let orgId = searchParams.get('orgId');
 
     if (!orgId) {
-      const cookieStore = cookies();
+      const cookieStore = await cookies();
       const clientOrgCookie = cookieStore.get('ll_client_org');
       orgId = clientOrgCookie?.value || null;
     }
