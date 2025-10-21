@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/libs/supabaseAdmin';
-import { logEvent } from '@/libs/log';
+import { log } from '@/libs/log';
 
 // ========================================
 // AI SUGGESTIONS API ROUTE
@@ -331,14 +331,7 @@ export async function GET(request: NextRequest) {
     const suggestions = await analyzeData(orgId);
 
     // Log the analysis event
-    await logEvent({
-      event_type: 'ai.suggestions_generated',
-      org_id: orgId,
-      metadata: {
-        suggestion_count: suggestions.length,
-        suggestion_ids: suggestions.map(s => s.id)
-      }
-    });
+    await log(`[AI:Suggestions] Generated ${suggestions.length} suggestions for org: ${orgId}`);
 
     return NextResponse.json({
       success: true,
@@ -417,15 +410,7 @@ export async function POST(request: NextRequest) {
     const triggerResult = await triggerResponse.json();
 
     // Log the notification event
-    await logEvent({
-      event_type: 'ai.suggestion_notified',
-      org_id: orgId,
-      metadata: {
-        suggestion_id: topSuggestion.id,
-        notification_sent: triggerResult.success,
-        suggestion_count: suggestions.length
-      }
-    });
+    await log(`[AI:Suggestions] Notification sent for org: ${orgId}, suggestion: ${topSuggestion.id}`);
 
     return NextResponse.json({
       success: true,

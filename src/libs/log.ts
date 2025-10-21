@@ -7,3 +7,11 @@ export function log(...msg: any[]) {
     body: JSON.stringify({ message: text }),
   }).catch(() => {})
 }
+
+/**
+ * Log follow-up automation events
+ */
+export function logFollowUp(orgId: string, count: number) {
+  const message = `[FollowUp] Triggered for org: ${orgId}, count: ${count}`;
+  log(message);
+}

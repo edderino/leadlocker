@@ -25,6 +25,7 @@ interface SuggestionsResponse {
   suggestions: Suggestion[];
   generated_at: string;
   org_id: string;
+  error?: string;
 }
 
 // ========================================
