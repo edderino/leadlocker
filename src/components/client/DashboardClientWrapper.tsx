@@ -2,27 +2,15 @@
 
 import dynamic from 'next/dynamic';
 
-// Dynamic import for all client components to prevent SSR hydration issues
+type DashboardClientWrapperProps = {
+  orgId: string;
+};
+
 const DashboardClientRoot = dynamic(
-  () => import('@/components/client/DashboardClientRoot'),
-  { 
-    ssr: false, 
-    loading: () => (
-      <div className="bg-white border border-gray-200 rounded-lg p-8 flex items-center justify-center mb-6">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
+  () => import('./DashboardClientRoot'),
+  { ssr: false }
 );
 
-interface DashboardClientWrapperProps {
-  orgId: string;
-  leads: any[];
-}
-
-export default function DashboardClientWrapper({ orgId, leads }: DashboardClientWrapperProps) {
-  return <DashboardClientRoot orgId={orgId} leads={leads} />;
+export default function DashboardClientWrapper({ orgId }: DashboardClientWrapperProps) {
+  return <DashboardClientRoot orgId={orgId} />;
 }

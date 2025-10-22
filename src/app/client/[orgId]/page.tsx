@@ -5,8 +5,8 @@ import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 
 // completely client-side dashboard
-const DashboardClientRoot = dynamic(
-  () => import('@/components/client/DashboardClientRoot'),
+const DashboardClientWrapper = dynamic(
+  () => import('@/components/client/DashboardClientWrapper'),
   { ssr: false }
 )
 
@@ -38,5 +38,5 @@ export default function ClientPage({ params }: any) {
 
   if (!ready || !orgId) return <div className="p-4">Authorizing session…</div>
 
-  return <DashboardClientRoot orgId={orgId} />
+  return <DashboardClientWrapper orgId={orgId} />
 }

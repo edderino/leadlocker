@@ -2,8 +2,8 @@
 
 import dynamic from 'next/dynamic';
 
-const DashboardClientRoot = dynamic(
-  () => import('@/components/client/DashboardClientRoot'),
+const DashboardClientWrapper = dynamic(
+  () => import('@/components/client/DashboardClientWrapper'),
   { 
     ssr: false, 
     loading: () => (
@@ -19,5 +19,5 @@ const DashboardClientRoot = dynamic(
 
 export default function ClientPage({ params }: { params: { orgId: string } }) {
   const { orgId } = params;
-  return <DashboardClientRoot orgId={orgId} />;
+  return <DashboardClientWrapper orgId={orgId} />;
 }
