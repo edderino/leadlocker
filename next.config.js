@@ -5,6 +5,20 @@ const nextConfig = {
     WEB_PUSH_PRIVATE_KEY: process.env.WEB_PUSH_PRIVATE_KEY,
     VAPID_SUBJECT: process.env.VAPID_SUBJECT,
   },
+  experimental: {
+    serverActions: false,
+    appDir: true,
+  },
+  async headers() {
+    return [
+      {
+        source: '/client/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
+    ]
+  },
 };
 
 module.exports = nextConfig;
