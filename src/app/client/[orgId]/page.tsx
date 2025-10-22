@@ -1,71 +1,39 @@
-"use client";
-import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
+'use client'
+
+import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 
 const DashboardClientRoot = dynamic(
-  () => import("@/components/client/DashboardClientRoot"),
-  { ssr: false, loading: () => <div>Loading dashboard...</div> }
-);
+  () => import('@/components/client/DashboardClientRoot'),
+  { ssr: false, loading: () => <div>Loading dashboard…</div> }
+)
 
-export default function ClientPage({ params }: { params: Promise<{ orgId: string }> }) {
-  // 🧠 Resolve params safely for Next.js 15+
-  const [orgId, setOrgId] = useState<string | null>(null);
+export default function ClientPage(props: any) {
+  const [orgId, setOrgId] = useState<string | null>(null)
+  const [ready, setReady] = useState(false)
 
+  // ✅ unwrap params safely (Next 15 changed this)
   useEffect(() => {
-    (async () => {
-      const p = await params;
-      setOrgId(p.orgId);
-    })();
-  }, [params]);
+    ;(async () => {
+      const p = await props.params
+      setOrgId(p.orgId)
+    })()
+  }, [props.params])
 
-  // 🧱 Wait for orgId before rendering anything
-  if (!orgId) return <div>Initializing dashboard...</div>;
-
-  return <AuthorizedDashboard orgId={orgId} />;
-}
-
-function AuthorizedDashboard({ orgId }: { orgId: string }) {
-  const [authorized, setAuthorized] = useState(false);
-
+  // ✅ ensure we only ever render on the client
   useEffect(() => {
-    async function ensureSession() {
-      const existing = document.cookie.includes("ll_client_org=");
-      if (existing) {
-        console.log("[ClientPage] Existing session detected");
-        setAuthorized(true);
-        return;
-      }
+    if (!orgId) return
 
-      console.log("[ClientPage] Bootstrapping session for org:", orgId);
-      try {
-        const res = await fetch(`/api/client/invite`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-secret": "test-secret-12345",
-          },
-          body: JSON.stringify({ orgId, phone: "+393514421114" }),
-          cache: "no-store",
-        });
-
-        const data = await res.json();
-        if (data?.inviteUrl) {
-          document.cookie = `ll_client_org=${orgId}; path=/; SameSite=Lax`;
-          console.log("[ClientPage] ✅ Session established");
-          setAuthorized(true);
-        } else {
-          console.error("[ClientPage] ❌ Failed to bootstrap session:", data);
-        }
-      } catch (err) {
-        console.error("[ClientPage] ❌ Error bootstrapping session:", err);
-      }
+    const existing = document.cookie.includes('ll_client_org=')
+    if (!existing) {
+      document.cookie = `ll_client_org=${orgId}; path=/; SameSite=Lax`
+      console.log('[ClientPage] Cookie bootstrapped for org:', orgId)
     }
 
-    ensureSession();
-  }, [orgId]);
+    setReady(true)
+  }, [orgId])
 
-  if (!authorized) return <div>Authorizing {orgId}...</div>;
+  if (!ready || !orgId) return <div>Authorizing session…</div>
 
-  // 🧩 Render only after cookie + client hydration
-  return <DashboardClientRoot orgId={orgId} />;
+  return <DashboardClientRoot orgId={orgId} />
 }
