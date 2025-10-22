@@ -1,135 +1,53 @@
-// LeadLocker Service Worker
-// Provides offline caching and PWA functionality
+// LeadLocker Service Worker v2
+// CRITICAL: Never cache HTML documents to prevent hydration mismatches
 
-const CACHE_NAME = 'leadlocker-v1';
-const RUNTIME_CACHE = 'leadlocker-runtime';
-
-// Assets to cache on install
-const STATIC_ASSETS = [
-  '/manifest.json',
-];
-
-// Install event - cache static assets
-self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
-  
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .then(() => self.skipWaiting())
-  );
+self.addEventListener("install", (e) => {
+  console.log("[SW] Installing v2 - clearing all caches");
+  self.skipWaiting();
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
-  
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME && name !== RUNTIME_CACHE)
-          .map((name) => {
-            console.log('[SW] Deleting old cache:', name);
-            return caches.delete(name);
-          })
-      );
-    }).then(() => self.clients.claim())
-  );
+self.addEventListener("activate", async (e) => {
+  console.log("[SW] Activating v2 - wiping all old caches");
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map((name) => caches.delete(name)));
+  self.clients.claim();
+  console.log("[SW] Cleared all caches on activate");
 });
 
-// Fetch event - serve from cache, fallback to network
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-
+self.addEventListener("fetch", (e) => {
+  const req = e.request;
+  
+  // CRITICAL: Never cache HTML responses (avoids hydration mismatch)
+  if (req.destination === "document") {
+    console.log("[SW] Bypassing cache for HTML:", req.url);
+    return e.respondWith(fetch(req));
+  }
+  
   // Skip non-GET requests
-  if (request.method !== 'GET') {
+  if (req.method !== 'GET') {
     return;
   }
-
-  // Skip chrome extensions and external requests
-  if (!url.origin.includes(self.location.origin)) {
-    return;
-  }
-
-  // API routes - network first, cache fallback
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache successful API responses
-          if (response.ok && (url.pathname.includes('/analytics') || url.pathname.includes('/client/leads'))) {
-            const responseClone = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Fallback to cache for analytics and client data
-          return caches.match(request).then((cached) => {
-            if (cached) {
-              console.log('[SW] Serving from cache (offline):', url.pathname);
-              return cached;
-            }
-            // Return offline page or error
-            return new Response(
-              JSON.stringify({ success: false, error: 'Offline' }),
-              {
-                headers: { 'Content-Type': 'application/json' },
-                status: 503
-              }
-            );
-          });
-        })
-    );
-    return;
-  }
-
-  // All other requests - cache first, network fallback
-  event.respondWith(
-    caches.match(request)
-      .then((cached) => {
-        if (cached) {
-          console.log('[SW] Serving from cache:', url.pathname);
-          return cached;
-        }
-
-        return fetch(request).then((response) => {
-          // Cache successful responses
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        });
-      })
+  
+  // Cache static assets only (CSS, JS, images, fonts)
+  e.respondWith(
+    caches.open("static-v2").then(async (cache) => {
+      const res = await cache.match(req);
+      if (res) {
+        console.log("[SW] Cache hit:", req.url);
+        return res;
+      }
+      const fresh = await fetch(req);
+      // Only cache successful responses
+      if (fresh.ok) {
+        cache.put(req, fresh.clone());
+      }
+      return fresh;
+    })
   );
-});
-
-// Message event - allow runtime cache clearing
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
-    console.log('[SW] Clearing caches...');
-    event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((name) => caches.delete(name))
-        );
-      })
-    );
-  }
 });
 
 // =====================================================
-// PUSH NOTIFICATION HANDLING
+// PUSH NOTIFICATION HANDLING (unchanged)
 // =====================================================
 
 // Push event - show notification when received
@@ -157,8 +75,8 @@ self.addEventListener('push', (event) => {
         eventType: data.data?.eventType || data.eventType,
         timestamp: data.timestamp || Date.now(),
       },
-      vibrate: [200, 100, 200], // Vibration pattern: 200ms on, 100ms off, 200ms on
-      requireInteraction: false, // Auto-dismiss after a few seconds
+      vibrate: [200, 100, 200],
+      requireInteraction: false,
       actions: [
         {
           action: 'open',
@@ -237,4 +155,3 @@ self.addEventListener('notificationclose', (event) => {
   // Optional: Track notification dismissals
   // Could send analytics event here
 });
-
