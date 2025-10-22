@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import BuildInfo from '@/components/BuildInfo';
 import { Toaster } from 'react-hot-toast';
@@ -8,18 +8,19 @@ export const metadata: Metadata = {
   title: 'LeadLocker - Lead Management',
   description: 'Manage your leads with SMS alerts and daily summaries',
   manifest: '/manifest.json',
-  themeColor: '#2563EB',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'LeadLocker',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#2563EB',
 };
 
 export default function RootLayout({
