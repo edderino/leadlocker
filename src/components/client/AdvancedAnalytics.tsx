@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  PieChart, 
-  Pie, 
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
   Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer 
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
 import { TrendingUp, BarChart3, PieChart as PieChartIcon, Clock, Loader2, RefreshCw } from 'lucide-react';
 
@@ -222,10 +222,10 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
 
   const { data, generated_at } = analyticsData;
   
-  // Defensive extraction with defaults
-  const lead_trends = data?.lead_trends || [];
-  const approval_metrics = data?.approval_metrics || [];
-  const source_distribution = data?.source_distribution || [];
+  // Defensive extraction with defaults - ensure all data is arrays
+  const lead_trends = Array.isArray(data?.lead_trends) ? data.lead_trends : [];
+  const approval_metrics = Array.isArray(data?.approval_metrics) ? data.approval_metrics : [];
+  const source_distribution = Array.isArray(data?.source_distribution) ? data.source_distribution : [];
   const summary = data?.summary || {
     total_leads: 0,
     total_approved: 0,
@@ -234,6 +234,15 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
     approval_rate: 0,
     followup_completion_rate: 0
   };
+
+  console.log('[AdvancedAnalytics] Data safety check:', {
+    lead_trends_length: lead_trends.length,
+    approval_metrics_length: approval_metrics.length,
+    source_distribution_length: source_distribution.length,
+    lead_trends_isArray: Array.isArray(lead_trends),
+    approval_metrics_isArray: Array.isArray(approval_metrics),
+    source_distribution_isArray: Array.isArray(source_distribution)
+  });
 
   // Format date for display
   const formatDate = (dateStr: string) => {
@@ -317,31 +326,55 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
             <TrendingUp className="h-4 w-4 text-blue-600" />
             Lead Trends Over Time
           </h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={lead_trends}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis 
-                dataKey="date" 
-                tickFormatter={formatDate}
-                tick={{ fontSize: 11 }}
-                stroke="#6B7280"
-              />
-              <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
-              <Tooltip 
-                contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
-                labelFormatter={formatDate}
-              />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Line 
-                type="monotone" 
-                dataKey="count" 
-                stroke={COLORS.primary} 
-                strokeWidth={2}
-                name="Total Leads"
-                dot={{ fill: COLORS.primary, r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {(() => {
+            try {
+              console.log('[AdvancedAnalytics] Rendering Lead Trends Chart with data:', lead_trends.length);
+              const safeData = Array.isArray(lead_trends) ? lead_trends : [];
+              
+              if (safeData.length === 0) {
+                return (
+                  <div className="flex items-center justify-center h-[250px] text-gray-500 text-sm">
+                    No lead trend data available
+                  </div>
+                );
+              }
+
+              return (
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={safeData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={formatDate}
+                      tick={{ fontSize: 11 }}
+                      stroke="#6B7280"
+                    />
+                    <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
+                    <Tooltip 
+                      contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
+                      labelFormatter={formatDate}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke={COLORS.primary} 
+                      strokeWidth={2}
+                      name="Total Leads"
+                      dot={{ fill: COLORS.primary, r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              );
+            } catch (error) {
+              console.error('[AdvancedAnalytics] Error rendering Lead Trends Chart:', error);
+              return (
+                <div className="flex items-center justify-center h-[250px] text-red-500 text-sm">
+                  Error rendering lead trends chart
+                </div>
+              );
+            }
+          })()}
         </div>
 
         {/* Approval Metrics Chart */}
@@ -350,34 +383,58 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
             <BarChart3 className="h-4 w-4 text-green-600" />
             Approval Rate by Week
           </h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={approval_metrics}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis 
-                dataKey="week" 
-                tickFormatter={formatWeek}
-                tick={{ fontSize: 11 }}
-                stroke="#6B7280"
-              />
-              <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
-              <Tooltip 
-                contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
-                labelFormatter={formatWeek}
-                formatter={(value: number, name: string) => {
-                  if (name === 'approval_rate') return `${value.toFixed(1)}%`;
-                  if (name === 'avg_time_hours') return `${value.toFixed(1)}h`;
-                  return value;
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar 
-                dataKey="approval_rate" 
-                fill={COLORS.success} 
-                name="Approval Rate (%)"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          {(() => {
+            try {
+              console.log('[AdvancedAnalytics] Rendering Approval Metrics Chart with data:', approval_metrics.length);
+              const safeData = Array.isArray(approval_metrics) ? approval_metrics : [];
+              
+              if (safeData.length === 0) {
+                return (
+                  <div className="flex items-center justify-center h-[250px] text-gray-500 text-sm">
+                    No approval metrics data available
+                  </div>
+                );
+              }
+
+              return (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={safeData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis 
+                      dataKey="week" 
+                      tickFormatter={formatWeek}
+                      tick={{ fontSize: 11 }}
+                      stroke="#6B7280"
+                    />
+                    <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
+                    <Tooltip 
+                      contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
+                      labelFormatter={formatWeek}
+                      formatter={(value: number, name: string) => {
+                        if (name === 'approval_rate') return `${value.toFixed(1)}%`;
+                        if (name === 'avg_time_hours') return `${value.toFixed(1)}h`;
+                        return value;
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar 
+                      dataKey="approval_rate" 
+                      fill={COLORS.success} 
+                      name="Approval Rate (%)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              );
+            } catch (error) {
+              console.error('[AdvancedAnalytics] Error rendering Approval Metrics Chart:', error);
+              return (
+                <div className="flex items-center justify-center h-[250px] text-red-500 text-sm">
+                  Error rendering approval metrics chart
+                </div>
+              );
+            }
+          })()}
         </div>
 
         {/* Source Distribution Chart */}
@@ -386,37 +443,55 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
             <PieChartIcon className="h-4 w-4 text-purple-600" />
             Lead Source Distribution
           </h3>
-          {source_distribution.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={source_distribution as any}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(props: any) => `${props.source}: ${props.percentage.toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {source_distribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
-                  formatter={(value: number, name: string, props: any) => {
-                    const percentage = props.payload.percentage;
-                    return [`${value} (${percentage.toFixed(1)}%)`, props.payload.source];
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-[250px] text-gray-500 text-sm">
-              No source data available
-            </div>
-          )}
+          {(() => {
+            try {
+              console.log('[AdvancedAnalytics] Rendering Source Distribution Chart with data:', source_distribution.length);
+              const safeData = Array.isArray(source_distribution) ? source_distribution : [];
+              
+              if (safeData.length === 0) {
+                return (
+                  <div className="flex items-center justify-center h-[250px] text-gray-500 text-sm">
+                    No source data available
+                  </div>
+                );
+              }
+
+              return (
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={safeData as any}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={(props: any) => `${props.source}: ${props.percentage.toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {safeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
+                      formatter={(value: number, name: string, props: any) => {
+                        const percentage = props.payload.percentage;
+                        return [`${value} (${percentage.toFixed(1)}%)`, props.payload.source];
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              );
+            } catch (error) {
+              console.error('[AdvancedAnalytics] Error rendering Source Distribution Chart:', error);
+              return (
+                <div className="flex items-center justify-center h-[250px] text-red-500 text-sm">
+                  Error rendering source distribution chart
+                </div>
+              );
+            }
+          })()}
         </div>
 
         {/* Approval Time Trend */}
@@ -425,32 +500,56 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
             <Clock className="h-4 w-4 text-orange-600" />
             Avg Approval Time (Hours)
           </h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={approval_metrics}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis 
-                dataKey="week" 
-                tickFormatter={formatWeek}
-                tick={{ fontSize: 11 }}
-                stroke="#6B7280"
-              />
-              <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
-              <Tooltip 
-                contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
-                labelFormatter={formatWeek}
-                formatter={(value: number) => `${value.toFixed(1)}h`}
-              />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Line 
-                type="monotone" 
-                dataKey="avg_time_hours" 
-                stroke={COLORS.warning} 
-                strokeWidth={2}
-                name="Avg Time (hours)"
-                dot={{ fill: COLORS.warning, r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {(() => {
+            try {
+              console.log('[AdvancedAnalytics] Rendering Approval Time Chart with data:', approval_metrics.length);
+              const safeData = Array.isArray(approval_metrics) ? approval_metrics : [];
+              
+              if (safeData.length === 0) {
+                return (
+                  <div className="flex items-center justify-center h-[250px] text-gray-500 text-sm">
+                    No approval time data available
+                  </div>
+                );
+              }
+
+              return (
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={safeData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis 
+                      dataKey="week" 
+                      tickFormatter={formatWeek}
+                      tick={{ fontSize: 11 }}
+                      stroke="#6B7280"
+                    />
+                    <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
+                    <Tooltip 
+                      contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
+                      labelFormatter={formatWeek}
+                      formatter={(value: number) => `${value.toFixed(1)}h`}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="avg_time_hours" 
+                      stroke={COLORS.warning} 
+                      strokeWidth={2}
+                      name="Avg Time (hours)"
+                      dot={{ fill: COLORS.warning, r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              );
+            } catch (error) {
+              console.error('[AdvancedAnalytics] Error rendering Approval Time Chart:', error);
+              return (
+                <div className="flex items-center justify-center h-[250px] text-red-500 text-sm">
+                  Error rendering approval time chart
+                </div>
+              );
+            }
+          })()}
         </div>
       </div>
     </div>
