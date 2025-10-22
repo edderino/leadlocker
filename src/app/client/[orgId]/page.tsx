@@ -22,15 +22,18 @@ export default function ClientPage({ params }: any) {
     })()
   }, [params])
 
-  // only run after client hydration
+  // set cookie BEFORE rendering components
   useEffect(() => {
     if (!orgId) return
-    const hasCookie = document.cookie.includes('ll_client_org=')
-    if (!hasCookie) {
-      document.cookie = `ll_client_org=${orgId}; path=/; SameSite=Lax`
-      console.log('[ClientPage] cookie set for', orgId)
-    }
-    setReady(true)
+    
+    // Set cookie immediately
+    document.cookie = `ll_client_org=${orgId}; path=/; SameSite=Lax`
+    console.log('[ClientPage] cookie set for', orgId)
+    
+    // Small delay to ensure cookie is set before components render
+    setTimeout(() => {
+      setReady(true)
+    }, 100)
   }, [orgId])
 
   if (!ready || !orgId) return <div className="p-4">Authorizing session…</div>

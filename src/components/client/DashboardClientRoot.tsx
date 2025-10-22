@@ -31,7 +31,7 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
         console.log('[DashboardClientRoot] Fetching leads for org:', orgId);
         const response = await fetch(`/api/client/leads?orgId=${orgId}`, {
           headers: {
-            'x-client-token': process.env.NEXT_PUBLIC_CLIENT_PORTAL_SECRET || 'test-secret-12345'
+            'x-client-token': '23e0ab1e2bb286fb1163c79cbe86013bc8a920d2dc85da9252e599db4194a3d6'
           }
         });
         const data = await response.json();
