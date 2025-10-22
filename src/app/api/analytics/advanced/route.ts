@@ -31,7 +31,6 @@ interface Lead {
   org_id: string;
   status: string;
   created_at: string;
-  updated_at: string;
 }
 
 interface Event {
@@ -119,7 +118,7 @@ async function generateAnalytics(orgId: string, timeRange: number = 7): Promise<
     // Fetch leads
     const { data: leads, error: leadsError } = await supabaseAdmin
       .from('leads')
-      .select('id, org_id, status, created_at, updated_at, phone')
+      .select('id, org_id, status, created_at, phone')
       .eq('org_id', orgId)
       .gte('created_at', startDate)
       .order('created_at', { ascending: true });
@@ -237,9 +236,9 @@ function calculateApprovalMetrics(leads: Lead[], events: Event[]): ApprovalMetri
     if (lead.status === 'approved' || lead.status === 'completed') {
       weeks[week].approved++;
       
-      // Calculate approval time
-      const approvalTime = new Date(lead.updated_at).getTime() - new Date(lead.created_at).getTime();
-      weeks[week].totalTime += approvalTime;
+      // Note: Without updated_at column, we can't calculate exact approval time
+      // This would require tracking status change events or adding updated_at column
+      weeks[week].totalTime += 0;
     }
   });
 
@@ -327,14 +326,9 @@ function calculateSummary(leads: Lead[], events: Event[]): Summary {
   const completedLeads = leads.filter(l => l.status === 'completed');
 
   // Calculate average approval time
-  let totalApprovalTime = 0;
-  approvedLeads.forEach(lead => {
-    const time = new Date(lead.updated_at).getTime() - new Date(lead.created_at).getTime();
-    totalApprovalTime += time;
-  });
-  const avgApprovalTimeHours = approvedLeads.length > 0 
-    ? (totalApprovalTime / approvedLeads.length) / (1000 * 60 * 60)
-    : 0;
+  // Note: Without updated_at column, we use a default estimate
+  // In production, you should add updated_at column or track via events
+  const avgApprovalTimeHours = 0;
 
   // Calculate follow-up completion rate
   const followupTriggered = events.filter(e => e.event_type === 'followup.triggered').length;
