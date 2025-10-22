@@ -1,23 +1,13 @@
 "use client";
-
+import { use } from "react";
 import dynamic from "next/dynamic";
 
 const DashboardClientRoot = dynamic(
   () => import("@/components/client/DashboardClientRoot"),
-  { 
-    ssr: false, 
-    loading: () => (
-      <div className="bg-white border border-gray-200 rounded-lg p-8 flex items-center justify-center mb-6">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
+  { ssr: false, loading: () => <div>Loading dashboard…</div> }
 );
 
-export default function ClientPage({ params }: { params: { orgId: string } }) {
-  const { orgId } = params;
+export default function ClientPage({ params }: { params: Promise<{ orgId: string }> }) {
+  const { orgId } = use(params);  // ✅ unwraps the promise safely
   return <DashboardClientRoot orgId={orgId} />;
 }
