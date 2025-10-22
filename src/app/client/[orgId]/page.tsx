@@ -1,8 +1,6 @@
 import { cookies } from 'next/headers';
 import ClientDashboard from '@/components/client/ClientDashboard';
-import NotificationManager from '@/components/client/NotificationManager';
-import AISuggestions from '@/components/client/AISuggestions';
-import AdvancedAnalyticsWrapper from '@/components/client/AdvancedAnalyticsWrapper';
+import DashboardClientWrapper from '@/components/client/DashboardClientWrapper';
 import { relativeTime } from '@/libs/time';
 
 interface Lead {
@@ -175,20 +173,8 @@ export default async function ClientPortalPage({
           </p>
         </div>
 
-        {/* Push Notification Manager */}
-        <div className="mb-6">
-          <NotificationManager orgId={orgId} />
-        </div>
-
-        {/* AI Suggestions */}
-        <div className="mb-6">
-          <AISuggestions orgId={orgId} />
-        </div>
-
-        {/* Advanced Analytics Dashboard */}
-        <div className="mb-6">
-          <AdvancedAnalyticsWrapper orgId={orgId} />
-        </div>
+        {/* Client Components (Dynamic Import) */}
+        <DashboardClientWrapper orgId={orgId} />
 
         {/* Dashboard Content */}
         <ClientDashboard leads={leads} orgId={orgId} />
