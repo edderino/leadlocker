@@ -1,5 +1,5 @@
 "use client";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
 const DashboardClientRoot = dynamic(
@@ -8,21 +8,37 @@ const DashboardClientRoot = dynamic(
 );
 
 export default function ClientPage({ params }: { params: Promise<{ orgId: string }> }) {
-  const { orgId } = use(params);
+  // 🧠 Resolve params safely for Next.js 15+
+  const [orgId, setOrgId] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const p = await params;
+      setOrgId(p.orgId);
+    })();
+  }, [params]);
+
+  // 🧱 Wait for orgId before rendering anything
+  if (!orgId) return <div>Initializing dashboard...</div>;
+
+  return <AuthorizedDashboard orgId={orgId} />;
+}
+
+function AuthorizedDashboard({ orgId }: { orgId: string }) {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    async function bootstrap() {
+    async function ensureSession() {
       const existing = document.cookie.includes("ll_client_org=");
       if (existing) {
-        console.log("[ClientPage] Existing ll_client_org cookie detected.");
+        console.log("[ClientPage] Existing session detected");
         setAuthorized(true);
         return;
       }
 
-      console.log("[ClientPage] No session found, bootstrapping via /api/client/invite...");
+      console.log("[ClientPage] Bootstrapping session for org:", orgId);
       try {
-        const res = await fetch(`http://localhost:3000/api/client/invite`, {
+        const res = await fetch(`/api/client/invite`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -35,20 +51,21 @@ export default function ClientPage({ params }: { params: Promise<{ orgId: string
         const data = await res.json();
         if (data?.inviteUrl) {
           document.cookie = `ll_client_org=${orgId}; path=/; SameSite=Lax`;
-          console.log("[ClientPage] ✅ Cookie set successfully for org:", orgId);
+          console.log("[ClientPage] ✅ Session established");
           setAuthorized(true);
         } else {
-          console.error("[ClientPage] ❌ Invite endpoint failed:", data);
+          console.error("[ClientPage] ❌ Failed to bootstrap session:", data);
         }
       } catch (err) {
-        console.error("[ClientPage] ❌ Bootstrap error:", err);
+        console.error("[ClientPage] ❌ Error bootstrapping session:", err);
       }
     }
 
-    bootstrap();
+    ensureSession();
   }, [orgId]);
 
-  if (!authorized) return <div>Authorizing session for {orgId}...</div>;
+  if (!authorized) return <div>Authorizing {orgId}...</div>;
 
+  // 🧩 Render only after cookie + client hydration
   return <DashboardClientRoot orgId={orgId} />;
 }
