@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import dynamic from "next/dynamic";
+import dynamic from 'next/dynamic';
 
 const DashboardClientRoot = dynamic(
-  () => import("@/components/client/DashboardClientRoot"),
+  () => import('@/components/client/DashboardClientRoot'),
   { 
     ssr: false, 
     loading: () => (

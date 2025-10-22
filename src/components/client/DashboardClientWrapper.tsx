@@ -20,8 +20,9 @@ const DashboardClientRoot = dynamic(
 
 interface DashboardClientWrapperProps {
   orgId: string;
+  leads: any[];
 }
 
-export default function DashboardClientWrapper({ orgId }: DashboardClientWrapperProps) {
-  return <DashboardClientRoot orgId={orgId} />;
+export default function DashboardClientWrapper({ orgId, leads }: DashboardClientWrapperProps) {
+  return <DashboardClientRoot orgId={orgId} leads={leads} />;
 }
