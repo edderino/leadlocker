@@ -4,6 +4,7 @@
       "path": "/api/summary/send",
       "schedule": "0 9 * * *"
     }
-  ]
+  ],
+  "buildCommand": "next build"
 }
 
