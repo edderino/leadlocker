@@ -118,27 +118,32 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
     setError(null);
 
     try {
-      console.log(`[AdvancedAnalytics] Fetching analytics for org: ${orgId}, range: ${timeRange}d`);
-      const response = await fetch(`/api/analytics/advanced?orgId=${orgId}&range=${timeRange}`);
-      const data: AnalyticsData = await response.json();
-
-      console.log('[AdvancedAnalytics] API response:', { success: data.success, hasData: !!data.data });
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch analytics');
-      }
-
-      if (data.success && data.data) {
-        setAnalyticsData(data);
-        console.log(`[AdvancedAnalytics] ✅ Loaded analytics for org: ${orgId}, range: ${timeRange}d, trends: ${data.data.lead_trends?.length || 0}`);
-      } else {
-        console.warn('[AdvancedAnalytics] ⚠️ No data returned');
-        setError(data.error || 'No analytics data available');
-        setAnalyticsData(null);
-      }
+      console.log(`[AdvancedAnalytics] Initializing for new client org: ${orgId}`);
+      // For new clients, start with empty analytics data
+      setAnalyticsData({
+        success: true,
+        org_id: orgId,
+        time_range: timeRange,
+        generated_at: new Date().toISOString(),
+        data: {
+          lead_trends: [],
+          approval_metrics: [],
+          source_distribution: [],
+          followup_completion: [],
+          summary: {
+            total_leads: 0,
+            new_leads: 0,
+            approved_leads: 0,
+            completed_leads: 0,
+            avg_approval_time: 0,
+            conversion_rate: 0
+          }
+        }
+      });
+      console.log(`[AdvancedAnalytics] ✅ Initialized empty analytics for new client: ${orgId}`);
     } catch (err: any) {
-      console.error('[AdvancedAnalytics] ❌ Error fetching analytics:', err);
-      setError(err.message || 'Failed to load analytics');
+      console.error('[AdvancedAnalytics] ❌ Error initializing analytics:', err);
+      setError('Failed to initialize analytics');
       setAnalyticsData(null);
     } finally {
       setLoading(false);
