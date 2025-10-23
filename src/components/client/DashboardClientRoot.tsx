@@ -18,6 +18,7 @@ interface Lead {
 
 interface DashboardClientRootProps {
   orgId: string;
+  leads?: any[];
 }
 
 export default function DashboardClientRoot({ orgId }: DashboardClientRootProps) {

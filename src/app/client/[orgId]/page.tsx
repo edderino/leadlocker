@@ -1,20 +1,29 @@
 'use client'
 
-// ⚠️ absolutely no imports that trigger server rendering above here
-import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
+import NotificationManager from '@/components/client/NotificationManager'
+import AISuggestions from '@/components/client/AISuggestions'
+import AdvancedAnalytics from '@/components/client/AdvancedAnalytics'
+import ClientDashboard from '@/components/client/ClientDashboard'
 
-// completely client-side dashboard
-const DashboardClientWrapper = dynamic(
-  () => import('@/components/client/DashboardClientWrapper'),
-  { ssr: false }
-)
+interface Lead {
+  id: string;
+  name: string;
+  phone: string;
+  source: string;
+  description: string | null;
+  status: 'NEW' | 'APPROVED' | 'COMPLETED';
+  created_at: string;
+}
 
 export default function ClientPage({ params }: any) {
   const [orgId, setOrgId] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // unwrap params safely for Next 15
+  // unwrap params safely (Next 15 changed this)
   useEffect(() => {
     ;(async () => {
       const p = await params
@@ -22,7 +31,38 @@ export default function ClientPage({ params }: any) {
     })()
   }, [params])
 
-  // set cookie BEFORE rendering components
+  // fetch leads data
+  useEffect(() => {
+    if (!orgId) return
+
+    const fetchLeads = async () => {
+      try {
+        console.log('[ClientPage] Fetching leads for org:', orgId)
+        const response = await fetch(`/api/client/leads?orgId=${orgId}`, {
+          headers: {
+            'x-client-token': '23e0ab1e2bb286fb1163c79cbe86013bc8a920d2dc85da9252e599db4194a3d6'
+          }
+        })
+        const data = await response.json()
+        
+        if (data.success && data.leads) {
+          setLeads(data.leads)
+          console.log('[ClientPage] Loaded leads:', data.leads.length)
+        } else {
+          setError(data.error || 'Failed to load leads')
+        }
+      } catch (err: any) {
+        console.error('[ClientPage] Error fetching leads:', err)
+        setError(err.message || 'Failed to load leads')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchLeads()
+  }, [orgId])
+
+  // ensure we only ever render on the client
   useEffect(() => {
     if (!orgId) return
     
@@ -38,5 +78,60 @@ export default function ClientPage({ params }: any) {
 
   if (!ready || !orgId) return <div className="p-4">Authorizing session…</div>
 
-  return <DashboardClientWrapper orgId={orgId} />
+  if (loading) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+          <p className="text-gray-600">Loading dashboard data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <svg className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-red-800">Error loading dashboard</h3>
+            <p className="text-sm text-red-600 mt-1">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 text-sm text-red-700 hover:text-red-800 underline"
+            >
+              Reload page
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {/* Push Notification Manager */}
+      <div className="mb-6">
+        <NotificationManager orgId={orgId} />
+      </div>
+
+      {/* AI Suggestions */}
+      <div className="mb-6">
+        <AISuggestions orgId={orgId} />
+      </div>
+
+      {/* Advanced Analytics Dashboard */}
+      <div className="mb-6">
+        <AdvancedAnalytics orgId={orgId} />
+      </div>
+
+      {/* Dashboard Content */}
+      <ClientDashboard leads={leads} orgId={orgId} />
+    </>
+  )
 }
