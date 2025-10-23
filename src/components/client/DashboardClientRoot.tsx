@@ -31,8 +31,8 @@ export default function DashboardClientRoot({ orgId, leads: initialLeads }: Dash
   useEffect(() => {
     const fetchLeads = async () => {
       try {
-        console.log('[DashboardClientRoot] Fetching leads for org:', orgId);
-        const response = await fetch(`/api/client/leads?orgId=${orgId}`, {
+        console.log('[DashboardClientRoot] Fetching leads for org:', orgId, 'v2.1');
+        const response = await fetch(`/api/client/leads?orgId=${orgId}&_t=${Date.now()}`, {
           headers: {
             'x-client-token': '3OV9G6R74RYvb8vIaTdADm/3ssNreOujsNU3/bRqXrY'
           }
