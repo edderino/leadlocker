@@ -36,7 +36,7 @@ async function handleCleanupCron(request: NextRequest) {
       );
     }
 
-    log('[Cleanup] /api/cron/cleanup - Starting cleanup job');
+    log('[Cleanup] /api/_cron/cleanup - Starting cleanup job');
 
     // 2. Get retention periods from environment (with defaults)
     const leadRetentionDays = parseInt(process.env.CLEANUP_LEAD_RETENTION_DAYS || '30');
@@ -148,7 +148,7 @@ async function handleCleanupCron(request: NextRequest) {
     console.error('[Cleanup] Cleanup job failed:', error);
     
     // Notify admin of the error
-    await notifyAdmin('/api/cron/cleanup', error);
+    await notifyAdmin('/api/_cron/cleanup', error);
     
     return NextResponse.json(
       { 

@@ -37,7 +37,7 @@ async function handleDailySummaryCron(request: NextRequest) {
       );
     }
 
-    log('[Cron] /api/cron/daily-summary - Starting daily summary job');
+    log('[Cron] /api/_cron/daily-summary - Starting daily summary job');
 
     const userId = 'c96933ac-8a2b-484b-b9df-8e25d04e7f29';
 
@@ -145,7 +145,7 @@ async function handleDailySummaryCron(request: NextRequest) {
     console.error('[Cron] Daily summary job failed:', error);
     
     // Notify admin of the error
-    await notifyAdmin('/api/cron/daily-summary', error);
+    await notifyAdmin('/api/_cron/daily-summary', error);
     
     return NextResponse.json(
       { 

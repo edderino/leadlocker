@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 
 /**
- * GET /api/cron/followups
+ * GET /api/_cron/followups
  * Cron wrapper endpoint for automated follow-up reminders
  */
 export async function GET(request: NextRequest) {
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       message: 'Follow-up cron job completed',
       result: result,
       timestamp: new Date().toISOString(),
-      endpoint: '/api/cron/followups'
+      endpoint: '/api/_cron/followups'
     });
 
   } catch (error) {
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/cron/followups
+ * POST /api/_cron/followups
  * Alternative POST endpoint for cron services that prefer POST
  */
 export async function POST(request: NextRequest) {
