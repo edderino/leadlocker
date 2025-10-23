@@ -29,32 +29,11 @@ export default function DashboardClientRoot({ orgId, leads: initialLeads }: Dash
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchLeads = async () => {
-      try {
-        console.log('[DashboardClientRoot] Fetching leads for org:', orgId, 'v2.1');
-        const response = await fetch(`/api/client/leads?orgId=${orgId}&_t=${Date.now()}`, {
-          headers: {
-            'x-client-token': '3OV9G6R74RYvb8vIaTdADm/3ssNreOujsNU3/bRqXrY'
-          }
-        });
-        const data = await response.json();
-        
-        if (data.success && data.leads) {
-          setLeads(data.leads);
-          console.log('[DashboardClientRoot] Loaded leads:', data.leads.length);
-        } else {
-          setError(data.error || 'Failed to load leads');
-        }
-      } catch (err: any) {
-        console.error('[DashboardClientRoot] Error fetching leads:', err);
-        setError(err.message || 'Failed to load leads');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLeads();
-  }, [orgId]);
+    // For new clients, start with empty leads - they'll get populated when leads are added
+    console.log('[DashboardClientRoot] Initializing dashboard for org:', orgId);
+    setLeads(initialLeads || []);
+    setLoading(false);
+  }, [orgId, initialLeads]);
 
   if (loading) {
     return (
