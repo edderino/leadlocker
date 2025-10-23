@@ -1,4 +1,5 @@
 import { config } from "dotenv";
+import { createInviteToken } from "../src/libs/signing";
 
 // Load environment variables
 config({ path: ".env.local" });
@@ -9,7 +10,7 @@ config({ path: ".env.local" });
  */
 
 const orgId = process.argv[2];
-const ttlHours = parseInt(process.argv[3]) || 168; // Default: 7 days
+const ttlHours = parseInt(process.argv[3]) || 24; // Default: 24 hours
 
 if (!orgId) {
   console.error("❌ Usage: npx tsx scripts/generate-invite.ts <orgId> [hours]");
@@ -18,21 +19,15 @@ if (!orgId) {
 }
 
 try {
-  // Generate token using production endpoint
-  const response = await fetch(`https://leadlocker.vercel.app/api/debug/generate-token?orgId=${orgId}&hours=${ttlHours}`);
-  const data = await response.json();
-  
-  if (!data.success) {
-    throw new Error(data.error);
-  }
+  const token = createInviteToken(orgId, ttlHours);
   
   console.log("🎉 Client Invite Token Generated!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`📋 Organization ID: ${data.orgId}`);
-  console.log(`⏰ Expires in: ${data.ttlHours} hours (${Math.round(data.ttlHours/24)} days)`);
-  console.log(`🔗 Invite URL: ${data.inviteUrl}`);
+  console.log(`📋 Organization ID: ${orgId}`);
+  console.log(`⏰ Expires in: ${ttlHours} hours (${Math.round(ttlHours/24)} days)`);
+  console.log(`🔗 Invite URL: https://leadlocker.vercel.app/client/access?token=${token}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`🔑 Token: ${data.token}`);
+  console.log(`🔑 Token: ${token}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   
 } catch (error: any) {
