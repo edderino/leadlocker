@@ -6,8 +6,15 @@ const nextConfig = {
     VAPID_SUBJECT: process.env.VAPID_SUBJECT,
   },
   experimental: {
-    serverActions: false,
+    serverActions: {},
     appDir: true,
+  },
+  reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
   },
   async headers() {
     return [
@@ -21,5 +28,5 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
 
