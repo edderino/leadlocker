@@ -31,35 +31,13 @@ export default function ClientPage({ params }: any) {
     })()
   }, [params])
 
-  // fetch leads data
+  // Initialize with empty leads for new clients
   useEffect(() => {
     if (!orgId) return
-
-    const fetchLeads = async () => {
-      try {
-        console.log('[ClientPage] Fetching leads for org:', orgId)
-        const response = await fetch(`/api/client/leads?orgId=${orgId}`, {
-          headers: {
-            'x-client-token': '23e0ab1e2bb286fb1163c79cbe86013bc8a920d2dc85da9252e599db4194a3d6'
-          }
-        })
-        const data = await response.json()
-        
-        if (data.success && data.leads) {
-          setLeads(data.leads)
-          console.log('[ClientPage] Loaded leads:', data.leads.length)
-        } else {
-          setError(data.error || 'Failed to load leads')
-        }
-      } catch (err: any) {
-        console.error('[ClientPage] Error fetching leads:', err)
-        setError(err.message || 'Failed to load leads')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchLeads()
+    
+    console.log('[ClientPage] Initializing dashboard for org:', orgId)
+    setLeads([]) // Start with empty leads for new clients
+    setLoading(false)
   }, [orgId])
 
   // ensure we only ever render on the client
