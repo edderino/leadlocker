@@ -1,4 +1,4 @@
-import { supabase } from '@/libs/supabaseClient';
+import { supabaseAdmin } from '@/libs/supabaseAdmin';
 import SendSummaryButton from './SendSummaryButton';
 
 async function getTodayStats() {
@@ -8,7 +8,7 @@ async function getTodayStats() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const { data: leads, error } = await supabase
+  const { data: leads, error } = await supabaseAdmin
     .from('leads')
     .select('*')
     .eq('user_id', userId)
