@@ -28,10 +28,10 @@ async function main() {
   // --- 1. Delete existing demo data ---
   console.log("🧹 Cleaning up existing demo data...");
   
+  const orgId = "demo-org";
+  
   // Delete demo user's leads first (foreign key constraint)
-  await supabase.from("leads").delete().eq("name", "John Carter");
-  await supabase.from("leads").delete().eq("name", "Mia Rossi");
-  await supabase.from("leads").delete().eq("name", "Luca Bianchi");
+  await supabase.from("leads").delete().eq("org_id", orgId);
   
   // Delete demo user
   await supabase.from("users").delete().eq("email", "demo@leadlocker.local");
@@ -54,6 +54,7 @@ async function main() {
   const leadsData = [
     {
       user_id: user.id,
+      org_id: orgId,
       name: "John Carter",
       phone: "+61411111111",
       source: "Website",
@@ -62,6 +63,7 @@ async function main() {
     },
     {
       user_id: user.id,
+      org_id: orgId,
       name: "Mia Rossi",
       phone: "+61422222222",
       source: "Facebook",
@@ -70,6 +72,7 @@ async function main() {
     },
     {
       user_id: user.id,
+      org_id: orgId,
       name: "Luca Bianchi",
       phone: "+61433333333",
       source: "Google",
