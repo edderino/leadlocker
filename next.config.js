@@ -7,7 +7,6 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {},
-    appDir: true,
   },
   reactStrictMode: true,
   eslint: {
