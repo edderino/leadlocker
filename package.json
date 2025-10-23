@@ -10,7 +10,8 @@
     "start:prod": "npm run build && npm start",
     "dev:auto": "nodemon --exec \"next dev --turbo\"",
     "lint": "next lint",
-    "seed": "npx tsx scripts/seed.ts"
+    "seed": "npx tsx scripts/seed.ts",
+    "invite": "npx tsx scripts/generate-invite.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.3",

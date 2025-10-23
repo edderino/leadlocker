@@ -394,10 +394,7 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies();
     const clientOrgCookie = cookieStore.get('ll_client_org');
 
-    // TEMPORARY: Allow testing without auth for demo-org
-    if (orgId === 'demo-org') {
-      console.log(`[Analytics] Allowing demo-org access without auth for testing`);
-    } else if (!clientOrgCookie || clientOrgCookie.value !== orgId) {
+    if (!clientOrgCookie || clientOrgCookie.value !== orgId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }

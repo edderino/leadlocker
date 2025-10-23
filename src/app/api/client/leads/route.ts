@@ -37,16 +37,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (!clientToken || clientToken !== expectedToken) {
-      // TEMPORARY: Allow testing without auth for demo-org
-      if (orgId === 'demo-org') {
-        console.log('[ClientAPI] Allowing demo-org access without auth for testing');
-      } else {
-        console.error('[ClientAPI] Unauthorized access attempt - invalid or missing x-client-token');
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
+      console.error('[ClientAPI] Unauthorized access attempt - invalid or missing x-client-token');
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     console.log('[ClientAPI] Fetching leads for orgId:', orgId);
