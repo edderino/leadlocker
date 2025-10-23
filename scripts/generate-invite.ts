@@ -1,5 +1,4 @@
 import { config } from "dotenv";
-import { createInviteToken } from "../src/libs/signing";
 
 // Load environment variables
 config({ path: ".env.local" });
@@ -19,15 +18,21 @@ if (!orgId) {
 }
 
 try {
-  const token = createInviteToken(orgId, ttlHours);
+  // Generate token using production endpoint
+  const response = await fetch(`https://leadlocker.vercel.app/api/debug/generate-token?orgId=${orgId}&hours=${ttlHours}`);
+  const data = await response.json();
+  
+  if (!data.success) {
+    throw new Error(data.error);
+  }
   
   console.log("🎉 Client Invite Token Generated!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`📋 Organization ID: ${orgId}`);
-  console.log(`⏰ Expires in: ${ttlHours} hours (${Math.round(ttlHours/24)} days)`);
-  console.log(`🔗 Invite URL: https://your-domain.com/client/access?token=${token}`);
+  console.log(`📋 Organization ID: ${data.orgId}`);
+  console.log(`⏰ Expires in: ${data.ttlHours} hours (${Math.round(data.ttlHours/24)} days)`);
+  console.log(`🔗 Invite URL: ${data.inviteUrl}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`🔑 Token: ${token}`);
+  console.log(`🔑 Token: ${data.token}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   
 } catch (error: any) {
