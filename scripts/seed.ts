@@ -1,11 +1,25 @@
-import { config } from "dotenv";
+import * as dotenv from "dotenv";
+
+// Force-load only the clean prod env file, override everything
+dotenv.config({ path: ".env.clean.final.prod.local", override: true });
+
+console.log("[FORCED LOAD] env file:", ".env.clean.final.prod.local");
+console.log("SUPABASE_SERVICE_ROLE_KEY =", process.env.SUPABASE_SERVICE_ROLE_KEY);
+
 import { createClient } from "@supabase/supabase-js";
 
-// Load environment variables from .env.local
-config({ path: ".env.local" });
+console.log("[DEBUG] Loaded env vars:", Object.keys(process.env));
+
+console.log("[DEBUG] Raw values:");
+for (const [key, value] of Object.entries(process.env)) {
+  if (key.startsWith("SUPABASE") || key.startsWith("TWILIO") || key.startsWith("NEXT_PUBLIC")) {
+    console.log(`${key} =`, JSON.stringify(value));
+  }
+}
 
 // Seed script for LeadLocker demo environment
 async function main() {
+  console.log("KEY BYTES:", Array.from(Buffer.from(process.env.SUPABASE_SERVICE_ROLE_KEY || "")));
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!

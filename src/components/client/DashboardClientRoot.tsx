@@ -16,12 +16,14 @@ interface Lead {
   created_at: string;
 }
 
-interface DashboardClientRootProps {
+// props
+export interface DashboardClientRootProps {
   orgId: string;
-  leads?: any[];
+  leads: any[]; // keep it any[] for now; we can tighten later
 }
 
-export default function DashboardClientRoot({ orgId }: DashboardClientRootProps) {
+// component
+export default function DashboardClientRoot({ orgId, leads }: DashboardClientRootProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
