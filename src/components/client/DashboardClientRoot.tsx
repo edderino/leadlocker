@@ -23,8 +23,8 @@ export interface DashboardClientRootProps {
 }
 
 // component
-export default function DashboardClientRoot({ orgId, leads }: DashboardClientRootProps) {
-  const [leads, setLeads] = useState<Lead[]>([]);
+export default function DashboardClientRoot({ orgId, leads: initialLeads }: DashboardClientRootProps) {
+  const [leads, setLeads] = useState<Lead[]>(initialLeads || []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
