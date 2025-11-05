@@ -55,3 +55,8 @@ export async function sendSMS(to: string, body: string) {
 export function isTwilioConfigured() {
   return !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER)
 }
+
+export const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_AUTH_TOKEN!
+);
