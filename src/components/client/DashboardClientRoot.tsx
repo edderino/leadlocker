@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import ClientDashboard from './ClientDashboardV5';
+import WorkspaceLayout from './workspace/WorkspaceLayout';
 
 interface Lead {
   id: string;
@@ -85,5 +85,14 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
     );
   }
 
-  return <ClientDashboard leads={leads} orgId={orgId} />;
+  return (
+    <div className="relative">
+      <div className="sr-only">Client Dashboard</div>
+      <WorkspaceLayout
+        orgId={orgId}
+        leads={leads}
+        onRefresh={() => window.location.reload()}
+      />
+    </div>
+  );
 }
