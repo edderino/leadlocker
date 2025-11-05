@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     const { data: leads, error } = await supabaseAdmin
       .from('leads')
       .select('id, name, phone, source, description, status, created_at')
-      .eq('client_id', orgId)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .limit(100);
 
