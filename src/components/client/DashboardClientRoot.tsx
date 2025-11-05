@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import ClientDashboard from './ClientDashboardV3';
+import ClientDashboard from './ClientDashboardV5';
 
 interface Lead {
   id: string;
