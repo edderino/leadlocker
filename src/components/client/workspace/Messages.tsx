@@ -1,13 +1,18 @@
 'use client';
 
-export default function Messages({ orgId }: { orgId: string }) {
+import { MessageSquare } from 'lucide-react';
+
+export default function Messages() {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-gray-300">
-      <div className="text-[11px] uppercase tracking-widest text-gray-400 mb-2">Messages</div>
-      <p>
-        Threaded messaging UI will live here (Phase 3). For now, reply per-lead from the Leads section.
-        <span className="text-gray-500 ml-2">org: {orgId}</span>
+    <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 p-12 text-center">
+      <div className="inline-flex p-4 rounded-full bg-white/10 mb-4">
+        <MessageSquare className="h-12 w-12 text-gray-400" />
+      </div>
+      <h3 className="text-white text-xl font-semibold mb-2">Messages Coming Soon</h3>
+      <p className="text-gray-400 max-w-md mx-auto">
+        Threaded message view will be available in Phase 3. For now, use the Reply button on individual leads.
       </p>
     </div>
   );
 }
+

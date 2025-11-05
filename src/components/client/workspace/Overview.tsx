@@ -1,94 +1,122 @@
 'use client';
 
-import { useMemo } from 'react';
-import type { Lead } from './WorkspaceLayout';
-import Sparkline from './Sparkline';
+import { TrendingUp, Users, CheckCircle2, Clock } from 'lucide-react';
 
-export default function Overview({ leads, totals }: { leads: Lead[]; totals: { all: number; needs: number; approved: number; completed: number } }) {
-  // build a tiny timeline for sparkline (last 14 items just for vibe)
-  const series = useMemo(() => {
-    const arr = leads
-      .slice(0, 14)
-      .map((l) => (l.status === 'NEW' ? 2 : l.status === 'APPROVED' ? 4 : 6))
-      .reverse();
-    return arr.length ? arr : [0, 1, 0.5, 1.5, 0.8, 1.2, 0.7, 1.3];
-  }, [leads]);
+type Lead = {
+  id: string;
+  status: 'NEW' | 'APPROVED' | 'COMPLETED';
+  created_at: string;
+};
+
+interface OverviewProps {
+  leads: Lead[];
+}
+
+export default function Overview({ leads }: OverviewProps) {
+  const stats = {
+    total: leads.length,
+    new: leads.filter(l => l.status === 'NEW').length,
+    approved: leads.filter(l => l.status === 'APPROVED').length,
+    completed: leads.filter(l => l.status === 'COMPLETED').length,
+  };
+
+  const kpis = [
+    {
+      label: 'Total Leads',
+      value: stats.total,
+      icon: Users,
+      gradient: 'from-[#8b5cf6] to-[#6d28d9]',
+      bgGradient: 'from-[#8b5cf6]/10 to-[#6d28d9]/5',
+    },
+    {
+      label: 'Needs Attention',
+      value: stats.new,
+      icon: TrendingUp,
+      gradient: 'from-[#f97316] to-[#ea580c]',
+      bgGradient: 'from-[#f97316]/10 to-[#ea580c]/5',
+    },
+    {
+      label: 'Approved',
+      value: stats.approved,
+      icon: Clock,
+      gradient: 'from-[#fbbf24] to-[#f59e0b]',
+      bgGradient: 'from-[#fbbf24]/10 to-[#f59e0b]/5',
+    },
+    {
+      label: 'Completed',
+      value: stats.completed,
+      icon: CheckCircle2,
+      gradient: 'from-[#10b981] to-[#059669]',
+      bgGradient: 'from-[#10b981]/10 to-[#059669]/5',
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* KPI row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi title="Total Leads" value={totals.all} accent="from-violet-500/60 to-violet-400/20">
-          <Sparkline values={series} />
-        </Kpi>
-        <Kpi title="Needs Attention" value={totals.needs} accent="from-rose-500/60 to-rose-400/20">
-          <Sparkline values={series.map(v => Math.max(0, v - 1))} />
-        </Kpi>
-        <Kpi title="Approved" value={totals.approved} accent="from-amber-500/60 to-amber-400/20">
-          <Sparkline values={series.map(v => v * .8)} />
-        </Kpi>
-        <Kpi title="Completed" value={totals.completed} accent="from-emerald-500/60 to-emerald-400/20">
-          <Sparkline values={series.map(v => Math.min(8, v + 1))} />
-        </Kpi>
+      {/* KPI Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {kpis.map((kpi, i) => {
+          const Icon = kpi.icon;
+          return (
+            <div
+              key={i}
+              className={`relative rounded-xl bg-gradient-to-br ${kpi.bgGradient} backdrop-blur-md border border-white/10 p-6 overflow-hidden group hover:scale-[1.02] transition-all duration-200`}
+            >
+              {/* Gradient bar */}
+              <div className={`absolute top-0 left-0 h-1 w-full bg-gradient-to-r ${kpi.gradient}`} />
+              
+              {/* Icon */}
+              <div className={`inline-flex p-3 rounded-lg bg-gradient-to-br ${kpi.gradient} mb-4`}>
+                <Icon className="h-6 w-6 text-white" />
+              </div>
+              
+              {/* Content */}
+              <div className="text-gray-400 text-sm uppercase tracking-wider mb-2">{kpi.label}</div>
+              <div className="text-4xl font-bold text-white mb-1">{kpi.value}</div>
+              
+              {/* Mini sparkline placeholder */}
+              <div className="mt-4 h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full bg-gradient-to-r ${kpi.gradient} rounded-full`}
+                  style={{ width: `${Math.min((kpi.value / (stats.total || 1)) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Two-up cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card title="Recent Activity">
-          <ul className="space-y-2 text-sm">
-            {leads.slice(0, 6).map(l => (
-              <li key={l.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                <div className="truncate">
-                  <span className="font-medium">{l.name}</span>
-                  <span className="mx-2 text-gray-500">•</span>
-                  <span className="text-gray-400">{l.source}</span>
+      {/* Recent Activity */}
+      <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 p-6">
+        <h3 className="text-white text-lg font-semibold mb-4">Recent Activity</h3>
+        {leads.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <p>No leads yet. Start adding leads to see activity here.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {leads.slice(0, 5).map((lead) => (
+              <div
+                key={lead.id}
+                className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${
+                    lead.status === 'NEW' ? 'bg-orange-500' :
+                    lead.status === 'APPROVED' ? 'bg-yellow-500' :
+                    'bg-green-500'
+                  }`} />
+                  <span className="text-white text-sm">Lead #{lead.id.slice(0, 8)}</span>
                 </div>
-                <StatusPill status={l.status} />
-              </li>
+                <span className="text-gray-400 text-xs">
+                  {new Date(lead.created_at).toLocaleDateString()}
+                </span>
+              </div>
             ))}
-            {leads.length === 0 && <div className="text-gray-500">No leads yet.</div>}
-          </ul>
-        </Card>
-
-        <Card title="Quick Tips">
-          <ul className="text-sm text-gray-300 space-y-2">
-            <li>• Reply within 5–10 minutes to double conversion.</li>
-            <li>• Mark jobs "Completed" to keep the board tidy.</li>
-            <li>• Use the phone tap to call straight from the list.</li>
-          </ul>
-        </Card>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function Kpi({ title, value, children, accent }: { title: string; value: number | string; children?: React.ReactNode; accent: string }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
-      <div className="p-4">
-        <div className="text-[11px] uppercase tracking-widest text-gray-400">{title}</div>
-        <div className="mt-2 text-3xl font-bold">{value}</div>
-      </div>
-      <div className={`h-2 bg-gradient-to-r ${accent}`} />
-      <div className="px-3 py-2">{children}</div>
-    </div>
-  );
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-      <div className="text-[11px] uppercase tracking-widest text-gray-400">{title}</div>
-      <div className="mt-3">{children}</div>
-    </div>
-  );
-}
-
-function StatusPill({ status }: { status: Lead['status'] }) {
-  const map = {
-    NEW: 'bg-rose-500/15 text-rose-300 border-rose-400/20',
-    APPROVED: 'bg-amber-500/15 text-amber-300 border-amber-400/20',
-    COMPLETED: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20',
-  } as const;
-  return <span className={`text-xs px-2 py-1 rounded-full border ${map[status]}`}>{status === 'NEW' ? 'Needs Attention' : status}</span>;
-}
