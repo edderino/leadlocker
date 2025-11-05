@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       .from('leads')
       .insert({
         user_id,
+        org_id: 'demo-org', // Default org for all leads
         source: payload.source,
         name: payload.name,
         phone: payload.phone,
