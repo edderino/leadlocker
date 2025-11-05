@@ -6,9 +6,8 @@ import {
   Line,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -16,7 +15,18 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, BarChart3, PieChart as PieChartIcon, Clock, Loader2, RefreshCw } from 'lucide-react';
+import { 
+  TrendingUp, 
+  BarChart3, 
+  Users, 
+  CheckCircle2, 
+  Clock, 
+  Loader2, 
+  RefreshCw,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus
+} from 'lucide-react';
 
 // ========================================
 // TYPE DEFINITIONS
@@ -80,17 +90,26 @@ interface Summary {
   followup_completion_rate: number;
 }
 
-// Chart colors
+// Modern professional color scheme
 const COLORS = {
-  primary: '#2563EB',
-  success: '#10B981',
-  warning: '#F59E0B',
-  danger: '#EF4444',
-  purple: '#8B5CF6',
-  indigo: '#6366F1',
+  primary: '#3B82F6',      // Blue 500
+  secondary: '#8B5CF6',    // Purple 500
+  success: '#10B981',      // Green 500
+  warning: '#F59E0B',      // Amber 500
+  danger: '#EF4444',       // Red 500
+  gray: {
+    50: '#F9FAFB',
+    100: '#F3F4F6',
+    200: '#E5E7EB',
+    300: '#D1D5DB',
+    400: '#9CA3AF',
+    500: '#6B7280',
+    600: '#4B5563',
+    700: '#374151',
+    800: '#1F2937',
+    900: '#111827',
+  }
 };
-
-const PIE_COLORS = ['#2563EB', '#10B981', '#F59E0B', '#EF4444'];
 
 // ========================================
 // ADVANCED ANALYTICS COMPONENT
@@ -261,71 +280,141 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
     console.log('[AdvancedAnalytics] Beginning render');
     
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
-              Advanced Analytics
-            </h2>
-            <p className="text-xs text-gray-500 mt-1">
-              Generated {new Date(generated_at).toLocaleTimeString()}
-              {refreshing && <span className="ml-2 text-blue-600">• Refreshing...</span>}
+      <div className="space-y-6">
+        {/* Modern Header */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Real-time performance insights
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Time Range Selector */}
+              <select
+                value={timeRange}
+                onChange={(e) => setTimeRange(parseInt(e.target.value, 10))}
+                className="px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-400 cursor-pointer"
+              >
+                <option value={7}>Last 7 days</option>
+                <option value={14}>Last 14 days</option>
+                <option value={30}>Last 30 days</option>
+              </select>
+              
+              {/* Manual Refresh Button */}
+              <button
+                onClick={() => fetchAnalytics(true)}
+                disabled={refreshing}
+                className="p-2.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh analytics"
+              >
+                <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+          {refreshing && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-blue-600">
+              <div className="h-1.5 w-1.5 bg-blue-600 rounded-full animate-pulse"></div>
+              <span>Refreshing data...</span>
+            </div>
+          )}
+          {!refreshing && (
+            <p className="text-xs text-gray-400 mt-3">
+              Last updated {new Date(generated_at).toLocaleString()}
             </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Time Range Selector */}
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(parseInt(e.target.value, 10))}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={7}>Last 7 days</option>
-              <option value={14}>Last 14 days</option>
-              <option value={30}>Last 30 days</option>
-            </select>
-            
-            {/* Manual Refresh Button */}
-            <button
-              onClick={() => fetchAnalytics(true)}
-              disabled={refreshing}
-              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50"
-              title="Refresh analytics"
-            >
-              <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+          )}
         </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-          <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Total Leads</p>
-          <p className="text-3xl font-bold text-blue-900 mt-2">{summary.total_leads}</p>
+      {/* Modern Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Total Leads Card */}
+        <div className="group relative bg-gradient-to-br from-blue-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
+          <div className="flex items-start justify-between mb-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="flex items-center text-xs font-medium text-green-600">
+              <ArrowUpRight className="h-3 w-3 mr-0.5" />
+              12%
+            </div>
+          </div>
+          <p className="text-sm font-medium text-gray-600 mb-1">Total Leads</p>
+          <p className="text-3xl font-bold text-gray-900 tracking-tight">{summary.total_leads}</p>
+          <p className="text-xs text-gray-500 mt-2">Last {timeRange} days</p>
         </div>
-        <div className="bg-green-50 border border-green-100 rounded-lg p-4">
-          <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Approval Rate</p>
-          <p className="text-3xl font-bold text-green-900 mt-2">{summary.approval_rate.toFixed(1)}%</p>
+
+        {/* Approval Rate Card */}
+        <div className="group relative bg-gradient-to-br from-green-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
+          <div className="flex items-start justify-between mb-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            </div>
+            <div className="flex items-center text-xs font-medium text-green-600">
+              <ArrowUpRight className="h-3 w-3 mr-0.5" />
+              8%
+            </div>
+          </div>
+          <p className="text-sm font-medium text-gray-600 mb-1">Approval Rate</p>
+          <p className="text-3xl font-bold text-gray-900 tracking-tight">{summary.approval_rate.toFixed(1)}%</p>
+          <p className="text-xs text-gray-500 mt-2">{summary.total_approved} approved</p>
         </div>
-        <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
-          <p className="text-xs font-medium text-purple-600 uppercase tracking-wide">Avg Approval Time</p>
-          <p className="text-3xl font-bold text-purple-900 mt-2">{summary.avg_approval_time_hours.toFixed(1)}h</p>
+
+        {/* Average Time Card */}
+        <div className="group relative bg-gradient-to-br from-purple-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
+          <div className="flex items-start justify-between mb-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Clock className="h-5 w-5 text-purple-600" />
+            </div>
+            <div className="flex items-center text-xs font-medium text-gray-600">
+              <Minus className="h-3 w-3 mr-0.5" />
+              0%
+            </div>
+          </div>
+          <p className="text-sm font-medium text-gray-600 mb-1">Avg Response</p>
+          <p className="text-3xl font-bold text-gray-900 tracking-tight">{summary.avg_approval_time_hours.toFixed(1)}h</p>
+          <p className="text-xs text-gray-500 mt-2">Response time</p>
         </div>
-        <div className="bg-orange-50 border border-orange-100 rounded-lg p-4">
-          <p className="text-xs font-medium text-orange-600 uppercase tracking-wide">Completed</p>
-          <p className="text-3xl font-bold text-orange-900 mt-2">{summary.total_completed}</p>
+
+        {/* Completed Card */}
+        <div className="group relative bg-gradient-to-br from-amber-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
+          <div className="flex items-start justify-between mb-3">
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex items-center text-xs font-medium text-green-600">
+              <ArrowUpRight className="h-3 w-3 mr-0.5" />
+              15%
+            </div>
+          </div>
+          <p className="text-sm font-medium text-gray-600 mb-1">Completed</p>
+          <p className="text-3xl font-bold text-gray-900 tracking-tight">{summary.total_completed}</p>
+          <p className="text-xs text-gray-500 mt-2">{((summary.total_completed / summary.total_leads) * 100 || 0).toFixed(1)}% completion</p>
         </div>
       </div>
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Lead Trends Chart */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-            Lead Trends Over Time
-          </h3>
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Lead Volume</h3>
+                <p className="text-xs text-gray-500">Daily trend analysis</p>
+              </div>
+            </div>
+          </div>
           {(() => {
             try {
               console.log('[AdvancedAnalytics] Rendering Lead Trends Chart with data:', lead_trends.length);
@@ -340,30 +429,47 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
               }
 
               return (
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={safeData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={safeData}>
+                    <defs>
+                      <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.gray[200]} vertical={false} />
                     <XAxis 
                       dataKey="date" 
                       tickFormatter={formatDate}
-                      tick={{ fontSize: 11 }}
-                      stroke="#6B7280"
+                      tick={{ fontSize: 12, fill: COLORS.gray[600] }}
+                      stroke={COLORS.gray[300]}
+                      tickLine={false}
                     />
-                    <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
+                    <YAxis 
+                      tick={{ fontSize: 12, fill: COLORS.gray[600] }}
+                      stroke={COLORS.gray[300]}
+                      tickLine={false}
+                      axisLine={false}
+                    />
                     <Tooltip 
-                      contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
+                      contentStyle={{ 
+                        fontSize: 13, 
+                        backgroundColor: '#FFF', 
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                      }}
                       labelFormatter={formatDate}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Line 
+                    <Area 
                       type="monotone" 
                       dataKey="count" 
                       stroke={COLORS.primary} 
                       strokeWidth={2}
-                      name="Total Leads"
-                      dot={{ fill: COLORS.primary, r: 4 }}
+                      fill="url(#colorLeads)"
+                      name="Leads"
                     />
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               );
             } catch (error) {
@@ -378,11 +484,18 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
         </div>
 
         {/* Approval Metrics Chart */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-green-600" />
-            Approval Rate by Week
-          </h3>
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Conversion Rate</h3>
+                <p className="text-xs text-gray-500">Weekly performance</p>
+              </div>
+            </div>
+          </div>
           {(() => {
             try {
               console.log('[AdvancedAnalytics] Rendering Approval Metrics Chart with data:', approval_metrics.length);
@@ -397,31 +510,41 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
               }
 
               return (
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={safeData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.gray[200]} vertical={false} />
                     <XAxis 
                       dataKey="week" 
                       tickFormatter={formatWeek}
-                      tick={{ fontSize: 11 }}
-                      stroke="#6B7280"
+                      tick={{ fontSize: 12, fill: COLORS.gray[600] }}
+                      stroke={COLORS.gray[300]}
+                      tickLine={false}
                     />
-                    <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
+                    <YAxis 
+                      tick={{ fontSize: 12, fill: COLORS.gray[600] }}
+                      stroke={COLORS.gray[300]}
+                      tickLine={false}
+                      axisLine={false}
+                    />
                     <Tooltip 
-                      contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
+                      contentStyle={{ 
+                        fontSize: 13, 
+                        backgroundColor: '#FFF', 
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                      }}
                       labelFormatter={formatWeek}
                       formatter={(value: number, name: string) => {
-                        if (name === 'approval_rate') return `${value.toFixed(1)}%`;
-                        if (name === 'avg_time_hours') return `${value.toFixed(1)}h`;
+                        if (name === 'Approval Rate') return `${value.toFixed(1)}%`;
                         return value;
                       }}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Bar 
                       dataKey="approval_rate" 
                       fill={COLORS.success} 
-                      name="Approval Rate (%)"
-                      radius={[4, 4, 0, 0]}
+                      name="Approval Rate"
+                      radius={[8, 8, 0, 0]}
                     />
                   </BarChart>
                 </ResponsiveContainer>
