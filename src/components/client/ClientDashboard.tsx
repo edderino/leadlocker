@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { X } from 'lucide-react';
-import { relativeTime } from '@/libs/time';
+import Card from '@/components/ui/Card';
+import StatusPill from '@/components/ui/StatusPill';
+import { RefreshCw, Send, Phone, MessageSquare } from 'lucide-react';
 
-interface Lead {
+type Lead = {
   id: string;
   name: string;
   phone: string;
@@ -12,149 +12,130 @@ interface Lead {
   description: string | null;
   status: 'NEW' | 'APPROVED' | 'COMPLETED';
   created_at: string;
-}
+};
 
-interface Props {
-  leads: Lead[];
-  orgId: string;
-}
-
-export default function ClientDashboard({ leads, orgId }: Props) {
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [replyMessage, setReplyMessage] = useState('');
-  const [sending, setSending] = useState(false);
-
-  const handleSend = async () => {
-    if (!replyMessage.trim() || !selectedLead) return;
-    
-    setSending(true);
-    try {
-      const res = await fetch('/api/client/messages/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-client-token': process.env.NEXT_PUBLIC_CLIENT_PORTAL_SECRET || '',
-        },
-        body: JSON.stringify({ orgId, body: replyMessage }),
-      });
-      
-      const data = await res.json();
-      if (data.ok) {
-        setReplyMessage('');
-        setSelectedLead(null);
-        alert('Message sent ✅');
-      } else {
-        alert('Failed: ' + data.error);
-      }
-    } catch {
-      alert('Error sending message');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const stats = {
+export default function ClientDashboard({ leads, orgId }: { leads: Lead[]; orgId: string }) {
+  const totals = {
+    all: leads.length,
     new: leads.filter(l => l.status === 'NEW').length,
     approved: leads.filter(l => l.status === 'APPROVED').length,
     done: leads.filter(l => l.status === 'COMPLETED').length,
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="text-center p-4 bg-white rounded-lg border">
-          <div className="text-3xl font-bold">{stats.new}</div>
-          <div className="text-sm text-gray-500 mt-1">New</div>
-        </div>
-        <div className="text-center p-4 bg-white rounded-lg border">
-          <div className="text-3xl font-bold">{stats.approved}</div>
-          <div className="text-sm text-gray-500 mt-1">Active</div>
-        </div>
-        <div className="text-center p-4 bg-white rounded-lg border">
-          <div className="text-3xl font-bold">{stats.done}</div>
-          <div className="text-sm text-gray-500 mt-1">Done</div>
-        </div>
-      </div>
-
-      {/* Leads */}
-      {leads.length === 0 ? (
-        <div className="text-center py-20 text-gray-400">
-          <p>No leads yet</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {leads.map((lead) => (
-            <div key={lead.id} className="bg-white border rounded-lg p-4 hover:shadow-sm transition">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-lg">{lead.name}</h3>
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      lead.status === 'NEW' ? 'bg-blue-100 text-blue-700' :
-                      lead.status === 'APPROVED' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-green-100 text-green-700'
-                    }`}>
-                      {lead.status === 'NEW' ? 'New' : lead.status === 'APPROVED' ? 'Active' : 'Done'}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <div>{lead.phone}</div>
-                    {lead.description && <div className="text-gray-500">{lead.description}</div>}
-                    <div className="text-xs text-gray-400">{lead.source} · {relativeTime(lead.created_at)}</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedLead(lead)}
-                  className="ml-4 px-4 py-2 bg-black text-white text-sm rounded hover:bg-gray-800 transition"
-                >
-                  Reply
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Reply Modal */}
-      {selectedLead && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 relative">
+    <div className="min-h-screen bg-ink-900 text-white">
+      {/* Top bar */}
+      <div className="sticky top-0 z-10 backdrop-blur bg-ink-900/75 border-b border-edge/60">
+        <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
+          <div className="font-semibold tracking-tight text-white/90">LeadLocker</div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-soft/80 bg-edge/70 px-2 py-1 rounded">org: {orgId}</span>
             <button
-              onClick={() => { setSelectedLead(null); setReplyMessage(''); }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              onClick={() => location.reload()}
+              className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 bg-edge/80 hover:bg-edge transition border border-white/5"
+              aria-label="Refresh"
             >
-              <X className="h-5 w-5" />
+              <RefreshCw className="h-4 w-4" />
+              <span className="text-sm">Refresh</span>
             </button>
-            
-            <h3 className="text-lg font-semibold mb-4">Reply to {selectedLead.name}</h3>
-            
-            <textarea
-              value={replyMessage}
-              onChange={(e) => setReplyMessage(e.target.value)}
-              placeholder="Type your message..."
-              className="w-full h-32 p-3 border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-black mb-4"
-              autoFocus
-            />
-            
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => { setSelectedLead(null); setReplyMessage(''); }}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSend}
-                disabled={sending || !replyMessage.trim()}
-                className="px-4 py-2 bg-black text-white text-sm rounded hover:bg-gray-800 transition disabled:opacity-50"
-              >
-                {sending ? 'Sending...' : 'Send'}
-              </button>
-            </div>
           </div>
         </div>
-      )}
+      </div>
+      {/* Content */}
+      <div className="mx-auto max-w-6xl px-4 py-6 space-y-6">
+        {/* KPIs */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="p-4">
+            <div className="text-soft text-xs uppercase">Total Leads</div>
+            <div className="mt-2 text-3xl font-bold tracking-tight">{totals.all}</div>
+            <div className="mt-2 h-1 rounded bg-edge/70">
+              <div className="h-1 rounded bg-acc-violet" style={{ width: `${(totals.all ? 100 : 0)}%` }} />
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-soft text-xs uppercase">Needs Attention</div>
+            <div className="mt-2 text-3xl font-bold tracking-tight text-acc-red">{totals.new}</div>
+            <div className="mt-2 h-1 rounded bg-edge/70">
+              <div className="h-1 rounded bg-acc-red" style={{ width: `${totals.all ? (totals.new / totals.all) * 100 : 0}%` }} />
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-soft text-xs uppercase">Completed</div>
+            <div className="mt-2 text-3xl font-bold tracking-tight text-acc-green">{totals.done}</div>
+            <div className="mt-2 h-1 rounded bg-edge/70">
+              <div className="h-1 rounded bg-acc-green" style={{ width: `${totals.all ? (totals.done / totals.all) * 100 : 0}%` }} />
+            </div>
+          </Card>
+        </div>
+        {/* Leads table */}
+        <Card className="overflow-hidden">
+          <div className="border-b border-edge/60 px-4 py-3 flex items-center justify-between">
+            <div className="text-sm text-soft">Leads</div>
+            <div className="text-xs text-soft/70">{leads.length} items</div>
+          </div>
+          {leads.length === 0 ? (
+            <div className="px-6 py-14 text-center">
+              <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-edge/70 flex items-center justify-center">
+                <MessageSquare className="h-6 w-6 text-soft" />
+              </div>
+              <div className="text-white/90 font-medium">No leads yet</div>
+              <div className="text-soft/80 text-sm mt-1">New enquiries will land here the second they come in.</div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-ink-800/70 border-b border-edge/60">
+                  <tr className="text-soft/80">
+                    <th className="px-4 py-3 text-left font-medium">Lead</th>
+                    <th className="px-4 py-3 text-left font-medium">Message</th>
+                    <th className="px-4 py-3 text-left font-medium">Source</th>
+                    <th className="px-4 py-3 text-left font-medium">Status</th>
+                    <th className="px-4 py-3 text-left font-medium">Phone</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leads.map((l, i) => (
+                    <tr
+                      key={l.id}
+                      className={`border-b border-edge/50 ${i % 2 ? 'bg-ink-800/40' : 'bg-ink-800/20'}`}
+                    >
+                      <td className="px-4 py-3 font-medium text-white/90">{l.name}</td>
+                      <td className="px-4 py-3 text-white/70 max-w-[420px] truncate">{l.description ?? '-'}</td>
+                      <td className="px-4 py-3 text-soft">{l.source}</td>
+                      <td className="px-4 py-3"><StatusPill v={l.status} /></td>
+                      <td className="px-4 py-3">
+                        <a href={`tel:${l.phone}`} className="inline-flex items-center gap-1 text-acc-blue hover:opacity-80">
+                          <Phone className="h-4 w-4" /> {l.phone}
+                        </a>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 bg-acc-violet/15 text-acc-violet border border-white/5 hover:bg-acc-violet/20"
+                          onClick={() => {
+                            const msg = prompt('Reply message');
+                            if (!msg) return;
+                            fetch('/api/client/messages/send', {
+                              method: 'POST',
+                              headers: { 
+                                'Content-Type': 'application/json',
+                                'x-client-token': process.env.NEXT_PUBLIC_CLIENT_PORTAL_SECRET || '',
+                              },
+                              body: JSON.stringify({ orgId, body: msg }),
+                            });
+                          }}
+                        >
+                          <Send className="h-4 w-4" /> Reply
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

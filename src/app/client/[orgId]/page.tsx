@@ -38,5 +38,9 @@ export default function ClientPage({ params }: any) {
 
   if (!ready || !orgId) return <div className="p-4">Authorizing session…</div>
 
-  return <DashboardClientWrapper orgId={orgId} />
+  return (
+    <div className="bg-ink-900 min-h-screen">
+      <DashboardClientWrapper orgId={orgId} />
+    </div>
+  )
 }

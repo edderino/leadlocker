@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import NotificationManager from './NotificationManager';
 import AISuggestions from './AISuggestions';
 import AdvancedAnalytics from './AdvancedAnalytics';
-import ClientDashboard from './ClientDashboardV2';
+import ClientDashboard from './ClientDashboard';
 
 interface Lead {
   id: string;
