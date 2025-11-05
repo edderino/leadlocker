@@ -1,8 +1,8 @@
 'use client';
 
+import React, { useState } from 'react';
 import { relativeTime } from '@/libs/time';
 import { Phone, MapPin, Send } from 'lucide-react';
-import { useState } from 'react';
 
 interface Lead {
   id: string;
@@ -121,9 +121,8 @@ export default function ClientLeadList({ leads }: ClientLeadListProps) {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {leads.map((lead, index) => (
-              <>
+              <React.Fragment key={lead.id}>
                 <tr 
-                  key={lead.id} 
                   className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
                 >
                   <td className="px-6 py-4">
@@ -197,7 +196,7 @@ export default function ClientLeadList({ leads }: ClientLeadListProps) {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>
