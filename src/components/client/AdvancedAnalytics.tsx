@@ -1,200 +1,124 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Users, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp, ArrowUpRight, Activity } from 'lucide-react';
 
 interface AdvancedAnalyticsProps {
   orgId: string;
 }
 
-interface AnalyticsData {
-  success: boolean;
-  org_id: string;
-  time_range: number;
-  generated_at: string;
-  data: {
-    summary: {
-      total_leads: number;
-      total_approved: number;
-      total_completed: number;
-      approval_rate: number;
-      avg_approval_time_hours: number;
-      [key: string]: any;
-    };
-    lead_trends?: Array<{ date: string; count: number; [key: string]: any }>;
-  };
-}
-
 export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState(7);
+  const [data, setData] = useState({
+    total_leads: 0,
+    total_approved: 0,
+    approval_rate: 0,
+    avg_time: 0,
+    trend: [] as Array<{ date: string; count: number }>
+  });
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // For now, use empty data structure
-        setData({
-          success: true,
-          org_id: orgId,
-          time_range: timeRange,
-          generated_at: new Date().toISOString(),
-          data: {
-            summary: {
-              total_leads: 0,
-              total_approved: 0,
-              total_completed: 0,
-              approval_rate: 0,
-              avg_approval_time_hours: 0
-            },
-            lead_trends: []
-          }
-        });
-      } catch (err) {
-        console.error('Analytics error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [orgId, timeRange]);
-
-  if (loading || !data) {
-    return (
-      <div className="flex items-center justify-center p-12 bg-white rounded-2xl border border-gray-100">
-        <RefreshCw className="h-5 w-5 animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
-  const { summary, lead_trends = [] } = data.data;
+    // Initialize with empty data for new clients
+    setData({
+      total_leads: 0,
+      total_approved: 0,
+      approval_rate: 0,
+      avg_time: 0,
+      trend: []
+    });
+  }, [orgId]);
 
   return (
-    <div className="space-y-6">
-      {/* Minimal Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">Performance</h2>
-          <p className="text-sm text-gray-500 mt-1">Last {timeRange} days</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-8">
+      {/* Full Width Hero Stats */}
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <div className="flex items-baseline gap-3 mb-2">
+            <h1 className="text-5xl font-bold text-slate-900">{data.total_leads}</h1>
+            <span className="text-lg text-slate-500">total leads</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-emerald-600">
+            <ArrowUpRight className="h-4 w-4" />
+            <span>Getting started</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(Number(e.target.value))}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors"
-          >
-            <option value={7}>7 days</option>
-            <option value={14}>14 days</option>
-            <option value={30}>30 days</option>
-          </select>
+
+        {/* Horizontal Metric Strip */}
+        <div className="flex gap-12 mb-12 pb-8 border-b border-slate-200">
+          <div className="flex flex-col">
+            <span className="text-xs uppercase tracking-wider text-slate-500 mb-2">Approved</span>
+            <span className="text-3xl font-semibold text-slate-900">{data.total_approved}</span>
+          </div>
+          
+          <div className="flex flex-col">
+            <span className="text-xs uppercase tracking-wider text-slate-500 mb-2">Conversion</span>
+            <span className="text-3xl font-semibold text-slate-900">{data.approval_rate}%</span>
+          </div>
+          
+          <div className="flex flex-col">
+            <span className="text-xs uppercase tracking-wider text-slate-500 mb-2">Avg Response</span>
+            <span className="text-3xl font-semibold text-slate-900">{data.avg_time.toFixed(1)}h</span>
+          </div>
         </div>
+
+        {/* Large Full-Width Chart Area */}
+        {data.trend.length > 0 ? (
+          <div className="bg-white/50 backdrop-blur rounded-3xl p-8 border border-slate-200/50 shadow-xl shadow-slate-200/20">
+            <div className="flex items-center gap-2 mb-8">
+              <Activity className="h-5 w-5 text-slate-400" />
+              <h2 className="text-sm font-medium text-slate-600 uppercase tracking-wide">Activity Timeline</h2>
+            </div>
+            <ResponsiveContainer width="100%" height={400}>
+              <AreaChart data={data.trend}>
+                <defs>
+                  <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0EA5E9" stopOpacity={0.3}/>
+                    <stop offset="100%" stopColor="#0EA5E9" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis 
+                  dataKey="date"
+                  tick={{ fontSize: 12, fill: '#94A3B8' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12, fill: '#94A3B8' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#0F172A',
+                    border: 'none',
+                    borderRadius: '12px',
+                    color: '#FFF',
+                    fontSize: 14,
+                    padding: '12px 16px'
+                  }}
+                />
+                <Area 
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#0EA5E9"
+                  strokeWidth={3}
+                  fill="url(#areaGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="mb-6 p-6 rounded-full bg-slate-100">
+              <TrendingUp className="h-12 w-12 text-slate-400" />
+            </div>
+            <h3 className="text-xl font-medium text-slate-900 mb-2">No data yet</h3>
+            <p className="text-slate-500 max-w-sm">
+              Your analytics will appear here once you start receiving leads
+            </p>
+          </div>
+        )}
       </div>
-
-      {/* Clean Stat Cards - Single Row */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-100 p-5 hover:border-gray-200 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50">
-              <Users className="h-4 w-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Total</p>
-              <p className="text-2xl font-semibold text-gray-900">{summary.total_leads}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-100 p-5 hover:border-gray-200 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-50">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Approved</p>
-              <p className="text-2xl font-semibold text-gray-900">{summary.total_approved}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-100 p-5 hover:border-gray-200 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-50">
-              <TrendingUp className="h-4 w-4 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Rate</p>
-              <p className="text-2xl font-semibold text-gray-900">{summary.approval_rate.toFixed(0)}%</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-100 p-5 hover:border-gray-200 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-50">
-              <Clock className="h-4 w-4 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Avg Time</p>
-              <p className="text-2xl font-semibold text-gray-900">{summary.avg_approval_time_hours.toFixed(1)}h</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Single Clean Chart */}
-      {lead_trends.length > 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 p-6">
-          <h3 className="text-sm font-medium text-gray-900 mb-6">Lead Activity</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={lead_trends}>
-              <defs>
-                <linearGradient id="leadGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.1}/>
-                  <stop offset="100%" stopColor="#3B82F6" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-              <XAxis 
-                dataKey="date"
-                tick={{ fontSize: 11, fill: '#9CA3AF' }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                tick={{ fontSize: 11, fill: '#9CA3AF' }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#FFF',
-                  border: 'none',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                  fontSize: 12
-                }}
-              />
-              <Area 
-                type="monotone"
-                dataKey="count"
-                stroke="#3B82F6"
-                strokeWidth={2}
-                fill="url(#leadGradient)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-50 mb-3">
-            <TrendingUp className="h-5 w-5 text-gray-400" />
-          </div>
-          <p className="text-sm text-gray-500">No activity data yet</p>
-          <p className="text-xs text-gray-400 mt-1">Charts will appear as leads come in</p>
-        </div>
-      )}
     </div>
   );
 }
