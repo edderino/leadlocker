@@ -148,6 +148,47 @@ export default function ClientLeadList({ leads }: ClientLeadListProps) {
           </div>
         ))}
       </div>
+
+      {/* Reply box */}
+      <div className="border-t border-gray-200 p-4 flex items-center gap-3 bg-gray-50">
+        <input
+          id="reply-message"
+          type="text"
+          placeholder="Type a reply to all new leads..."
+          className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <button
+          onClick={async () => {
+            const input = document.getElementById("reply-message") as HTMLInputElement;
+            const body = input.value.trim();
+            if (!body) return alert("Type a message first");
+            const res = await fetch("/api/client/messages/send", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-client-token": process.env.NEXT_PUBLIC_CLIENT_PORTAL_SECRET || "",
+              },
+              body: JSON.stringify({
+                orgId: document.cookie
+                  .split("; ")
+                  .find((r) => r.startsWith("ll_client_org="))
+                  ?.split("=")[1],
+                body,
+              }),
+            });
+            const data = await res.json();
+            if (data.ok) {
+              input.value = "";
+              alert("Message sent ✅");
+            } else {
+              alert("Failed: " + data.error);
+            }
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition"
+        >
+          Send
+        </button>
+      </div>
     </div>
   );
 }
