@@ -1,43 +1,33 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { RefreshCw, Send, Clock, CheckCircle2, AlertTriangle, User } from 'lucide-react'
-import { relativeTime } from '@/libs/time'
+import { useState } from 'react';
+import { X } from 'lucide-react';
+import { relativeTime } from '@/libs/time';
 
 interface Lead {
-  id: string
-  name: string
-  phone: string
-  source: string
-  description: string | null
-  status: 'NEW' | 'APPROVED' | 'COMPLETED'
-  created_at: string
+  id: string;
+  name: string;
+  phone: string;
+  source: string;
+  description: string | null;
+  status: 'NEW' | 'APPROVED' | 'COMPLETED';
+  created_at: string;
 }
 
 interface Props {
-  leads: Lead[]
-  orgId: string
+  leads: Lead[];
+  orgId: string;
 }
 
 export default function ClientDashboard({ leads, orgId }: Props) {
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [replyMessage, setReplyMessage] = useState('')
-  const [sending, setSending] = useState(false)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [replyMessage, setReplyMessage] = useState('');
+  const [sending, setSending] = useState(false);
 
-  const handleRefresh = () => {
-    setIsRefreshing(true)
-    window.location.reload()
-  }
-
-  const handleSendReply = async () => {
-    if (!replyMessage.trim() || !selectedLead) {
-      alert('Please type a message first')
-      return
-    }
-
-    setSending(true)
+  const handleSend = async () => {
+    if (!replyMessage.trim() || !selectedLead) return;
     
+    setSending(true);
     try {
       const res = await fetch('/api/client/messages/send', {
         method: 'POST',
@@ -45,138 +35,119 @@ export default function ClientDashboard({ leads, orgId }: Props) {
           'Content-Type': 'application/json',
           'x-client-token': process.env.NEXT_PUBLIC_CLIENT_PORTAL_SECRET || '',
         },
-        body: JSON.stringify({
-          orgId,
-          body: replyMessage,
-        }),
-      })
+        body: JSON.stringify({ orgId, body: replyMessage }),
+      });
       
-      const data = await res.json()
-      
+      const data = await res.json();
       if (data.ok) {
-        setReplyMessage('')
-        setSelectedLead(null)
-        alert('Message sent ✅')
+        setReplyMessage('');
+        setSelectedLead(null);
+        alert('Message sent ✅');
       } else {
-        alert('Failed: ' + data.error)
+        alert('Failed: ' + data.error);
       }
-    } catch (err) {
-      alert('Error sending message')
+    } catch {
+      alert('Error sending message');
     } finally {
-      setSending(false)
+      setSending(false);
     }
-  }
+  };
 
   const stats = {
-    total: leads.length,
-    needs: leads.filter(l => l.status === 'NEW').length,
+    new: leads.filter(l => l.status === 'NEW').length,
     approved: leads.filter(l => l.status === 'APPROVED').length,
-    completed: leads.filter(l => l.status === 'COMPLETED').length,
-  }
+    done: leads.filter(l => l.status === 'COMPLETED').length,
+  };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      {/* Header */}
-      <header className="flex justify-between items-center px-6 py-4 border-b border-neutral-800">
-        <h1 className="text-lg font-semibold tracking-wide">LeadLocker</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-neutral-400">{orgId}</span>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 transition text-sm"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+    <div className="max-w-6xl mx-auto p-6">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="text-center p-4 bg-white rounded-lg border">
+          <div className="text-3xl font-bold">{stats.new}</div>
+          <div className="text-sm text-gray-500 mt-1">New</div>
         </div>
-      </header>
+        <div className="text-center p-4 bg-white rounded-lg border">
+          <div className="text-3xl font-bold">{stats.approved}</div>
+          <div className="text-sm text-gray-500 mt-1">Active</div>
+        </div>
+        <div className="text-center p-4 bg-white rounded-lg border">
+          <div className="text-3xl font-bold">{stats.done}</div>
+          <div className="text-sm text-gray-500 mt-1">Done</div>
+        </div>
+      </div>
 
-      {/* Quick Stats */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6">
-        <StatCard icon={<User className="h-4 w-4" />} label="Total Leads" value={stats.total} color="text-neutral-100" />
-        <StatCard icon={<AlertTriangle className="h-4 w-4 text-red-400" />} label="Needs Attention" value={stats.needs} color="text-red-400" />
-        <StatCard icon={<Clock className="h-4 w-4 text-yellow-400" />} label="Approved" value={stats.approved} color="text-yellow-400" />
-        <StatCard icon={<CheckCircle2 className="h-4 w-4 text-green-400" />} label="Completed" value={stats.completed} color="text-green-400" />
-      </section>
-
-      {/* Lead Table */}
-      <section className="p-6">
-        {leads.length === 0 ? (
-          <div className="text-center py-24 text-neutral-400">
-            <p className="text-lg font-medium mb-1">No leads yet</p>
-            <p className="text-sm text-neutral-500">New messages will appear here automatically.</p>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900/40 backdrop-blur">
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-900/70 border-b border-neutral-800">
-                <tr className="text-left text-neutral-400">
-                  <th className="py-3 px-4 font-medium">Lead</th>
-                  <th className="py-3 px-4 font-medium">Message</th>
-                  <th className="py-3 px-4 font-medium">Source</th>
-                  <th className="py-3 px-4 font-medium">Status</th>
-                  <th className="py-3 px-4 font-medium">Time</th>
-                  <th className="py-3 px-4 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leads.map((lead, idx) => (
-                  <tr
-                    key={lead.id}
-                    className={`border-b border-neutral-800/60 hover:bg-neutral-800/30 transition ${
-                      idx % 2 === 0 ? 'bg-neutral-900/50' : ''
-                    }`}
-                  >
-                    <td className="py-3 px-4 font-semibold text-neutral-100">{lead.name}</td>
-                    <td className="py-3 px-4 text-neutral-300 truncate max-w-[250px]">{lead.description || '-'}</td>
-                    <td className="py-3 px-4 text-neutral-400">{lead.source}</td>
-                    <td className="py-3 px-4">
-                      <StatusBadge status={lead.status} />
-                    </td>
-                    <td className="py-3 px-4 text-neutral-500">{relativeTime(lead.created_at)}</td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => setSelectedLead(lead)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition"
-                      >
-                        <Send className="h-3.5 w-3.5" /> Reply
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      {/* Leads */}
+      {leads.length === 0 ? (
+        <div className="text-center py-20 text-gray-400">
+          <p>No leads yet</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {leads.map((lead) => (
+            <div key={lead.id} className="bg-white border rounded-lg p-4 hover:shadow-sm transition">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-semibold text-lg">{lead.name}</h3>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      lead.status === 'NEW' ? 'bg-blue-100 text-blue-700' :
+                      lead.status === 'APPROVED' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>
+                      {lead.status === 'NEW' ? 'New' : lead.status === 'APPROVED' ? 'Active' : 'Done'}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div>{lead.phone}</div>
+                    {lead.description && <div className="text-gray-500">{lead.description}</div>}
+                    <div className="text-xs text-gray-400">{lead.source} · {relativeTime(lead.created_at)}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedLead(lead)}
+                  className="ml-4 px-4 py-2 bg-black text-white text-sm rounded hover:bg-gray-800 transition"
+                >
+                  Reply
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Reply Modal */}
       {selectedLead && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl w-full max-w-md p-6 shadow-lg">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => { setSelectedLead(null); setReplyMessage(''); }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            
             <h3 className="text-lg font-semibold mb-4">Reply to {selectedLead.name}</h3>
+            
             <textarea
               value={replyMessage}
               onChange={(e) => setReplyMessage(e.target.value)}
-              placeholder="Type your reply..."
-              className="w-full h-28 rounded-md bg-neutral-800 text-neutral-100 border border-neutral-700 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+              placeholder="Type your message..."
+              className="w-full h-32 p-3 border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-black mb-4"
               autoFocus
             />
-            <div className="flex justify-end gap-2 mt-4">
+            
+            <div className="flex justify-end gap-2">
               <button
-                onClick={() => {
-                  setSelectedLead(null)
-                  setReplyMessage('')
-                }}
-                className="px-4 py-1.5 rounded-md bg-neutral-800 text-neutral-300 hover:bg-neutral-700 text-sm transition"
+                onClick={() => { setSelectedLead(null); setReplyMessage(''); }}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSendReply}
-                disabled={sending}
-                className="px-4 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm transition disabled:opacity-50"
+                onClick={handleSend}
+                disabled={sending || !replyMessage.trim()}
+                className="px-4 py-2 bg-black text-white text-sm rounded hover:bg-gray-800 transition disabled:opacity-50"
               >
                 {sending ? 'Sending...' : 'Send'}
               </button>
@@ -185,47 +156,5 @@ export default function ClientDashboard({ leads, orgId }: Props) {
         </div>
       )}
     </div>
-  )
-}
-
-/* ----------------- Subcomponents ----------------- */
-
-function StatCard({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number
-  color: string
-}) {
-  return (
-    <div className="bg-neutral-900/60 rounded-xl p-4 border border-neutral-800 flex flex-col items-start justify-center gap-2">
-      <div className={`flex items-center gap-2 ${color}`}>
-        {icon}
-        <span className="text-sm font-medium text-neutral-400">{label}</span>
-      </div>
-      <p className={`text-2xl font-semibold ${color}`}>{value}</p>
-    </div>
-  )
-}
-
-function StatusBadge({ status }: { status: Lead['status'] }) {
-  const map = {
-    NEW: 'bg-red-500/20 text-red-400 border border-red-500/30',
-    APPROVED: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
-    COMPLETED: 'bg-green-500/20 text-green-400 border border-green-500/30',
-  }
-  const label = {
-    NEW: 'Needs Attention',
-    APPROVED: 'Approved',
-    COMPLETED: 'Completed',
-  }[status]
-  return (
-    <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${map[status]}`}>
-      {label}
-    </span>
-  )
+  );
 }
