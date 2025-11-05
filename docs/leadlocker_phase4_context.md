@@ -78,3 +78,4 @@ We execute one step at a time. Each step finishes with a verification before mov
 - Verification after each step: demonstrate events logged + UI behavior (where applicable).
 
 
+
