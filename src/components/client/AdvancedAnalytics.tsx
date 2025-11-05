@@ -561,11 +561,18 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
         </div>
 
         {/* Source Distribution Chart */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <PieChartIcon className="h-4 w-4 text-purple-600" />
-            Lead Source Distribution
-          </h3>
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-50 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Lead Sources</h3>
+                <p className="text-xs text-gray-500">Distribution by channel</p>
+              </div>
+            </div>
+          </div>
           {(() => {
             try {
               console.log('[AdvancedAnalytics] Rendering Source Distribution Chart with data:', source_distribution.length);
@@ -618,11 +625,18 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
         </div>
 
         {/* Approval Time Trend */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-orange-600" />
-            Avg Approval Time (Hours)
-          </h3>
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-50 rounded-lg">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Response Time</h3>
+                <p className="text-xs text-gray-500">Average handling time</p>
+              </div>
+            </div>
+          </div>
           {(() => {
             try {
               console.log('[AdvancedAnalytics] Rendering Approval Time Chart with data:', approval_metrics.length);
@@ -637,29 +651,41 @@ export default function AdvancedAnalytics({ orgId }: AdvancedAnalyticsProps) {
               }
 
               return (
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={safeData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.gray[200]} vertical={false} />
                     <XAxis 
                       dataKey="week" 
                       tickFormatter={formatWeek}
-                      tick={{ fontSize: 11 }}
-                      stroke="#6B7280"
+                      tick={{ fontSize: 12, fill: COLORS.gray[600] }}
+                      stroke={COLORS.gray[300]}
+                      tickLine={false}
                     />
-                    <YAxis tick={{ fontSize: 11 }} stroke="#6B7280" />
+                    <YAxis 
+                      tick={{ fontSize: 12, fill: COLORS.gray[600] }}
+                      stroke={COLORS.gray[300]}
+                      tickLine={false}
+                      axisLine={false}
+                    />
                     <Tooltip 
-                      contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
+                      contentStyle={{ 
+                        fontSize: 13, 
+                        backgroundColor: '#FFF', 
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                      }}
                       labelFormatter={formatWeek}
                       formatter={(value: number) => `${value.toFixed(1)}h`}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Line 
                       type="monotone" 
                       dataKey="avg_time_hours" 
                       stroke={COLORS.warning} 
-                      strokeWidth={2}
-                      name="Avg Time (hours)"
-                      dot={{ fill: COLORS.warning, r: 4 }}
+                      strokeWidth={3}
+                      name="Response Time"
+                      dot={{ fill: COLORS.warning, r: 5, strokeWidth: 2, stroke: '#FFF' }}
+                      activeDot={{ r: 7 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
