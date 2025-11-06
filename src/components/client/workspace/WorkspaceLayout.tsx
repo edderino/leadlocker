@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Overview from './Overview';
@@ -28,6 +28,13 @@ export default function WorkspaceLayout({ leads, orgId }: WorkspaceLayoutProps) 
   const [currentSection, setCurrentSection] = useState('overview');
   const [refreshing, setRefreshing] = useState(false);
 
+  const totals = useMemo(() => ({
+    all: leads.length,
+    needs: leads.filter(l => l.status === 'NEW').length,
+    approved: leads.filter(l => l.status === 'APPROVED').length,
+    completed: leads.filter(l => l.status === 'COMPLETED').length,
+  }), [leads]);
+
   const handleRefresh = () => {
     setRefreshing(true);
     window.location.reload();
@@ -44,7 +51,7 @@ export default function WorkspaceLayout({ leads, orgId }: WorkspaceLayoutProps) 
   const renderContent = () => {
     switch (currentSection) {
       case 'overview':
-        return <Overview leads={leads} />;
+        return <Overview leads={leads} totals={totals} />;
       case 'leads':
         return <Leads leads={leads} orgId={orgId} />;
       case 'messages':
@@ -54,7 +61,7 @@ export default function WorkspaceLayout({ leads, orgId }: WorkspaceLayoutProps) 
       case 'settings':
         return <Settings />;
       default:
-        return <Overview leads={leads} />;
+        return <Overview leads={leads} totals={totals} />;
     }
   };
 
