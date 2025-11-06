@@ -53,7 +53,7 @@ export default function WorkspaceLayout({ leads, orgId }: WorkspaceLayoutProps) 
       case 'overview':
         return <Overview leads={leads} totals={totals} />;
       case 'leads':
-        return <Leads leads={leads} orgId={orgId} />;
+        return <Leads leads={leads} />;
       case 'messages':
         return <Messages />;
       case 'analytics':
