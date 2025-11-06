@@ -1,122 +1,94 @@
 'use client';
 
-import { TrendingUp, Users, CheckCircle2, Clock } from 'lucide-react';
+import { useMemo } from 'react';
+import type { Lead } from './WorkspaceLayout';
+import { Users, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
-type Lead = {
-  id: string;
-  status: 'NEW' | 'APPROVED' | 'COMPLETED';
-  created_at: string;
-};
-
-interface OverviewProps {
-  leads: Lead[];
-}
-
-export default function Overview({ leads }: OverviewProps) {
-  const stats = {
-    total: leads.length,
-    new: leads.filter(l => l.status === 'NEW').length,
-    approved: leads.filter(l => l.status === 'APPROVED').length,
-    completed: leads.filter(l => l.status === 'COMPLETED').length,
-  };
-
-  const kpis = [
-    {
-      label: 'Total Leads',
-      value: stats.total,
-      icon: Users,
-      gradient: 'from-[#8b5cf6] to-[#6d28d9]',
-      bgGradient: 'from-[#8b5cf6]/10 to-[#6d28d9]/5',
-    },
-    {
-      label: 'Needs Attention',
-      value: stats.new,
-      icon: TrendingUp,
-      gradient: 'from-[#f97316] to-[#ea580c]',
-      bgGradient: 'from-[#f97316]/10 to-[#ea580c]/5',
-    },
-    {
-      label: 'Approved',
-      value: stats.approved,
-      icon: Clock,
-      gradient: 'from-[#fbbf24] to-[#f59e0b]',
-      bgGradient: 'from-[#fbbf24]/10 to-[#f59e0b]/5',
-    },
-    {
-      label: 'Completed',
-      value: stats.completed,
-      icon: CheckCircle2,
-      gradient: 'from-[#10b981] to-[#059669]',
-      bgGradient: 'from-[#10b981]/10 to-[#059669]/5',
-    },
-  ];
+export default function Overview({ leads, totals }: { leads: Lead[]; totals: { all: number; needs: number; approved: number; completed: number } }) {
+  const recent = useMemo(() => leads.slice(0, 5), [leads]);
 
   return (
-    <div className="space-y-6">
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpis.map((kpi, i) => {
-          const Icon = kpi.icon;
-          return (
-            <div
-              key={i}
-              className={`relative rounded-xl bg-gradient-to-br ${kpi.bgGradient} backdrop-blur-md border border-white/10 p-6 overflow-hidden group hover:scale-[1.02] transition-all duration-200`}
-            >
-              {/* Gradient bar */}
-              <div className={`absolute top-0 left-0 h-1 w-full bg-gradient-to-r ${kpi.gradient}`} />
-              
-              {/* Icon */}
-              <div className={`inline-flex p-3 rounded-lg bg-gradient-to-br ${kpi.gradient} mb-4`}>
-                <Icon className="h-6 w-6 text-white" />
-              </div>
-              
-              {/* Content */}
-              <div className="text-gray-400 text-sm uppercase tracking-wider mb-2">{kpi.label}</div>
-              <div className="text-4xl font-bold text-white mb-1">{kpi.value}</div>
-              
-              {/* Mini sparkline placeholder */}
-              <div className="mt-4 h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full bg-gradient-to-r ${kpi.gradient} rounded-full`}
-                  style={{ width: `${Math.min((kpi.value / (stats.total || 1)) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
+    <div className="space-y-8">
+      {/* KPI Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+        <KpiCard
+          icon={<Users className="h-5 w-5 text-violet-400" />}
+          label="Total Leads"
+          value={totals.all}
+          accent="from-violet-500/40 via-violet-500/10 to-transparent"
+        />
+        <KpiCard
+          icon={<AlertTriangle className="h-5 w-5 text-orange-400" />}
+          label="Needs Attention"
+          value={totals.needs}
+          accent="from-orange-500/40 via-orange-500/10 to-transparent"
+        />
+        <KpiCard
+          icon={<Clock className="h-5 w-5 text-amber-400" />}
+          label="Approved"
+          value={totals.approved}
+          accent="from-amber-500/40 via-amber-500/10 to-transparent"
+        />
+        <KpiCard
+          icon={<CheckCircle className="h-5 w-5 text-emerald-400" />}
+          label="Completed"
+          value={totals.completed}
+          accent="from-emerald-500/40 via-emerald-500/10 to-transparent"
+        />
       </div>
 
       {/* Recent Activity */}
-      <div className="rounded-xl bg-white/5 backdrop-blur-md border border-white/10 p-6">
-        <h3 className="text-white text-lg font-semibold mb-4">Recent Activity</h3>
-        {leads.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <p>No leads yet. Start adding leads to see activity here.</p>
-          </div>
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent backdrop-blur-sm p-6 shadow-[0_0_20px_-5px_rgba(0,0,0,0.5)]">
+        <h3 className="text-lg font-semibold text-white/90 mb-4">Recent Activity</h3>
+
+        {recent.length === 0 ? (
+          <p className="text-sm text-gray-500">No recent leads yet. Once new messages come in, they'll show here.</p>
         ) : (
-          <div className="space-y-3">
-            {leads.slice(0, 5).map((lead) => (
-              <div
+          <ul className="space-y-2">
+            {recent.map((lead) => (
+              <li
                 key={lead.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition"
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-[#12161d]/70 hover:bg-[#161b23]/90 px-4 py-3 transition"
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    lead.status === 'NEW' ? 'bg-orange-500' :
-                    lead.status === 'APPROVED' ? 'bg-yellow-500' :
-                    'bg-green-500'
-                  }`} />
-                  <span className="text-white text-sm">Lead #{lead.id.slice(0, 8)}</span>
+                <div className="flex items-center gap-3 truncate">
+                  <StatusDot status={lead.status} />
+                  <div>
+                    <div className="text-sm font-medium text-white/90">{lead.name}</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-widest">{lead.source}</div>
+                  </div>
                 </div>
-                <span className="text-gray-400 text-xs">
-                  {new Date(lead.created_at).toLocaleDateString()}
-                </span>
-              </div>
+                <div className="text-xs text-gray-500">{new Date(lead.created_at).toLocaleDateString()}</div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
     </div>
   );
 }
 
+function KpiCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
+  return (
+    <div className="relative rounded-2xl border border-white/10 bg-[#12161d]/70 overflow-hidden shadow-[0_0_20px_-6px_rgba(0,0,0,0.6)]">
+      <div className={`absolute inset-0 bg-gradient-to-br ${accent}`} />
+      <div className="relative p-5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs uppercase tracking-widest text-gray-400">{label}</div>
+          {icon}
+        </div>
+        <div className="text-3xl font-bold text-white/90">{value}</div>
+      </div>
+      <div className="h-1 bg-gradient-to-r from-white/10 to-transparent" />
+    </div>
+  );
+}
+
+function StatusDot({ status }: { status: Lead['status'] }) {
+  const color =
+    status === 'NEW'
+      ? 'bg-orange-400'
+      : status === 'APPROVED'
+      ? 'bg-amber-400'
+      : 'bg-emerald-400';
+  return <div className={`h-2.5 w-2.5 rounded-full ${color}`} />;
+}
