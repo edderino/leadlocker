@@ -28,15 +28,18 @@ export default function LoginPage() {
       }
 
       console.log('[Login] Success! Session:', data.session?.user?.email);
+      console.log('[Login] Access token:', data.session?.access_token?.substring(0, 20) + '...');
       
-      // Wait for cookies to be set
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait longer for cookies to be set properly
+      console.log('[Login] Waiting for cookies to be set...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Check if there's a redirectedFrom parameter
       const params = new URLSearchParams(window.location.search);
       const redirectTo = params.get('redirectedFrom') || '/client/demo-org';
       
       console.log('[Login] Redirecting to:', redirectTo);
+      console.log('[Login] Current cookies:', document.cookie);
       
       // Hard redirect to ensure middleware sees the session
       window.location.href = redirectTo;
