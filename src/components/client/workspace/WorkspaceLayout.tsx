@@ -9,7 +9,7 @@ import Messages from './Messages';
 import Analytics from './Analytics';
 import Settings from './Settings';
 
-type Lead = {
+export type Lead = {
   id: string;
   name: string;
   phone: string;
