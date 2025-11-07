@@ -1,82 +1,83 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/libs/supabaseClient';
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
+    setError("");
 
-    try {
-      console.log('[Login] Attempting sign in...');
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (error) {
-        console.error('[Login] Error:', error);
-        setError(error.message);
-        setLoading(false);
-        return;
-      }
-
-      console.log('[Login] Success! Session:', data.session?.user?.email);
-      
-      // Check if there's a redirectedFrom parameter
-      const params = new URLSearchParams(window.location.search);
-      const redirectTo = params.get('redirectedFrom') || '/client/demo-org';
-      
-      console.log('[Login] Redirecting to:', redirectTo);
-      
-      // Use router.push since we're not using middleware
-      router.push(redirectTo);
-    } catch (err: any) {
-      console.error('[Login] Unexpected error:', err);
-      setError(err.message || 'Login failed');
-      setLoading(false);
+    if (error || !data?.user) {
+      setError("Invalid email or password");
+      return;
     }
-  };
+
+    // fetch linked client_id
+    const { data: userRow, error: userError } = await supabase
+      .from("users")
+      .select("client_id")
+      .eq("auth_id", data.user.id)
+      .single();
+
+    if (userError || !userRow?.client_id) {
+      setError("No client assigned to this user");
+      return;
+    }
+
+    // check if redirectedFrom param exists
+    const redirectedFrom = searchParams.get("redirectedFrom");
+    const target = redirectedFrom
+      ? redirectedFrom
+      : `/client/${userRow.client_id}`;
+
+    router.push(target);
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0e1014] text-gray-200">
+    <div className="flex h-screen items-center justify-center">
       <form
         onSubmit={handleLogin}
-        className="bg-[#13161c] border border-[#1e2128] rounded-xl p-8 w-full max-w-sm shadow-lg"
+        className="flex flex-col gap-4 p-8 bg-neutral-900 rounded-xl w-80"
       >
-        <h1 className="text-xl font-semibold mb-6 text-center text-gray-100">LeadLocker Login</h1>
-
-        <div className="space-y-4">
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full bg-[#1a1d23] border border-[#2a2d35] rounded-md p-3 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full bg-[#1a1d23] border border-[#2a2d35] rounded-md p-3 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-
-        {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
-
+        <h1 className="text-xl font-semibold text-white text-center">Login</h1>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="p-2 rounded bg-neutral-800 text-white"
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="p-2 rounded bg-neutral-800 text-white"
+        />
+        {error && <p className="text-red-400 text-sm">{error}</p>}
         <button
           type="submit"
-          disabled={loading}
-          className="w-full mt-6 bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded-md transition-all disabled:opacity-50"
+          className="p-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition"
         >
-          {loading ? 'Signing in…' : 'Login'}
+          Sign In
         </button>
       </form>
     </div>
