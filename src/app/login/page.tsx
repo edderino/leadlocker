@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [redirectedFrom, setRedirectedFrom] = useState<string | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setRedirectedFrom(params.get('redirectedFrom'));
+    }
+  }, []);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,7 +50,6 @@ export default function LoginPage() {
     }
 
     // check if redirectedFrom param exists
-    const redirectedFrom = searchParams.get("redirectedFrom");
     const target = redirectedFrom
       ? redirectedFrom
       : `/client/${userRow.client_id}`;
