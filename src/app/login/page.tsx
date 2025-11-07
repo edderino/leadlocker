@@ -16,16 +16,33 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      console.log('[Login] Attempting sign in...');
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        console.error('[Login] Error:', error);
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      console.log('[Login] Success! Session:', data.session?.user?.email);
+      
+      // Check if there's a redirectedFrom parameter
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = params.get('redirectedFrom') || '/client/demo-org';
+      
+      console.log('[Login] Redirecting to:', redirectTo);
       setLoading(false);
-      return;
+      
+      // Use window.location for a hard redirect to ensure middleware sees the session
+      window.location.href = redirectTo;
+    } catch (err: any) {
+      console.error('[Login] Unexpected error:', err);
+      setError(err.message || 'Login failed');
+      setLoading(false);
     }
-
-    // TEMP redirect — we'll replace this with their linked orgId later
-    router.push('/client/demo');
   };
 
   return (
