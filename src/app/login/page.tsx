@@ -29,12 +29,14 @@ export default function LoginPage() {
 
       console.log('[Login] Success! Session:', data.session?.user?.email);
       
+      // Wait a moment for cookies to be set
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Check if there's a redirectedFrom parameter
       const params = new URLSearchParams(window.location.search);
       const redirectTo = params.get('redirectedFrom') || '/client/demo-org';
       
       console.log('[Login] Redirecting to:', redirectTo);
-      setLoading(false);
       
       // Use window.location for a hard redirect to ensure middleware sees the session
       window.location.href = redirectTo;
