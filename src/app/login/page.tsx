@@ -28,15 +28,10 @@ export default function LoginPage() {
       }
 
       console.log('[Login] Success! Session:', data.session?.user?.email);
+      console.log('[Login] Redirecting to client dashboard');
       
-      // Check if there's a redirectedFrom parameter
-      const params = new URLSearchParams(window.location.search);
-      const redirectTo = params.get('redirectedFrom') || '/client/demo-org';
-      
-      console.log('[Login] Redirecting to:', redirectTo);
-      
-      // Redirect using router.push
-      router.push(redirectTo);
+      // Simple redirect - no middleware to deal with
+      window.location.href = '/client/demo-org';
     } catch (err: any) {
       console.error('[Login] Unexpected error:', err);
       setError(err.message || 'Login failed');
