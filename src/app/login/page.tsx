@@ -28,10 +28,18 @@ export default function LoginPage() {
       }
 
       console.log('[Login] Success! Session:', data.session?.user?.email);
-      console.log('[Login] Redirecting to client dashboard');
       
-      // Simple redirect - no middleware to deal with
-      window.location.href = '/client/demo-org';
+      // Wait for cookies to be set
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check if there's a redirectedFrom parameter
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = params.get('redirectedFrom') || '/client/demo-org';
+      
+      console.log('[Login] Redirecting to:', redirectTo);
+      
+      // Hard redirect to ensure middleware sees the session
+      window.location.href = redirectTo;
     } catch (err: any) {
       console.error('[Login] Unexpected error:', err);
       setError(err.message || 'Login failed');
