@@ -13,6 +13,73 @@ export default function Settings() {
   const [layout, setLayout] = useState("cards");
   const { theme, setTheme } = useTheme();
 
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function handleUpdate() {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        setMessage("Unable to verify session. Please log in again.");
+        return;
+      }
+
+      const user = session.user;
+
+      const response = await fetch("/api/user/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          user_id: user?.id,
+          name,
+          phone,
+        }),
+      });
+
+      const json = await response.json();
+      setMessage(json.success ? "Profile updated successfully." : json.error);
+    } catch (error: any) {
+      setMessage(error?.message || "Failed to update profile.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const { error } = await supabase.auth.updateUser({ password });
+
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
+
+      setMessage("Password changed. Please log in again.");
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    } catch (error: any) {
+      setMessage(error?.message || "Failed to change password.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="p-6 space-y-6 text-neutral-100">
       <h2 className="text-xl font-semibold">Settings</h2>
@@ -23,17 +90,25 @@ export default function Settings() {
           Profile
         </h3>
         <div className="space-y-3 text-sm">
-          <p>
-            Business Name: <span className="text-neutral-400">Demo Org</span>
-          </p>
-          <p>
-            Email: <span className="text-neutral-400">demo@leadlocker.app</span>
-          </p>
-          <p>
-            Phone: <span className="text-neutral-400">+39 000 000 0000</span>
-          </p>
-          <Button variant="secondary" className="mt-2 text-xs">
-            Edit Profile
+          <input
+            className="w-full p-2 rounded bg-neutral-900 border border-neutral-800 text-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-600"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <input
+            className="w-full p-2 rounded bg-neutral-900 border border-neutral-800 text-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-600"
+            placeholder="Phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+          <Button
+            variant="secondary"
+            className="mt-2 text-xs"
+            onClick={handleUpdate}
+            disabled={loading}
+          >
+            {loading ? "Saving..." : "Change Details"}
           </Button>
         </div>
       </Card>
@@ -110,8 +185,20 @@ export default function Settings() {
           Account
         </h3>
         <div className="space-y-3 text-sm">
-          <Button variant="secondary" className="text-xs">
-            Change Password
+          <input
+            className="w-full p-2 rounded bg-neutral-900 border border-neutral-800 text-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-600"
+            placeholder="New Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Button
+            variant="secondary"
+            className="text-xs"
+            onClick={handleChangePassword}
+            disabled={loading}
+          >
+            {loading ? "Updating..." : "Change Password"}
           </Button>
           <Button 
             variant="destructive" 
@@ -141,6 +228,12 @@ export default function Settings() {
           </a>
         </p>
       </Card>
+
+      {message && (
+        <p className="text-xs text-neutral-400">
+          {message}
+        </p>
+      )}
     </div>
   );
 }

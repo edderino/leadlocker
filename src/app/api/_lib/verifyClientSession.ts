@@ -11,6 +11,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 type VerifySuccess = {
   ok: true;
   clientId: string;
+  userId: string;
 };
 
 type VerifyFailure = {
@@ -60,6 +61,6 @@ export async function verifyClientSession(token: string): Promise<VerifySuccess 
     return { ok: false, status: 403, error: 'No client assigned to this user' };
   }
 
-  return { ok: true, clientId: userRow.client_id };
+  return { ok: true, clientId: userRow.client_id, userId: user.id };
 }
 
