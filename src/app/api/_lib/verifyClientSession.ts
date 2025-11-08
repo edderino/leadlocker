@@ -24,7 +24,7 @@ export async function verifyClientSession(token: string): Promise<VerifySuccess 
     return { ok: false, status: 401, error: 'Missing session token' };
   }
 
-  const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
+  const supabaseAuth = createClient(supabaseUrl!, supabaseAnonKey!);
   const {
     data: { user },
     error: authError,
