@@ -2,7 +2,6 @@
 const nextConfig = {
   experimental: {
     serverActions: {},
-    appDir: true,
   },
   async headers() {
     return [
