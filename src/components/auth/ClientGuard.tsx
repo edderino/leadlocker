@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { supabase } from "@/libs/supabaseClient";
 
 export default function ClientGuard({
   orgId,
@@ -15,10 +15,23 @@ export default function ClientGuard({
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const debugLog = useCallback((...args: unknown[]) => {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(...args);
+    }
+  }, []);
+
+  const redirectTo = useCallback((path: string) => {
+    if (typeof window === "undefined") return;
+    router.replace(path);
+
+    setTimeout(() => {
+      if (window.location.pathname !== new URL(path, window.location.origin).pathname) {
+        window.location.assign(path);
+      }
+    }, 150);
+  }, [router]);
 
   useEffect(() => {
     let mounted = true;
@@ -26,31 +39,62 @@ export default function ClientGuard({
     (async () => {
       const {
         data: { session },
+        error: sessionError,
       } = await supabase.auth.getSession();
 
-      if (!session) {
-        router.replace(`/login?redirectedFrom=${encodeURIComponent(pathname)}`);
+      if (sessionError) {
+        debugLog("[ClientGuard] Session error:", sessionError.message);
+      }
+
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        redirectTo(`/login?redirectedFrom=${encodeURIComponent(pathname)}`);
         return;
       }
 
-      const { data: user, error } = await supabase
-        .from("users")
-        .select("client_id")
-        .eq("auth_id", session.user.id)
-        .single();
+      try {
+        const userResponse = await fetch('/api/auth/get-user', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        });
 
-      if (error || !user || user.client_id !== orgId) {
-        router.replace(`/login?redirectedFrom=${encodeURIComponent(pathname)}`);
-        return;
+        if (!userResponse.ok) {
+          debugLog('[ClientGuard] Failed to get user, redirecting to login');
+          redirectTo(`/login?redirectedFrom=${encodeURIComponent(pathname)}`);
+          return;
+        }
+
+        const userData = await userResponse.json();
+
+        if (!userData.client_id) {
+          debugLog('[ClientGuard] User has no client association. Redirecting to login.');
+          redirectTo('/login');
+          return;
+        }
+
+        if (userData.client_id !== orgId) {
+          debugLog('[ClientGuard] Access denied - client_id mismatch:', {
+            userClientId: userData.client_id,
+            expectedOrgId: orgId
+          });
+          redirectTo(`/client/${userData.client_id}`);
+          return;
+        }
+
+        if (mounted) setReady(true);
+      } catch (err) {
+        console.error('[ClientGuard] Error:', err);
+        redirectTo(`/login?redirectedFrom=${encodeURIComponent(pathname)}`);
       }
-
-      if (mounted) setReady(true);
     })();
 
     return () => {
       mounted = false;
     };
-  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pathname, orgId, redirectTo, debugLog]);
 
   if (!ready) {
     return null; // or a lightweight skeleton if you prefer

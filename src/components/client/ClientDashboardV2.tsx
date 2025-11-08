@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { RefreshCw, Send, Clock, CheckCircle2, AlertTriangle, User } from 'lucide-react'
 import { relativeTime } from '@/libs/time'
+import { supabase } from '@/libs/supabaseClient'
 
 interface Lead {
   id: string
@@ -38,22 +39,33 @@ export default function ClientDashboardV2({ leads, orgId }: Props) {
 
     setSending(true)
     try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      if (sessionError || !session?.access_token) {
+        alert('Session expired. Please log in again.')
+        setSending(false)
+        return
+      }
+
       const res = await fetch('/api/client/messages/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-client-token': process.env.NEXT_PUBLIC_CLIENT_PORTAL_SECRET || '',
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ orgId, body: replyMessage }),
       })
       
       const data = await res.json()
-      if (data.ok) {
+      if (res.ok && data.ok) {
         setReplyMessage('')
         setSelectedLead(null)
         alert('Message sent ✅')
       } else {
-        alert('Failed: ' + data.error)
+        alert('Failed: ' + (data.error || 'Unknown error'))
       }
     } catch {
       alert('Error sending message')

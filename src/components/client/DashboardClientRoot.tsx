@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/libs/supabaseClient';
 import ClientDashboard from './ClientDashboardV5';
 
 interface Lead {
@@ -26,10 +27,30 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
     const fetchLeads = async () => {
       try {
         console.log('[DashboardClientRoot] Fetching leads for org:', orgId);
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error('[DashboardClientRoot] Session error:', sessionError.message);
+          setError('Authentication error. Please log in again.');
+          return;
+        }
+
+        const accessToken = session?.access_token;
+
+        if (!accessToken) {
+          console.error('[DashboardClientRoot] No access token found');
+          setError('You must be signed in to view this page.');
+          return;
+        }
+
         const response = await fetch(`/api/client/leads?orgId=${orgId}`, {
+          cache: 'no-store',
           headers: {
-            'x-client-token': process.env.NEXT_PUBLIC_CLIENT_PORTAL_SECRET || ''
-          }
+            Authorization: `Bearer ${accessToken}`,
+          },
         });
         const data = await response.json();
         
@@ -52,10 +73,23 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
 
   if (loading) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-8 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-          <p className="text-gray-600">Loading dashboard data...</p>
+      <div className="min-h-screen bg-gradient-to-br from-[#0c0f15] via-[#161b22] to-[#0c0f15] p-6">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-neutral-800 rounded w-48"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="h-40 bg-neutral-900/80 border border-neutral-800 rounded-md shadow-[0_0_15px_rgba(255,255,255,0.05)]"
+              >
+                <div className="p-5 space-y-3">
+                  <div className="h-4 bg-neutral-800 rounded w-2/3"></div>
+                  <div className="h-3 bg-neutral-800 rounded w-1/2"></div>
+                  <div className="h-3 bg-neutral-800 rounded w-3/4"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

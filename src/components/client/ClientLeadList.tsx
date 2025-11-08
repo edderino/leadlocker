@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { relativeTime } from '@/libs/time';
 import { Phone, MapPin, Send } from 'lucide-react';
+import { supabase } from '@/libs/supabaseClient';
 
 interface Lead {
   id: string;
@@ -53,29 +54,43 @@ export default function ClientLeadList({ leads }: ClientLeadListProps) {
     setSending(lead.id);
     
     try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        alert('Session expired. Please log in again.');
+        setSending(null);
+        return;
+      }
+
+      const orgId =
+        document.cookie
+          .split('; ')
+          .find((r) => r.startsWith('ll_client_org='))
+          ?.split('=')[1] || '';
+
       const res = await fetch('/api/client/messages/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-client-token': process.env.NEXT_PUBLIC_CLIENT_PORTAL_SECRET || '',
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          orgId: document.cookie
-            .split('; ')
-            .find((r) => r.startsWith('ll_client_org='))
-            ?.split('=')[1],
+          orgId,
           body: message,
         }),
       });
       
       const data = await res.json();
       
-      if (data.ok) {
+      if (res.ok && data.ok) {
         setReplyMessages({ ...replyMessages, [lead.id]: '' });
         setReplyingTo(null);
         alert('Message sent ✅');
       } else {
-        alert('Failed: ' + data.error);
+        alert('Failed: ' + (data.error || 'Unknown error'));
       }
     } catch (err) {
       alert('Error sending message');

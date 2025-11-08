@@ -1,52 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/libs/supabaseAdmin';
+import { verifyClientSession } from '../../_lib/verifyClientSession';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /**
  * GET /api/client/leads?orgId=XXX
- * 
+ *
  * Returns leads for a specific organization.
- * Requires x-client-token header for authentication.
+ * Requires Authorization: Bearer <access_token> header.
  */
 export async function GET(request: NextRequest) {
   try {
-    // 1. Verify CLIENT_PORTAL_SECRET
-    const clientToken = request.headers.get('x-client-token');
-    const expectedToken = process.env.CLIENT_PORTAL_SECRET;
+    const authHeader = request.headers.get('authorization');
 
-    if (!expectedToken) {
-      console.error('[ClientAPI] CLIENT_PORTAL_SECRET not configured in environment');
+    if (!authHeader?.toLowerCase().startsWith('bearer ')) {
       return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    if (!clientToken || clientToken !== expectedToken) {
-      console.error('[ClientAPI] Unauthorized access attempt - invalid or missing x-client-token');
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Missing authorization header' },
         { status: 401 }
       );
     }
 
-    // 2. Get orgId from query params
+    const token = authHeader.slice('Bearer '.length).trim();
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid authorization header' },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const orgId = searchParams.get('orgId');
 
     if (!orgId) {
-      console.error('[ClientAPI] Missing required parameter: orgId');
       return NextResponse.json(
         { success: false, error: 'Missing orgId parameter' },
         { status: 400 }
       );
     }
 
-    console.log('[ClientAPI] Fetching leads for orgId:', orgId);
+    const verification = await verifyClientSession(token);
 
-    // 3. Query leads (read-only)
+    if (!verification.ok) {
+      return NextResponse.json(
+        { success: false, error: verification.error },
+        { status: verification.status }
+      );
+    }
+
+    if (verification.clientId !== orgId) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
     const { data: leads, error } = await supabaseAdmin
       .from('leads')
       .select('id, name, phone, source, description, status, created_at')
@@ -62,25 +72,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const total = leads?.length || 0;
-    console.log('[ClientAPI] Successfully fetched', total, 'leads for orgId:', orgId);
-
     return NextResponse.json({
       success: true,
       orgId,
-      total,
-      leads: leads || [],
+      total: leads?.length ?? 0,
+      leads: leads ?? [],
     });
-
   } catch (error: any) {
     console.error('[ClientAPI] Unexpected error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Internal server error',
       },
       { status: 500 }
     );
   }
 }
-

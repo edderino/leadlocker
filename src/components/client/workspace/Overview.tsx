@@ -1,94 +1,86 @@
 'use client';
 
-import { useMemo } from 'react';
+import Card from '@/components/ui/Card';
 import type { Lead } from './WorkspaceLayout';
-import { Users, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { useThemeStyles } from './ThemeContext';
 
-export default function Overview({ leads, totals }: { leads: Lead[]; totals: { all: number; needs: number; approved: number; completed: number } }) {
-  const recent = useMemo(() => leads.slice(0, 5), [leads]);
+interface OverviewProps {
+  leads?: Lead[];
+  totals?: { all: number; needs: number; approved: number; completed: number };
+}
+
+export default function Overview({ leads = [], totals }: OverviewProps) {
+  const themeStyles = useThemeStyles();
+  const stats = [
+    { label: 'Total Leads', value: totals?.all ?? 26 },
+    { label: 'New', value: totals?.needs ?? 10 },
+    { label: 'Approved', value: totals?.approved ?? 13 },
+    { label: 'Completed', value: totals?.completed ?? 3 },
+  ];
+
+  const recent = (leads.length > 0
+    ? leads.slice(0, 4).map((lead) => ({
+        name: lead.name || 'Unknown',
+        action: `New lead created from ${lead.source}`,
+        date: new Date(lead.created_at).toLocaleDateString(),
+      }))
+    : [
+        { name: 'reg', action: 'New lead created from FB', date: '05/11/2025' },
+        { name: 'Feed Smoke Test', action: 'New lead created from API', date: '05/11/2025' },
+        { name: 'john doe', action: 'New lead created from FB', date: '20/10/2025' },
+        { name: 'ray', action: 'New lead created from fb', date: '20/10/2025' },
+      ]) as Array<{ name: string; action: string; date: string }>;
 
   return (
-    <div className="space-y-8">
-      {/* KPI Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-        <KpiCard
-          icon={<Users className="h-5 w-5 text-violet-400" />}
-          label="Total Leads"
-          value={totals.all}
-          accent="from-violet-500/40 via-violet-500/10 to-transparent"
-        />
-        <KpiCard
-          icon={<AlertTriangle className="h-5 w-5 text-orange-400" />}
-          label="Needs Attention"
-          value={totals.needs}
-          accent="from-orange-500/40 via-orange-500/10 to-transparent"
-        />
-        <KpiCard
-          icon={<Clock className="h-5 w-5 text-amber-400" />}
-          label="Approved"
-          value={totals.approved}
-          accent="from-amber-500/40 via-amber-500/10 to-transparent"
-        />
-        <KpiCard
-          icon={<CheckCircle className="h-5 w-5 text-emerald-400" />}
-          label="Completed"
-          value={totals.completed}
-          accent="from-emerald-500/40 via-emerald-500/10 to-transparent"
-        />
-      </div>
+    <div className="p-6 space-y-6">
+      <h2 className="text-xl font-semibold text-neutral-100">Overview</h2>
 
-      {/* Recent Activity */}
-      <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent backdrop-blur-sm p-6 shadow-[0_0_20px_-5px_rgba(0,0,0,0.5)]">
-        <h3 className="text-lg font-semibold text-white/90 mb-4">Recent Activity</h3>
-
-        {recent.length === 0 ? (
-          <p className="text-sm text-gray-500">No recent leads yet. Once new messages come in, they'll show here.</p>
-        ) : (
-          <ul className="space-y-2">
-            {recent.map((lead) => (
-              <li
-                key={lead.id}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-[#12161d]/70 hover:bg-[#161b23]/90 px-4 py-3 transition"
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left side: Stats + Summary */}
+        <div className="lg:col-span-2 space-y-5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {stats.map((s) => (
+              <Card
+                key={s.label}
+                className={`p-5 bg-neutral-950 border border-neutral-800 transition-all duration-300 ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}
               >
-                <div className="flex items-center gap-3 truncate">
-                  <StatusDot status={lead.status} />
-                  <div>
-                    <div className="text-sm font-medium text-white/90">{lead.name}</div>
-                    <div className="text-xs text-gray-500 uppercase tracking-widest">{lead.source}</div>
-                  </div>
-                </div>
-                <div className="text-xs text-gray-500">{new Date(lead.created_at).toLocaleDateString()}</div>
-              </li>
+                <p className="text-xs uppercase tracking-wide text-neutral-400">{s.label}</p>
+                <p className={`text-4xl font-bold mt-1 ${themeStyles.accentTextClass}`}>
+                  {s.value}
+                </p>
+              </Card>
             ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
+          </div>
 
-function KpiCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
-  return (
-    <div className="relative rounded-2xl border border-white/10 bg-[#12161d]/70 overflow-hidden shadow-[0_0_20px_-6px_rgba(0,0,0,0.6)]">
-      <div className={`absolute inset-0 bg-gradient-to-br ${accent}`} />
-      <div className="relative p-5">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-xs uppercase tracking-widest text-gray-400">{label}</div>
-          {icon}
+          <Card className={`p-6 bg-neutral-950 border border-neutral-800 transition-all duration-300 ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}>
+            <h3 className="text-sm font-semibold uppercase text-neutral-300 mb-3 tracking-wide">
+              Performance Summary
+            </h3>
+            <p className="text-neutral-400 text-sm leading-relaxed">
+              Charts and analytics will appear here once live data is connected.
+              Layout preserved for spacing and hierarchy checks.
+            </p>
+          </Card>
         </div>
-        <div className="text-3xl font-bold text-white/90">{value}</div>
+
+        {/* Right side: Recent Activity */}
+        <div>
+          <Card className={`p-6 bg-neutral-950 border border-neutral-800 transition-all duration-300 ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}>
+            <h3 className="text-sm font-semibold uppercase text-neutral-300 mb-3 tracking-wide">
+              Recent Activity
+            </h3>
+            <ul className="divide-y divide-neutral-800">
+              {recent.map((r, i) => (
+                <li key={`${r.name}-${i}`} className="py-3">
+                  <p className="text-neutral-100 text-sm font-medium">{r.name}</p>
+                  <p className="text-neutral-400 text-xs">{r.action}</p>
+                  <p className="text-neutral-500 text-xs mt-1">{r.date}</p>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
       </div>
-      <div className="h-1 bg-gradient-to-r from-white/10 to-transparent" />
     </div>
   );
-}
-
-function StatusDot({ status }: { status: Lead['status'] }) {
-  const color =
-    status === 'NEW'
-      ? 'bg-orange-400'
-      : status === 'APPROVED'
-      ? 'bg-amber-400'
-      : 'bg-emerald-400';
-  return <div className={`h-2.5 w-2.5 rounded-full ${color}`} />;
 }

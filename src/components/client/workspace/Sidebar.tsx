@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { LayoutDashboard, Users, MessageSquare, BarChart3, Settings, ChevronLeft, LogOut } from 'lucide-react';
 import { useState } from 'react';
+import { supabase } from '@/libs/supabaseClient';
 
 interface SidebarProps {
   currentSection: string;
@@ -101,7 +102,10 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
       {/* Logout */}
       <div className="p-4 border-t border-white/10">
         <button
-          onClick={() => window.location.href = '/'}
+          onClick={async () => {
+            await supabase.auth.signOut();
+            window.location.href = '/login';
+          }}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-all"
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />

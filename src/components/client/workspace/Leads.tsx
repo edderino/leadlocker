@@ -1,7 +1,40 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Phone, MessageSquare, Grid, List, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import Card from "@/components/ui/Card";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { List, Grid, ArrowDownUp, Filter } from "lucide-react";
+import { useThemeStyles } from "./ThemeContext";
+
+const RECOGNIZED_SOURCES = [
+  { key: "gmail", label: "Gmail" },
+  { key: "facebook", label: "Facebook" },
+  { key: "instagram", label: "Instagram" },
+] as const;
+
+const UNCATEGORISED_KEY = "uncategorized";
+const UNCATEGORISED_LABEL = "Uncategorised";
+
+const recognizedLabels = RECOGNIZED_SOURCES.reduce<Record<string, string>>((acc, item) => {
+  acc[item.key] = item.label;
+  return acc;
+}, { [UNCATEGORISED_KEY]: UNCATEGORISED_LABEL });
+
+const normalizeSource = (source: string | null | undefined) =>
+  (source || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+const getSourceKey = (source: string | null | undefined) => {
+  const normalized = normalizeSource(source);
+  if (!normalized) return UNCATEGORISED_KEY;
+  const recognized = RECOGNIZED_SOURCES.find(({ key }) => normalized.includes(key));
+  if (recognized) return recognized.key;
+  return UNCATEGORISED_KEY;
+};
+
+const getSourceLabel = (key: string) => {
+  return recognizedLabels[key] ?? UNCATEGORISED_LABEL;
+};
 
 interface Lead {
   id: string;
@@ -13,180 +46,222 @@ interface Lead {
   created_at: string;
 }
 
-const STATUS_MAP = {
-  NEW: { label: 'Needs Attention', color: 'text-red-400' },
-  APPROVED: { label: 'In Progress', color: 'text-yellow-400' },
-  COMPLETED: { label: 'Completed', color: 'text-green-400' },
-};
+interface LeadsProps {
+  leads?: Lead[];
+  orgId?: string;
+}
 
-export default function Leads({ leads = [] }: { leads: Lead[] }) {
-  const [filter, setFilter] = useState<'ALL' | 'NEW' | 'APPROVED' | 'COMPLETED'>('ALL');
-  const [view, setView] = useState<'GRID' | 'TABLE'>('GRID');
-  const [replyLead, setReplyLead] = useState<Lead | null>(null);
+export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
+  const themeStyles = useThemeStyles();
+  const [view, setView] = useState<"cards" | "table">("cards");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+    []
+  );
+  const timeFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+    []
+  );
+  const sourceOptions = useMemo(
+    () => [
+      { key: "all", label: "All Sources" },
+      ...RECOGNIZED_SOURCES.map(({ key, label }) => ({ key, label })),
+      { key: UNCATEGORISED_KEY, label: UNCATEGORISED_LABEL },
+    ],
+    []
+  );
 
-  const filtered = filter === 'ALL' ? leads : leads.filter(l => l.status === filter);
+  useEffect(() => {
+    if (
+      sourceFilter !== "all" &&
+      !sourceOptions.some((option) => option.key === sourceFilter)
+    ) {
+      setSourceFilter("all");
+    }
+  }, [sourceFilter, sourceOptions]);
+  const formatLeadDate = (isoString: string) => {
+    try {
+      return dateFormatter.format(new Date(isoString));
+    } catch {
+      return isoString;
+    }
+  };
+  const formatLeadTime = (isoString: string) => {
+    try {
+      return timeFormatter.format(new Date(isoString));
+    } catch {
+      return "";
+    }
+  };
+  const formatSource = (source: string) => getSourceLabel(getSourceKey(source));
+
+  const displayLeads = useMemo(() => {
+    const filtered = initialLeads.filter((lead) => {
+      if (sourceFilter === "all") return true;
+      return getSourceKey(lead.source) === sourceFilter;
+    });
+
+    return filtered
+      .slice()
+      .sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+      });
+  }, [initialLeads, sortOrder, sourceFilter]);
+
+  // Empty state
+  if (displayLeads.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-neutral-400">
+        <p className="text-sm">No leads yet.</p>
+        <p className="text-xs text-neutral-500">New inquiries will appear here automatically.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative min-h-screen bg-[#0e1014] text-gray-200 px-6 py-8 transition-all">
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-100 tracking-tight">Leads</h1>
-          <p className="text-sm text-gray-500">
-            Manage and respond to incoming leads.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex gap-2">
-            {['ALL', 'NEW', 'APPROVED', 'COMPLETED'].map(t => (
-              <button
-                key={t}
-                onClick={() => setFilter(t as any)}
-                className={`px-3 py-1.5 text-sm rounded-md border transition-all ${
-                  filter === t
-                    ? 'bg-[#1a1d23] border-[#2d3140] text-indigo-400 shadow-[0_0_10px_#6366f155]'
-                    : 'border-[#2a2d35] text-gray-400 hover:text-gray-200 hover:border-[#3a3f4f]'
-                }`}
-              >
-                {t === 'ALL' ? 'All' : STATUS_MAP[t as keyof typeof STATUS_MAP]?.label || t}
-              </button>
-            ))}
+    <div className="p-6">
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl font-semibold text-white">Leads</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 bg-neutral-900/70 border border-neutral-800 rounded-lg px-3 py-1.5 text-sm text-neutral-300">
+            <Filter className="h-4 w-4 text-neutral-500" />
+            <select
+              value={sourceFilter}
+              onChange={(event) => setSourceFilter(event.target.value)}
+              className="bg-transparent focus:outline-none text-sm text-neutral-200"
+            >
+              {sourceOptions.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
-
-          {/* View toggle */}
-          <button
-            onClick={() => setView(view === 'GRID' ? 'TABLE' : 'GRID')}
-            className="ml-4 p-2 rounded-md border border-[#2a2d35] hover:border-[#3a3f4f] hover:text-indigo-400 transition-all"
-            title={view === 'GRID' ? 'Switch to Table View' : 'Switch to Grid View'}
+          <Button
+            variant="secondary"
+            onClick={() => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
+            className="flex items-center gap-2"
           >
-            {view === 'GRID' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
-          </button>
+            <ArrowDownUp className="h-4 w-4" />
+            {sortOrder === "desc" ? "Newest → Oldest" : "Oldest → Newest"}
+          </Button>
+          <Button
+            variant={view === "cards" ? "default" : "secondary"}
+            size="icon"
+            onClick={() => setView("cards")}
+          >
+            <Grid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={view === "table" ? "default" : "secondary"}
+            size="icon"
+            onClick={() => setView("table")}
+          >
+            <List className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Views */}
-      {view === 'GRID' ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.length === 0 ? (
-            <div className="col-span-full py-16 text-center text-gray-500">
-              No leads found.
-            </div>
-          ) : (
-            filtered.map(lead => (
-              <div
-                key={lead.id}
-                className="rounded-xl bg-[#13161c] border border-[#1e2128] p-5 hover:border-[#2e3340] hover:shadow-[0_0_20px_#00000070] hover:scale-[1.01] transition-all"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="text-base font-medium text-gray-100">{lead.name}</h3>
-                    <p className="text-sm text-gray-500">{lead.source}</p>
-                  </div>
-                  <span className={`text-xs font-medium ${STATUS_MAP[lead.status].color}`}>
-                    ● {STATUS_MAP[lead.status].label}
-                  </span>
-                </div>
-
-                {lead.description && (
-                  <p className="text-sm text-gray-400 mb-4 line-clamp-2">{lead.description}</p>
-                )}
-
-                <div className="flex items-center justify-between text-sm text-gray-400">
+      {view === "cards" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {displayLeads.map((lead) => (
+            <Card
+              key={lead.id}
+              className={`p-5 bg-neutral-950 border border-neutral-800 transition-all duration-300 ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="text-white font-semibold text-base leading-tight">{lead.name}</p>
                   <a
                     href={`tel:${lead.phone}`}
-                    className="inline-flex items-center gap-1 hover:text-gray-200"
+                    className={`text-neutral-400 text-sm transition-colors ${themeStyles.linkHoverClass}`}
                   >
-                    <Phone className="h-4 w-4" />
                     {lead.phone}
                   </a>
-                  <button
-                    onClick={() => setReplyLead(lead)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 border border-[#2a2d35] rounded-md hover:bg-[#1a1d23] hover:text-indigo-400 transition-all"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    Reply
-                  </button>
+                  <p className="text-neutral-500 text-xs uppercase tracking-wide">
+                    {formatSource(lead.source)}
+                  </p>
                 </div>
+                <span
+                  className={`px-2 py-1 text-xs font-semibold rounded ${
+                    lead.status === "NEW"
+                      ? "bg-red-600/20 text-red-400"
+                      : lead.status === "COMPLETED"
+                      ? "bg-green-600/20 text-green-400"
+                      : "bg-yellow-600/20 text-yellow-400"
+                  }`}
+                >
+                  {lead.status}
+                </span>
               </div>
-            ))
-          )}
+              <p className="text-sm text-neutral-300 mt-3 line-clamp-3">{lead.description || 'No description'}</p>
+              <p className="text-xs text-neutral-500 mt-4 flex items-center gap-2">
+                <span className="text-neutral-300">{formatLeadDate(lead.created_at)}</span>
+                <span className="text-neutral-600">{formatLeadTime(lead.created_at)}</span>
+              </p>
+            </Card>
+          ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[#1e2128]">
-          <table className="min-w-full text-sm text-gray-300">
-            <thead className="bg-[#16191f] text-gray-400 uppercase text-xs tracking-wide">
-              <tr>
-                <th className="px-4 py-3 text-left">Lead</th>
-                <th className="px-4 py-3 text-left">Source</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Phone</th>
-                <th className="px-4 py-3 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(lead => (
-                <tr key={lead.id} className="border-t border-[#1c1f25] hover:bg-[#15181e]/70 transition-colors">
-                  <td className="px-4 py-3 font-medium">{lead.name}</td>
-                  <td className="px-4 py-3">{lead.source}</td>
-                  <td className={`px-4 py-3 ${STATUS_MAP[lead.status].color}`}>
-                    {STATUS_MAP[lead.status].label}
-                  </td>
-                  <td className="px-4 py-3">
-                    <a href={`tel:${lead.phone}`} className="hover:text-indigo-400">{lead.phone}</a>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => setReplyLead(lead)}
-                      className="inline-flex items-center gap-1 px-3 py-1 border border-[#2a2d35] rounded-md hover:bg-[#1a1d23] hover:text-indigo-400 transition-all"
+        <Card className={`border border-neutral-800 bg-neutral-950 transition-all duration-300 ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-neutral-300">Name</TableHead>
+                <TableHead className="text-neutral-300">Phone</TableHead>
+                <TableHead className="text-neutral-300">Source</TableHead>
+                <TableHead className="text-neutral-300">Message</TableHead>
+                <TableHead className="text-neutral-300">Status</TableHead>
+                <TableHead className="text-neutral-300 text-right">Received</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayLeads.map((lead) => (
+                <TableRow key={lead.id} className="border-neutral-800/60">
+                  <TableCell className="text-neutral-200">{lead.name}</TableCell>
+                  <TableCell className="text-neutral-400">
+                    <a
+                      href={`tel:${lead.phone}`}
+                      className={`transition-colors ${themeStyles.linkHoverClass}`}
                     >
-                      <MessageSquare className="h-4 w-4" />
-                      Reply
-                    </button>
-                  </td>
-                </tr>
+                      {lead.phone}
+                    </a>
+                  </TableCell>
+                  <TableCell className="text-neutral-400">{formatSource(lead.source)}</TableCell>
+                  <TableCell className="text-neutral-400">{lead.description || '-'}</TableCell>
+                  <TableCell>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      lead.status === 'NEW' ? 'bg-red-500/20 text-red-400' :
+                      lead.status === 'APPROVED' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-green-500/20 text-green-400'
+                    }`}>
+                      {lead.status}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-neutral-400 text-right whitespace-nowrap">
+                    <div className="flex flex-col items-end leading-tight">
+                      <span className="text-neutral-200 text-sm">{formatLeadDate(lead.created_at)}</span>
+                      <span className="text-neutral-500 text-xs">{formatLeadTime(lead.created_at)}</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Slide-in reply drawer */}
-      {replyLead && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-end z-50">
-          <div className="w-full max-w-md h-full bg-[#111317] border-l border-[#2a2d35] shadow-[0_0_30px_#00000090] p-6 flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-100">
-                Reply to {replyLead.name}
-              </h2>
-              <button
-                onClick={() => setReplyLead(null)}
-                className="text-gray-400 hover:text-gray-200"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="text-sm text-gray-400 mb-2">
-              Source: {replyLead.source}
-            </div>
-            <div className="text-sm text-gray-400 mb-6">
-              Phone: {replyLead.phone}
-            </div>
-
-            <textarea
-              className="flex-grow bg-[#1a1d23] border border-[#2a2d35] rounded-md p-3 text-gray-200 text-sm focus:outline-none focus:border-indigo-500 resize-none"
-              placeholder="Type your reply..."
-            />
-            <button
-              className="mt-4 px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-all"
-              onClick={() => setReplyLead(null)}
-            >
-              Send Reply
-            </button>
-          </div>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   );

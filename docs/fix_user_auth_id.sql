@@ -22,3 +22,5 @@ WHERE email = 'demo@leadlocker.app';
 -- SET auth_id = 'REPLACE_WITH_FULL_UUID_FROM_AUTH_USERS'
 -- WHERE email = 'demo@leadlocker.app';
 
+
+

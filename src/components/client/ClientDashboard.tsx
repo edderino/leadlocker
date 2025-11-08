@@ -3,6 +3,7 @@
 import Card from '@/components/ui/Card';
 import StatusPill from '@/components/ui/StatusPill';
 import { RefreshCw, Send, Phone, MessageSquare } from 'lucide-react';
+import { supabase } from '@/libs/supabaseClient';
 
 type Lead = {
   id: string;
@@ -112,17 +113,33 @@ export default function ClientDashboard({ leads, orgId }: { leads: Lead[]; orgId
                       <td className="px-4 py-3">
                         <button
                           className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 bg-acc-violet/15 text-acc-violet border border-white/5 hover:bg-acc-violet/20"
-                          onClick={() => {
+                          onClick={async () => {
                             const msg = prompt('Reply message');
                             if (!msg) return;
-                            fetch('/api/client/messages/send', {
+
+                            const {
+                              data: { session },
+                              error: sessionError,
+                            } = await supabase.auth.getSession();
+
+                            if (sessionError || !session?.access_token) {
+                              alert('Session expired. Please log in again.');
+                              return;
+                            }
+
+                            const response = await fetch('/api/client/messages/send', {
                               method: 'POST',
-                              headers: { 
+                              headers: {
                                 'Content-Type': 'application/json',
-                                'x-client-token': process.env.NEXT_PUBLIC_CLIENT_PORTAL_SECRET || '',
+                                Authorization: `Bearer ${session.access_token}`,
                               },
                               body: JSON.stringify({ orgId, body: msg }),
                             });
+
+                            if (!response.ok) {
+                              const { error } = await response.json().catch(() => ({ error: 'Failed to send message' }));
+                              alert(error || 'Failed to send message');
+                            }
                           }}
                         >
                           <Send className="h-4 w-4" /> Reply
