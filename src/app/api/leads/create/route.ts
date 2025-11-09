@@ -1,8 +1,29 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+async function resolveDefaultUserId(supabase: SupabaseClient) {
+  if (process.env.LL_DEFAULT_USER_ID) return process.env.LL_DEFAULT_USER_ID;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to resolve default user: ${error.message}`);
+  }
+
+  if (!data?.id) {
+    throw new Error("No users found. Configure LL_DEFAULT_USER_ID or create a user.");
+  }
+
+  return data.id as string;
+}
 
 // ✅ secure endpoint replacing Zapier
 export async function POST(request: Request) {
@@ -26,6 +47,8 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
+    const userId = await resolveDefaultUserId(supabase);
+
     const { error } = await supabase.from("leads").insert([
       {
         name,
@@ -34,6 +57,7 @@ export async function POST(request: Request) {
         description: message || "",
         status: "NEW",
         org_id,
+        user_id: userId,
       },
     ]);
 
