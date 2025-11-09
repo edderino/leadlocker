@@ -81,7 +81,6 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
     () => [
       { key: "all", label: "All Sources" },
       ...RECOGNIZED_SOURCES.map(({ key, label }) => ({ key, label })),
-      { key: UNCATEGORISED_KEY, label: UNCATEGORISED_LABEL },
     ],
     []
   );
