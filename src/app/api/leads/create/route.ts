@@ -31,8 +31,8 @@ export async function POST(request: Request) {
         name,
         phone,
         source: source || "manual",
-        message: message || "",
-        status: "NEEDS_ATTENTION",
+        description: message || "",
+        status: "NEW",
         org_id,
       },
     ]);
