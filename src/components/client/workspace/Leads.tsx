@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { List, Grid, ArrowDownUp, Filter } from "lucide-react";
 import { useThemeStyles } from "./ThemeContext";
+import { supabase } from "@/libs/supabaseClient";
 
 const RECOGNIZED_SOURCES = [
   { key: "gmail", label: "Gmail" },
@@ -56,6 +57,9 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
   const [view, setView] = useState<"cards" | "table">("cards");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const [loading, setLoading] = useState(initialLeads.length === 0);
+  const [error, setError] = useState<string | null>(null);
   const dateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat("en-US", {
@@ -83,6 +87,54 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
   );
 
   useEffect(() => {
+    let mounted = true;
+
+    async function fetchLeads() {
+      if (!orgId || initialLeads.length > 0) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError || !session?.access_token) {
+          if (mounted) setError("Unauthenticated. Please log in again.");
+          return;
+        }
+
+        const response = await fetch(`/api/client/leads?orgId=${orgId}`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (!response.ok) {
+          const json = await response.json().catch(() => ({ error: "Failed to load leads" }));
+          if (mounted) setError(json.error || "Failed to load leads");
+          return;
+        }
+
+        const json = await response.json();
+        if (mounted) setLeads(json.leads || []);
+      } catch (err: any) {
+        if (mounted) setError(err?.message || "Failed to load leads");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    fetchLeads();
+
+    return () => {
+      mounted = false;
+    };
+  }, [initialLeads, orgId]);
+
+  useEffect(() => {
     if (
       sourceFilter !== "all" &&
       !sourceOptions.some((option) => option.key === sourceFilter)
@@ -107,7 +159,8 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
   const formatSource = (source: string) => getSourceLabel(getSourceKey(source));
 
   const displayLeads = useMemo(() => {
-    const filtered = initialLeads.filter((lead) => {
+    const list = initialLeads.length > 0 ? initialLeads : leads;
+    const filtered = list.filter((lead) => {
       if (sourceFilter === "all") return true;
       return getSourceKey(lead.source) === sourceFilter;
     });
@@ -119,7 +172,23 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
         const dateB = new Date(b.created_at).getTime();
         return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
       });
-  }, [initialLeads, sortOrder, sourceFilter]);
+  }, [initialLeads, leads, sortOrder, sourceFilter]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-neutral-400">
+        <p className="text-sm">Loading leads…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-neutral-400">
+        <p className="text-sm">{error}</p>
+      </div>
+    );
+  }
 
   // Empty state
   if (displayLeads.length === 0) {
