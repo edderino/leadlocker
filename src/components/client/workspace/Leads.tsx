@@ -58,7 +58,7 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
-  const [loading, setLoading] = useState(initialLeads.length === 0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dateFormatter = useMemo(
     () =>
@@ -87,11 +87,11 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
   );
 
   useEffect(() => {
+    if (!orgId) return;
+
     let mounted = true;
 
     async function fetchLeads() {
-      if (!orgId || initialLeads.length > 0) return;
-
       setLoading(true);
       setError(null);
 
@@ -110,6 +110,7 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },
+          cache: "no-store",
         });
 
         if (!response.ok) {
@@ -119,7 +120,9 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
         }
 
         const json = await response.json();
-        if (mounted) setLeads(json.leads || []);
+        if (mounted) {
+          setLeads(json.leads || []);
+        }
       } catch (err: any) {
         if (mounted) setError(err?.message || "Failed to load leads");
       } finally {
@@ -159,7 +162,7 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
   const formatSource = (source: string) => getSourceLabel(getSourceKey(source));
 
   const displayLeads = useMemo(() => {
-    const list = initialLeads.length > 0 ? initialLeads : leads;
+    const list = leads.length > 0 ? leads : initialLeads;
     const filtered = list.filter((lead) => {
       if (sourceFilter === "all") return true;
       return getSourceKey(lead.source) === sourceFilter;
@@ -174,7 +177,7 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
       });
   }, [initialLeads, leads, sortOrder, sourceFilter]);
 
-  if (loading) {
+  if (loading && leads.length === 0 && initialLeads.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-neutral-400">
         <p className="text-sm">Loading leads…</p>
