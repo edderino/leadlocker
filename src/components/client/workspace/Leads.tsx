@@ -134,7 +134,7 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
     return () => {
       mounted = false;
     };
-  }, [initialLeads, orgId]);
+  }, [orgId]);
 
   useEffect(() => {
     if (
@@ -161,7 +161,8 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
   const formatSource = (source: string) => getSourceLabel(getSourceKey(source));
 
   const displayLeads = useMemo(() => {
-    const list = leads.length > 0 ? leads : initialLeads;
+    // Always use fetched leads if available, otherwise fall back to initialLeads during initial load
+    const list = leads.length > 0 || loading ? leads : initialLeads;
     const filtered = list.filter((lead) => {
       if (sourceFilter === "all") return true;
       return getSourceKey(lead.source) === sourceFilter;
@@ -174,7 +175,7 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
         const dateB = new Date(b.created_at).getTime();
         return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
       });
-  }, [initialLeads, leads, sortOrder, sourceFilter]);
+  }, [leads, initialLeads, loading, sortOrder, sourceFilter]);
 
   if (loading && leads.length === 0 && initialLeads.length === 0) {
     return (
