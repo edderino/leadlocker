@@ -49,6 +49,8 @@ function json(status: number, body: any) {
  */
 
 export async function GET(req: Request) {
+  console.log("➡️  /api/client/leads HIT", new Date().toISOString());
+  console.log("Authorization header:", req.headers.get("Authorization"));
 
   try {
 
@@ -168,9 +170,11 @@ export async function GET(req: Request) {
 
       .order("created_at", { ascending: false });
 
-
+    console.log("📊 Fetched leads count:", leads?.length || 0, "for org:", orgId);
 
     if (leadsErr) {
+
+      console.error("❌ Database error:", leadsErr.message);
 
       return json(500, { success: false, error: "Database error", detail: leadsErr.message });
 

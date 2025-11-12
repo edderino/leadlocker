@@ -1,5 +1,7 @@
 'use client'
 
+export const revalidate = 0;
+
 // ⚠️ absolutely no imports that trigger server rendering above here
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
