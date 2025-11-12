@@ -82,9 +82,9 @@ export async function GET(req: Request) {
 
 
 
-    // 3) Resolve org from user metadata
+    // 3) Resolve org from user metadata, or fall back to users table
 
-    const orgId =
+    let orgId =
 
       (userRes.user.user_metadata as any)?.org_id ??
 
@@ -92,9 +92,61 @@ export async function GET(req: Request) {
 
 
 
+    // Fallback: query users table if org_id not in metadata
+
     if (!orgId || typeof orgId !== "string") {
 
-      return json(400, { success: false, error: "Missing org_id in user metadata" });
+      const { data: userRow, error: userRowError } = await admin
+
+        .from("users")
+
+        .select("client_id")
+
+        .eq("auth_id", userRes.user.id)
+
+        .maybeSingle();
+
+
+
+      if (userRowError || !userRow?.client_id) {
+
+        // Try by email as fallback
+
+        if (userRes.user.email) {
+
+          const { data: userByEmail } = await admin
+
+            .from("users")
+
+            .select("client_id")
+
+            .eq("email", userRes.user.email)
+
+            .maybeSingle();
+
+          
+
+          if (userByEmail?.client_id) {
+
+            orgId = userByEmail.client_id;
+
+          }
+
+        }
+
+      } else {
+
+        orgId = userRow.client_id;
+
+      }
+
+    }
+
+
+
+    if (!orgId || typeof orgId !== "string") {
+
+      return json(400, { success: false, error: "Missing org_id in user metadata or users table" });
 
     }
 
