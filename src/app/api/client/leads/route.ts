@@ -1,96 +1,133 @@
-import { NextRequest, NextResponse } from 'next/server';
+// src/app/api/client/leads/route.ts
+
+import { NextResponse } from "next/server";
+
 import { createClient } from "@supabase/supabase-js";
-import { verifyClientSession } from '../../_lib/verifyClientSession';
+
+
 
 export const dynamic = 'force-dynamic';
+
 export const runtime = 'nodejs';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+
+
+// Strict JSON response helper
+
+function json(status: number, body: any) {
+
+  return NextResponse.json(body, { status });
+
+}
+
+
 
 /**
- * GET /api/client/leads?orgId=XXX
- *
- * Returns leads for a specific organization.
- * Requires Authorization: Bearer <access_token> header.
+
+ * Production-grade leads fetch:
+
+ * - Requires Authorization: Bearer <supabase_jwt>
+
+ * - Verifies the token against Supabase (no home-rolled auth)
+
+ * - Derives org_id from the token's user_metadata
+
+ * - Uses service role key for DB read (bypasses RLS safely on server)
+
+ * - Filters by org_id to enforce tenant isolation
+
  */
-export async function GET(request: NextRequest) {
+
+export async function GET(req: Request) {
+
   try {
-    const authHeader = request.headers.get('authorization');
 
-    if (!authHeader?.toLowerCase().startsWith('bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Missing authorization header' },
-        { status: 401 }
-      );
+    // 1) Require Supabase JWT from the browser session
+
+    const authHeader = req.headers.get("authorization");
+
+    if (!authHeader?.startsWith("Bearer ")) {
+
+      return json(401, { success: false, error: "Missing or invalid Authorization header" });
+
     }
 
-    const token = authHeader.slice('Bearer '.length).trim();
+    const jwt = authHeader.split(" ")[1];
 
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid authorization header' },
-        { status: 401 }
-      );
-    }
 
-    const searchParams = request.nextUrl.searchParams;
-    const orgId = searchParams.get('orgId');
 
-    if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing orgId parameter' },
-        { status: 400 }
-      );
-    }
+    // 2) Build admin client and verify user from JWT
 
-    const verification = await verifyClientSession(token);
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
 
-    if (!verification.ok) {
-      return NextResponse.json(
-        { success: false, error: verification.error },
-        { status: verification.status }
-      );
-    }
+      auth: { persistSession: false }
 
-    if (verification.clientId !== orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
-    const { data: leads, error } = await supabase
-      .from('leads')
-      .select('id, name, phone, source, description, status, created_at')
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (error) {
-      console.error('[ClientAPI] Failed to fetch leads:', error);
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch leads' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      orgId,
-      total: leads?.length ?? 0,
-      leads: leads ?? [],
     });
-  } catch (error: any) {
-    console.error('[ClientAPI] Unexpected error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal server error',
-      },
-      { status: 500 }
-    );
+
+
+
+    const { data: userRes, error: userErr } = await admin.auth.getUser(jwt);
+
+    if (userErr || !userRes?.user) {
+
+      return json(401, { success: false, error: "Unauthorized" });
+
+    }
+
+
+
+    // 3) Resolve org from user metadata
+
+    const orgId =
+
+      (userRes.user.user_metadata as any)?.org_id ??
+
+      (userRes.user.app_metadata as any)?.org_id;
+
+
+
+    if (!orgId || typeof orgId !== "string") {
+
+      return json(400, { success: false, error: "Missing org_id in user metadata" });
+
+    }
+
+
+
+    // 4) Query leads for this org (service role bypasses RLS; still filter defensively)
+
+    const { data: leads, error: leadsErr } = await admin
+
+      .from("leads")
+
+      .select("*")
+
+      .eq("org_id", orgId)
+
+      .order("created_at", { ascending: false });
+
+
+
+    if (leadsErr) {
+
+      return json(500, { success: false, error: "Database error", detail: leadsErr.message });
+
+    }
+
+
+
+    return json(200, { success: true, orgId, leads });
+
+  } catch (e: any) {
+
+    return json(500, { success: false, error: "Server error", detail: e?.message ?? String(e) });
+
   }
+
 }
