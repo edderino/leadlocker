@@ -1,6 +1,6 @@
 // Legacy export for backward compatibility
 // New code should use src/utils/supabase/client.ts instead
-import { createClient as createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from "@supabase/ssr";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
