@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/libs/supabaseAdmin';
+import { createClient } from "@supabase/supabase-js";
 import { verifyClientSession } from '../../_lib/verifyClientSession';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 /**
  * GET /api/client/leads?orgId=XXX
@@ -57,7 +62,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data: leads, error } = await supabaseAdmin
+    const { data: leads, error } = await supabase
       .from('leads')
       .select('id, name, phone, source, description, status, created_at')
       .eq('org_id', orgId)
