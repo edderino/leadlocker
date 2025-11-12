@@ -60,6 +60,33 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
+        if (!session?.access_token) return;
+
+        const res = await fetch("/api/client/leads", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (data.success) setLeads(data.leads || []);
+      } catch (err) {
+        console.error("[Leads] Auto-refresh error:", err);
+      }
+    };
+
+    fetchLeads(); // initial load
+    const interval = setInterval(fetchLeads, 5000); // refresh every 5s
+    return () => clearInterval(interval);
+  }, []);
   const dateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat("en-US", {
