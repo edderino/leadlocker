@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/libs/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 
 export default function LoginPage() {
+  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -45,12 +46,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (!supabase) {
-        setError("Supabase client not initialized. Check environment variables.");
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
