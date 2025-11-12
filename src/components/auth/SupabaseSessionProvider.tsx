@@ -13,7 +13,7 @@ export default function SupabaseSessionProvider({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((event: string, session) => {
       // session auto-saves to localStorage; this ensures cookies stay updated
       if (event === "SIGNED_OUT") {
         window.location.href = "/login";
