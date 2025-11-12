@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { supabase } from "@/libs/supabaseClient";
+import type { Session } from "@supabase/supabase-js";
 
 export default function SupabaseSessionProvider({
   children,
@@ -13,7 +14,7 @@ export default function SupabaseSessionProvider({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: string, session) => {
+    } = supabase.auth.onAuthStateChange((event: string, session: Session | null) => {
       // session auto-saves to localStorage; this ensures cookies stay updated
       if (event === "SIGNED_OUT") {
         window.location.href = "/login";
