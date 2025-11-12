@@ -1,8 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/libs/supabaseClient';
+import { createBrowserClient } from '@supabase/ssr';
 import ClientDashboard from './ClientDashboardV5';
+
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface Lead {
   id: string;
@@ -23,53 +28,48 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchLeads = async () => {
-      try {
-        console.log('[DashboardClientRoot] Fetching leads for org:', orgId);
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
+  async function loadLeads() {
+    setLoading(true);
+    setError(null);
 
-        if (sessionError) {
-          console.error('[DashboardClientRoot] Session error:', sessionError.message);
-          setError('Authentication error. Please log in again.');
-          return;
-        }
-
-        const accessToken = session?.access_token;
-
-        if (!accessToken) {
-          console.error('[DashboardClientRoot] No access token found');
-          setError('You must be signed in to view this page.');
-          return;
-        }
-
-        const response = await fetch(`/api/client/leads?orgId=${orgId}`, {
-          cache: 'no-store',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        const data = await response.json();
-        
-        if (data.success && data.leads) {
-          setLeads(data.leads);
-          console.log('[DashboardClientRoot] Loaded leads:', data.leads.length);
-        } else {
-          setError(data.error || 'Failed to load leads');
-        }
-      } catch (err: any) {
-        console.error('[DashboardClientRoot] Error fetching leads:', err);
-        setError(err.message || 'Failed to load leads');
-      } finally {
-        setLoading(false);
+    try {
+      // 1) get Supabase session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = "/login";
+        return;
       }
-    };
 
-    fetchLeads();
-  }, [orgId]);
+      // 2) call the API with Authorization: Bearer <token>
+      const res = await fetch("/api/client/leads", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("[Leads] API error", errorText);
+        setError("Failed to load leads");
+        setLeads([]);
+        setLoading(false);
+        return;
+      }
+
+      const json = await res.json();
+      setLeads(json.leads ?? []);
+      console.log('[DashboardClientRoot] Loaded leads:', json.leads?.length || 0);
+    } catch (err: any) {
+      console.error('[DashboardClientRoot] Error fetching leads:', err);
+      setError(err.message || 'Failed to load leads');
+      setLeads([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadLeads();
+  }, []);
 
   if (loading) {
     return (

@@ -105,7 +105,7 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
           return;
         }
 
-        const response = await fetch(`/api/client/leads?orgId=${orgId}`, {
+        const response = await fetch(`/api/client/leads`, {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },
