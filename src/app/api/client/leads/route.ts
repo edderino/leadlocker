@@ -50,7 +50,7 @@ function json(status: number, body: any) {
 
 export async function GET(req: Request) {
   console.log("➡️  /api/client/leads HIT", new Date().toISOString());
-  console.log("Authorization header:", req.headers.get("Authorization"));
+  console.log("Authorization header:", req.headers.get("Authorization")?.substring(0, 20) + "...");
 
   try {
 
