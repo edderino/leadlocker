@@ -50,18 +50,18 @@ function json(status: number, body: any) {
 
 export async function GET(req: Request) {
   console.log("➡️  /api/client/leads HIT", new Date().toISOString());
-  console.log("Authorization header:", req.headers.get("Authorization")?.substring(0, 20) + "...");
+  
+  const authHeader = req.headers.get("Authorization");
+  console.log("🔐 Auth Header Received:", authHeader ? "✅ Yes" : "❌ No");
+  if (authHeader) {
+    console.log("🔐 Auth Header (first 30 chars):", authHeader.substring(0, 30) + "...");
+  }
 
   try {
 
     // 1) Require Supabase JWT from the browser session
-
-    const authHeader = req.headers.get("authorization");
-
     if (!authHeader?.startsWith("Bearer ")) {
-
       return json(401, { success: false, error: "Missing or invalid Authorization header" });
-
     }
 
     const jwt = authHeader.split(" ")[1];

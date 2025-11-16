@@ -68,6 +68,8 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
           data: { session },
         } = await supabase.auth.getSession();
         
+        console.log("🧠 [Leads Auto-refresh] Session check:", session?.access_token ? "✅ Token present" : "❌ No token");
+        
         if (!session?.access_token) return;
 
         const res = await fetch("/api/client/leads", {
@@ -126,6 +128,8 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession();
+
+        console.log("🧠 [Leads Manual Fetch] Session check:", session?.access_token ? "✅ Token present" : "❌ No token");
 
         if (sessionError || !session?.access_token) {
           if (mounted) setError("Unauthenticated. Please log in again.");

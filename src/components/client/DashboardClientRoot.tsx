@@ -35,6 +35,8 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
     try {
       // 1) get Supabase session token
       const { data: { session } } = await supabase.auth.getSession();
+      console.log("🧠 Session check:", session?.access_token ? "✅ Token present" : "❌ No token");
+      
       if (!session) {
         window.location.href = "/login";
         return;
@@ -42,7 +44,9 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
 
       // 2) call the API with Authorization: Bearer <token>
       const res = await fetch("/api/client/leads", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`,
+        },
         cache: "no-store",
       });
 
