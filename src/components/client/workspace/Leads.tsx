@@ -62,15 +62,23 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     const fetchLeads = async () => {
+      if (!mounted) return;
+
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
         
-        console.log("🧠 [Leads Auto-refresh] Session check:", session?.access_token ? "✅ Token present" : "❌ No token");
-        
-        if (!session?.access_token) return;
+        if (!session?.access_token) {
+          console.warn("⏳ [Leads Auto-refresh] No session yet — waiting before fetch");
+          setTimeout(fetchLeads, 500); // retry after 0.5s
+          return;
+        }
+
+        console.log("🧠 [Leads Auto-refresh] Session ready, fetching leads...");
 
         const res = await fetch("/api/client/leads", {
           headers: {
@@ -79,7 +87,10 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
           cache: "no-store",
         });
         const data = await res.json();
-        if (data.success) setLeads(data.leads || []);
+        if (mounted && data.success) {
+          setLeads(data.leads || []);
+          console.log("✅ [Leads Auto-refresh] Leads updated:", data.leads?.length || 0);
+        }
       } catch (err) {
         console.error("[Leads] Auto-refresh error:", err);
       }
@@ -87,7 +98,11 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
 
     fetchLeads(); // initial load
     const interval = setInterval(fetchLeads, 5000); // refresh every 5s
-    return () => clearInterval(interval);
+    
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
   const dateFormatter = useMemo(
     () =>
@@ -120,6 +135,8 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
     let mounted = true;
 
     async function fetchLeads() {
+      if (!mounted) return;
+
       setLoading(true);
       setError(null);
 
@@ -129,12 +146,15 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
           error: sessionError,
         } = await supabase.auth.getSession();
 
-        console.log("🧠 [Leads Manual Fetch] Session check:", session?.access_token ? "✅ Token present" : "❌ No token");
-
         if (sessionError || !session?.access_token) {
-          if (mounted) setError("Unauthenticated. Please log in again.");
+          console.warn("⏳ [Leads Manual Fetch] No session yet — waiting before fetch");
+          setTimeout(() => {
+            if (mounted) fetchLeads();
+          }, 500); // retry after 0.5s
           return;
         }
+
+        console.log("🧠 [Leads Manual Fetch] Session ready, fetching leads...");
 
         const response = await fetch(`/api/client/leads`, {
           headers: {
@@ -145,18 +165,25 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
 
         if (!response.ok) {
           const json = await response.json().catch(() => ({ error: "Failed to load leads" }));
-          if (mounted) setError(json.error || "Failed to load leads");
+          if (mounted) {
+            setError(json.error || "Failed to load leads");
+            setLoading(false);
+          }
           return;
         }
 
         const json = await response.json();
+        console.log("✅ [Leads Manual Fetch] Leads fetched:", json);
+        
         if (mounted) {
           setLeads(json.leads || []);
+          setLoading(false);
         }
       } catch (err: any) {
-        if (mounted) setError(err?.message || "Failed to load leads");
-      } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setError(err?.message || "Failed to load leads");
+          setLoading(false);
+        }
       }
     }
 

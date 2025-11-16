@@ -1,13 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@/utils/supabase/client';
 import ClientDashboard from './ClientDashboardV5';
-
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 interface Lead {
   id: string;
@@ -28,52 +23,73 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadLeads() {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // 1) get Supabase session token
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("🧠 Session check:", session?.access_token ? "✅ Token present" : "❌ No token");
-      
-      if (!session) {
-        window.location.href = "/login";
-        return;
-      }
-
-      // 2) call the API with Authorization: Bearer <token>
-      const res = await fetch("/api/client/leads", {
-        headers: {
-          "Authorization": `Bearer ${session.access_token}`,
-        },
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("[Leads] API error", errorText);
-        setError("Failed to load leads");
-        setLeads([]);
-        setLoading(false);
-        return;
-      }
-
-      const json = await res.json();
-      setLeads(json.leads ?? []);
-      console.log('[DashboardClientRoot] Loaded leads:', json.leads?.length || 0);
-    } catch (err: any) {
-      console.error('[DashboardClientRoot] Error fetching leads:', err);
-      setError(err.message || 'Failed to load leads');
-      setLeads([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
+    let mounted = true;
+    const supabase = createClient();
+
+    async function loadLeads() {
+      if (!mounted) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        // 1) Wait for Supabase session token to be ready
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.access_token) {
+          console.warn("⏳ No session yet — waiting before fetch");
+          setTimeout(() => {
+            if (mounted) loadLeads();
+          }, 500); // retry after 0.5s
+          return;
+        }
+
+        console.log("🧠 Session ready, fetching leads...");
+
+        // 2) call the API with Authorization: Bearer <token>
+        const res = await fetch("/api/client/leads", {
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("[Leads] API error", errorText);
+          if (mounted) {
+            setError("Failed to load leads");
+            setLeads([]);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const json = await res.json();
+        console.log("✅ Leads fetched:", json);
+        
+        if (mounted) {
+          setLeads(json.leads ?? []);
+          console.log('[DashboardClientRoot] Loaded leads:', json.leads?.length || 0);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error('[DashboardClientRoot] Error fetching leads:', err);
+        if (mounted) {
+          setError(err.message || 'Failed to load leads');
+          setLeads([]);
+          setLoading(false);
+        }
+      }
+    }
+
     loadLeads();
-  }, []);
+
+    return () => {
+      mounted = false;
+    };
+  }, [orgId]);
 
   if (loading) {
     return (
