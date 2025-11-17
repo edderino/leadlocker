@@ -22,31 +22,19 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get("authorization");
-
-    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-      return NextResponse.json({ ok: false, error: "Missing authorization header" }, { status: 401 });
-    }
-
-    const token = authHeader.slice("Bearer ".length).trim();
-
-    if (!token) {
-      return NextResponse.json({ ok: false, error: "Invalid authorization header" }, { status: 401 });
-    }
-
     const { orgId, body } = await req.json();
 
     if (!orgId || !body || typeof body !== "string" || body.trim().length === 0) {
       return NextResponse.json({ ok: false, error: "Missing orgId or body" }, { status: 400 });
     }
 
-    const verification = await verifyClientSession(token);
+    const verification = await verifyClientSession(req);
 
-    if (!verification.ok) {
-      return NextResponse.json({ ok: false, error: verification.error }, { status: verification.status });
+    if (verification.error) {
+      return NextResponse.json({ ok: false, error: verification.error }, { status: 401 });
     }
 
-    if (verification.clientId !== orgId) {
+    if (verification.orgId !== orgId) {
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
     }
 

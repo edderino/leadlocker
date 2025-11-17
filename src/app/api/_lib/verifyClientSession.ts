@@ -1,66 +1,92 @@
-import { createClient } from '@supabase/supabase-js';
-import { supabaseAdmin } from '@/libs/supabaseAdmin';
+import { cookies } from 'next/headers';
+import type { NextRequest } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URL or anon key is not configured');
-}
-
-type VerifySuccess = {
-  ok: true;
-  clientId: string;
-  userId: string;
-};
-
-type VerifyFailure = {
-  ok: false;
-  status: number;
-  error: string;
-};
-
-export async function verifyClientSession(token: string): Promise<VerifySuccess | VerifyFailure> {
-  if (!token) {
-    return { ok: false, status: 401, error: 'Missing session token' };
-  }
-
-  const supabaseAuth = createClient(supabaseUrl!, supabaseAnonKey!);
-  const {
-    data: { user },
-    error: authError,
-  } = await supabaseAuth.auth.getUser(token);
-
-  if (authError || !user) {
-    return { ok: false, status: 401, error: 'Invalid token' };
-  }
-
-  let { data: userRow, error: userError } = await supabaseAdmin
-    .from('users')
-    .select('client_id, auth_id, email')
-    .eq('auth_id', user.id)
-    .maybeSingle();
-
-  if ((!userRow || userError) && user.email) {
-    const { data: rowsByEmail, error: emailError } = await supabaseAdmin
-      .from('users')
-      .select('client_id, auth_id, email')
-      .eq('email', user.email);
-
-    if (!emailError && rowsByEmail && rowsByEmail.length > 0) {
-      userRow = rowsByEmail[0];
-      userError = null;
+type VerifiedSession =
+  | {
+      user: null;
+      orgId: null;
+      error: string;
     }
-  }
+  | {
+      user: NonNullable<import('@supabase/supabase-js').User>;
+      orgId: string | null;
+      error: null;
+    };
 
-  if (userError || !userRow) {
-    return { ok: false, status: 403, error: 'User not found in users table' };
-  }
+async function createSupabaseServerClient() {
+  const cookieStore = await cookies();
 
-  if (!userRow.client_id) {
-    return { ok: false, status: 403, error: 'No client assigned to this user' };
-  }
-
-  return { ok: true, clientId: userRow.client_id, userId: user.id };
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+          cookiesToSet.forEach((cookie) => {
+            cookieStore.set(cookie.name, cookie.value, cookie.options);
+          });
+        },
+      },
+    },
+  );
 }
 
+/**
+ * Centralised client session verification for API routes.
+ *
+ * - First tries `Authorization: Bearer <token>`
+ * - Falls back to the `sb-access-token` cookie used by @supabase/ssr
+ * - Returns the Supabase user + org_id (from user/app metadata) when valid
+ */
+export async function verifyClientSession(req: NextRequest): Promise<VerifiedSession> {
+  // 1) Try Authorization header
+  const authHeader = req.headers.get('authorization');
+  let accessToken: string | null = null;
+
+  if (authHeader?.toLowerCase().startsWith('bearer ')) {
+    accessToken = authHeader.slice('bearer '.length).trim();
+  }
+
+  // 2) Fallback to sb-access-token cookie (set by @supabase/ssr)
+  if (!accessToken) {
+    const cookieStore = await cookies();
+    accessToken = cookieStore.get('sb-access-token')?.value ?? null;
+  }
+
+  if (!accessToken) {
+    return {
+      user: null,
+      orgId: null,
+      error: 'Missing access token (no Authorization header or sb-access-token cookie)',
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase.auth.getUser(accessToken);
+
+  if (error || !data.user) {
+    return {
+      user: null,
+      orgId: null,
+      error: error?.message ?? 'Invalid or expired session',
+    };
+  }
+
+  // org_id can live in either app_metadata or user_metadata depending on how it was set
+  const appMeta = (data.user.app_metadata as any) ?? {};
+  const userMeta = (data.user.user_metadata as any) ?? {};
+
+  const orgId: string | null =
+    appMeta.org_id ?? userMeta.org_id ?? null;
+
+  return {
+    user: data.user,
+    orgId,
+    error: null,
+  };
+}

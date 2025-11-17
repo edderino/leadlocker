@@ -7,31 +7,19 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-
-    if (!authHeader?.toLowerCase().startsWith('bearer ')) {
-      return NextResponse.json({ success: false, error: 'Missing authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice('Bearer '.length).trim();
-
-    if (!token) {
-      return NextResponse.json({ success: false, error: 'Invalid authorization header' }, { status: 401 });
-    }
-
     const orgId = request.nextUrl.searchParams.get('orgId');
 
     if (!orgId) {
       return NextResponse.json({ success: false, error: 'Missing orgId parameter' }, { status: 400 });
     }
 
-    const verification = await verifyClientSession(token);
+    const verification = await verifyClientSession(request);
 
-    if (!verification.ok) {
-      return NextResponse.json({ success: false, error: verification.error }, { status: verification.status });
+    if (verification.error) {
+      return NextResponse.json({ success: false, error: verification.error }, { status: 401 });
     }
 
-    if (verification.clientId !== orgId) {
+    if (verification.orgId !== orgId) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 

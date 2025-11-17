@@ -7,18 +7,10 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
+    const verification = await verifyClientSession(request);
 
-    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-      return NextResponse.json({ error: "Missing authorization header" }, { status: 401 });
-    }
-
-    const token = authHeader.slice("Bearer ".length).trim();
-
-    const verification = await verifyClientSession(token);
-
-    if (!verification.ok) {
-      return NextResponse.json({ error: verification.error }, { status: verification.status });
+    if (verification.error) {
+      return NextResponse.json({ error: verification.error }, { status: 401 });
     }
 
     const { name, phone } = await request.json();
@@ -39,7 +31,7 @@ export async function POST(request: NextRequest) {
     const { error } = await supabaseAdmin
       .from("users")
       .update(updates)
-      .eq("auth_id", verification.userId);
+      .eq("auth_id", verification.user.id);
 
     if (error) {
       throw error;
