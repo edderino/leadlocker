@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/libs/supabaseAdmin";
-import { verifyClientSession } from "../_lib/verifyClientSession";
+import { verifyClientSession } from "../../_lib/verifyClientSession";
 
 // Ensure this runs on Node runtime and never caches
 export const runtime = "nodejs";

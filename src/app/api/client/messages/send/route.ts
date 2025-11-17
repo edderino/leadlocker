@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { supabaseAdmin } from "@/libs/supabaseAdmin";
 import { twilioClient } from "@/libs/twilio"; // already in your repo
-import { verifyClientSession } from "../../../_lib/verifyClientSession";
+import { verifyClientSession } from "../../_lib/verifyClientSession";
 
 export const runtime = "nodejs";
 
