@@ -1,55 +1,40 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. Allow all framework assets + static files
+  // Allow public assets
   if (
-    pathname.startsWith("/_next/") ||
-    pathname.startsWith("/static/") ||
-    pathname.startsWith("/public/") ||
-    pathname.endsWith(".png") ||
-    pathname.endsWith(".jpg") ||
-    pathname.endsWith(".jpeg") ||
-    pathname.endsWith(".svg") ||
-    pathname.endsWith(".webp") ||
-    pathname.endsWith(".ico")
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/icons/') ||
+    pathname === '/manifest.json' ||
+    pathname === '/sw.js' ||
+    pathname === '/favicon.ico' ||
+    pathname === '/apple-touch-icon.png' ||
+    pathname === '/android-chrome-192x192.png' ||
+    pathname === '/android-chrome-512x512.png'
   ) {
     return NextResponse.next();
   }
 
-  // 2. Allow PWA files
+  // 🔥 ALLOW SUPABASE AUTH CALLBACKS (critical)
   if (
-    pathname === "/manifest.json" ||
-    pathname === "/sw.js" ||
-    pathname.startsWith("/icons/")
+    pathname.startsWith('/api/auth/') ||   // your API auth handler
+    pathname.startsWith('/auth/') ||       // supabase built-in paths
+    pathname.startsWith('/api/supabase/')  // future-proof
   ) {
     return NextResponse.next();
   }
 
-  // 3. Allow Supabase auth endpoints (critical!)
-  if (
-    pathname.startsWith("/auth/") ||
-    pathname.startsWith("/api/auth/") ||
-    pathname.includes("/auth/v1/")
-  ) {
-    return NextResponse.next();
-  }
-
-  // 4. Allow API routes (they check their own auth)
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.next();
-  }
-
-  // 5. Protect ONLY the client dashboard pages
-  if (pathname.startsWith("/client")) {
-    const token = req.cookies.get("sb-access-token")?.value;
+  // Protect client area ONLY after login SESSION exists
+  if (pathname.startsWith('/client')) {
+    const token = req.cookies.get('sb-access-token')?.value;
 
     if (!token) {
-      const redirectUrl = new URL("/login", req.url);
-      redirectUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(redirectUrl);
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
@@ -57,5 +42,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)"], // clean + safe
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 };
