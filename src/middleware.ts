@@ -1,35 +1,55 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const url = req.nextUrl;
+  const { pathname } = req.nextUrl;
 
-  // Allow public PWA assets
-  const publicFiles = [
-    '/manifest.json',
-    '/sw.js',
-    '/favicon.ico',
-    '/icon.png',
-    '/apple-touch-icon.png',
-    '/android-chrome-192x192.png',
-    '/android-chrome-512x512.png'
-  ];
-
-  if (publicFiles.includes(url.pathname)) {
+  // 1. Allow all framework assets + static files
+  if (
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/static/") ||
+    pathname.startsWith("/public/") ||
+    pathname.endsWith(".png") ||
+    pathname.endsWith(".jpg") ||
+    pathname.endsWith(".jpeg") ||
+    pathname.endsWith(".svg") ||
+    pathname.endsWith(".webp") ||
+    pathname.endsWith(".ico")
+  ) {
     return NextResponse.next();
   }
 
-  // Allow everything under /icons/
-  if (url.pathname.startsWith('/icons/')) {
+  // 2. Allow PWA files
+  if (
+    pathname === "/manifest.json" ||
+    pathname === "/sw.js" ||
+    pathname.startsWith("/icons/")
+  ) {
     return NextResponse.next();
   }
 
-  // Protect client portal
-  if (url.pathname.startsWith('/client')) {
-    const token = req.cookies.get('sb-access-token')?.value;
+  // 3. Allow Supabase auth endpoints (critical!)
+  if (
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/api/auth/") ||
+    pathname.includes("/auth/v1/")
+  ) {
+    return NextResponse.next();
+  }
+
+  // 4. Allow API routes (they check their own auth)
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  // 5. Protect ONLY the client dashboard pages
+  if (pathname.startsWith("/client")) {
+    const token = req.cookies.get("sb-access-token")?.value;
 
     if (!token) {
-      return NextResponse.redirect(new URL('/login', req.url));
+      const redirectUrl = new URL("/login", req.url);
+      redirectUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(redirectUrl);
     }
   }
 
@@ -37,8 +57,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ["/((?!.*\\..*|_next).*)"], // clean + safe
 };
-
