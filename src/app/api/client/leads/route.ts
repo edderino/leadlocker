@@ -24,6 +24,14 @@ export async function GET(req: NextRequest) {
     return j({ success: false, error: verification.error }, { status: 401 });
   }
 
+  // FIX: hard guard to satisfy TS + runtime safety
+  if (!verification || !verification.user || !verification.user.id) {
+    return NextResponse.json(
+      { success: false, error: "Invalid session" },
+      { status: 401 }
+    );
+  }
+
   let orgId = verification.orgId;
 
   // Fallback: query users table if org_id not in metadata
