@@ -3,31 +3,33 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
+  const path = url.pathname;
 
-  //
-  // 1. Allow ALL PUBLIC ASSETS (fixes 401 manifest)
-  //
+  // ⭐ Allow ALL PWA assets through with ZERO auth
   if (
-    url.pathname === '/manifest.json' ||
-    url.pathname === '/sw.js' ||
-    url.pathname.startsWith('/icons/') ||
-    url.pathname.startsWith('/favicon') ||
-    url.pathname.startsWith('/android-chrome') ||
-    url.pathname.startsWith('/apple-touch-icon')
+    path === '/manifest.json' ||
+    path === '/sw.js' ||
+    path.startsWith('/icons/') ||
+    path.endsWith('.png') ||
+    path.endsWith('.ico') ||
+    path.endsWith('.webmanifest')
   ) {
     return NextResponse.next();
   }
 
-  //
-  // 2. Protect ONLY client portal
-  //
-  if (url.pathname.startsWith('/client')) {
+  // ⭐ Public routes that must never be protected
+  if (path === '/login' || path === '/') {
+    return NextResponse.next();
+  }
+
+  // ⭐ Protect only the client portal
+  if (path.startsWith('/client')) {
     const token = req.cookies.get('sb-access-token')?.value;
+
     if (!token) {
-      const redirect = url.searchParams.get('redirect') || '/client';
-      return NextResponse.redirect(
-        new URL(`/login?redirect=${redirect}`, req.url)
-      );
+      const login = new URL('/login', req.url);
+      login.searchParams.set('redirect', path);
+      return NextResponse.redirect(login);
     }
   }
 
@@ -35,7 +37,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image).*)'],
 };
