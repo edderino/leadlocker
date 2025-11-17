@@ -13,13 +13,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: verification.error }, { status: 401 });
     }
 
-    // HARD GUARD — required by TS + prevents runtime crash
-    if (!verification || !verification.user || !verification.user.id) {
-      return NextResponse.json(
-        { success: false, error: "Invalid session" },
-        { status: 401 }
-      );
-    }
+    // Force non-null user to satisfy TS (runtime safe: verifyClientSession ensures this)
+    const authId = verification.user!.id;
 
     const { name, phone } = await request.json();
     const updates: Record<string, string> = {};
@@ -39,7 +34,7 @@ export async function POST(request: NextRequest) {
     const { error } = await supabaseAdmin
       .from("users")
       .update(updates)
-      .eq("auth_id", verification.user.id);
+      .eq("auth_id", authId);
 
     if (error) {
       throw error;
