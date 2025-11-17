@@ -13,9 +13,9 @@ export default function PWARegistration() {
       console.log('[PWA] Registering service worker...');
       
       navigator.serviceWorker
-        .register('/sw.js?v=2', { scope: '/' })
+        .register('/sw.js?v=4', { scope: '/' })
         .then((registration) => {
-          console.log('✅ Service worker v2 registered successfully');
+          console.log('✅ Service worker v4 registered successfully');
           console.log('[PWA] Scope:', registration.scope);
           console.log('[PWA] Installing:', registration.installing);
           console.log('[PWA] Active:', registration.active);
