@@ -13,6 +13,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: verification.error }, { status: 401 });
     }
 
+    // HARD GUARD — required by TS + prevents runtime crash
+    if (!verification || !verification.user || !verification.user.id) {
+      return NextResponse.json(
+        { success: false, error: "Invalid session" },
+        { status: 401 }
+      );
+    }
+
     const { name, phone } = await request.json();
     const updates: Record<string, string> = {};
 
