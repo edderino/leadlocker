@@ -65,7 +65,7 @@ export async function verifyClientSession(req: NextRequest): Promise<VerifiedSes
     };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServerClient();
 
   const { data, error } = await supabase.auth.getUser(accessToken);
 
