@@ -1,35 +1,29 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const url = req.nextUrl;
-  const path = url.pathname;
+  const { pathname } = req.nextUrl;
 
-  // ⭐ Allow ALL PWA assets through with ZERO auth
+  // --- 1. Allow all PWA public assets ---
   if (
-    path === '/manifest.json' ||
-    path === '/sw.js' ||
-    path.startsWith('/icons/') ||
-    path.endsWith('.png') ||
-    path.endsWith('.ico') ||
-    path.endsWith('.webmanifest')
+    pathname === "/manifest.json" ||
+    pathname === "/sw.js" ||
+    pathname.startsWith("/icons/") ||
+    pathname.startsWith("/_next/static/") ||
+    pathname.startsWith("/android-chrome") ||
+    pathname.startsWith("/apple-touch-icon")
   ) {
     return NextResponse.next();
   }
 
-  // ⭐ Public routes that must never be protected
-  if (path === '/login' || path === '/') {
-    return NextResponse.next();
-  }
-
-  // ⭐ Protect only the client portal
-  if (path.startsWith('/client')) {
-    const token = req.cookies.get('sb-access-token')?.value;
+  // --- 2. Protect /client routes only ---
+  if (pathname.startsWith("/client")) {
+    const token = req.cookies.get("sb-access-token")?.value;
 
     if (!token) {
-      const login = new URL('/login', req.url);
-      login.searchParams.set('redirect', path);
-      return NextResponse.redirect(login);
+      const url = new URL("/login", req.url);
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
     }
   }
 
@@ -37,5 +31,8 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image).*)'],
+  matcher: [
+    // apply middleware globally EXCEPT known static dirs
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ]
 };
