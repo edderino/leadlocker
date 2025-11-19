@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { List, Grid, ArrowDownUp, Filter } from "lucide-react";
 import { useThemeStyles } from "./ThemeContext";
 import { supabase } from "@/libs/supabaseClient";
+import { useLeadsStore } from "@/store/useLeadsStore";
 
 const RECOGNIZED_SOURCES = [
   { key: "gmail", label: "Gmail" },
@@ -52,58 +53,15 @@ interface LeadsProps {
   orgId?: string;
 }
 
-export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
+export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
   const themeStyles = useThemeStyles();
+  const leads = useLeadsStore((s) => s.leads);
+  const setLeads = useLeadsStore((s) => s.setLeads);
   const [view, setView] = useState<"cards" | "table">("cards");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-
-    const fetchLeads = async () => {
-      if (!mounted) return;
-
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        
-        if (!session?.access_token) {
-          console.warn("⏳ [Leads Auto-refresh] No session yet — waiting before fetch");
-          setTimeout(fetchLeads, 500); // retry after 0.5s
-          return;
-        }
-
-        console.log("🧠 [Leads Auto-refresh] Session ready, fetching leads...");
-
-        const res = await fetch("/api/client/leads", {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          cache: "no-store",
-        });
-        const data = await res.json();
-        if (mounted && data.success) {
-          setLeads(data.leads || []);
-          console.log("✅ [Leads Auto-refresh] Leads updated:", data.leads?.length || 0);
-        }
-      } catch (err) {
-        console.error("[Leads] Auto-refresh error:", err);
-      }
-    };
-
-    fetchLeads(); // initial load
-    const interval = setInterval(fetchLeads, 5000); // refresh every 5s
-    
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, []);
+  // Auto-refresh is now handled by DashboardClientRoot, so we just read from the store
   const dateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat("en-US", {
@@ -129,70 +87,7 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
     []
   );
 
-  useEffect(() => {
-    if (!orgId) return;
-
-    let mounted = true;
-
-    async function fetchLeads() {
-      if (!mounted) return;
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
-
-        if (sessionError || !session?.access_token) {
-          console.warn("⏳ [Leads Manual Fetch] No session yet — waiting before fetch");
-          setTimeout(() => {
-            if (mounted) fetchLeads();
-          }, 500); // retry after 0.5s
-          return;
-        }
-
-        console.log("🧠 [Leads Manual Fetch] Session ready, fetching leads...");
-
-        const response = await fetch(`/api/client/leads`, {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          const json = await response.json().catch(() => ({ error: "Failed to load leads" }));
-          if (mounted) {
-            setError(json.error || "Failed to load leads");
-            setLoading(false);
-          }
-          return;
-        }
-
-        const json = await response.json();
-        console.log("✅ [Leads Manual Fetch] Leads fetched:", json);
-        
-        if (mounted) {
-          setLeads(json.leads || []);
-          setLoading(false);
-        }
-      } catch (err: any) {
-        if (mounted) {
-          setError(err?.message || "Failed to load leads");
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchLeads();
-
-    return () => {
-      mounted = false;
-    };
-  }, [orgId]);
+  // Manual fetch removed - DashboardClientRoot handles all fetching and updates the store
 
   useEffect(() => {
     if (
@@ -218,10 +113,11 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
   };
   const formatSource = (source: string) => getSourceLabel(getSourceKey(source));
 
+  const isLoading = useLeadsStore((s) => s.isLoading);
+  const error = useLeadsStore((s) => s.error);
+
   const displayLeads = useMemo(() => {
-    // Always use fetched leads if available, otherwise fall back to initialLeads during initial load
-    const list = leads.length > 0 || loading ? leads : initialLeads;
-    const filtered = list.filter((lead) => {
+    const filtered = leads.filter((lead) => {
       if (sourceFilter === "all") return true;
       return getSourceKey(lead.source) === sourceFilter;
     });
@@ -233,9 +129,9 @@ export default function Leads({ leads: initialLeads = [], orgId }: LeadsProps) {
         const dateB = new Date(b.created_at).getTime();
         return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
       });
-  }, [leads, initialLeads, loading, sortOrder, sourceFilter]);
+  }, [leads, sortOrder, sourceFilter]);
 
-  if (loading && leads.length === 0 && initialLeads.length === 0) {
+  if (isLoading && leads.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-neutral-400">
         <p className="text-sm">Loading leads…</p>

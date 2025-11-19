@@ -9,6 +9,7 @@ import Messages from './Messages';
 import Analytics from './Analytics';
 import Settings from './Settings';
 import { ThemeProvider } from './ThemeContext';
+import { useLeadsStore } from '@/store/useLeadsStore';
 
 export type Lead = {
   id: string;
@@ -25,7 +26,8 @@ interface WorkspaceLayoutProps {
   orgId: string;
 }
 
-export default function WorkspaceLayout({ leads, orgId }: WorkspaceLayoutProps) {
+export default function WorkspaceLayout({ leads: _initialLeads, orgId }: WorkspaceLayoutProps) {
+  const leads = useLeadsStore((s) => s.leads);
   const [currentSection, setCurrentSection] = useState('overview');
   const [refreshing, setRefreshing] = useState(false);
 

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import ClientDashboard from './ClientDashboardV5';
+import { useLeadsStore } from '@/store/useLeadsStore';
 
 interface Lead {
   id: string;
@@ -19,9 +20,18 @@ interface DashboardClientRootProps {
 }
 
 export default function DashboardClientRoot({ orgId }: DashboardClientRootProps) {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const leads = useLeadsStore((s) => s.leads);
+  const loading = useLeadsStore((s) => s.isLoading);
+  const error = useLeadsStore((s) => s.error);
+  const setInitialLeads = useLeadsStore((s) => s.setInitialLeads);
+  const setLeads = useLeadsStore((s) => s.setLeads);
+  const startLoading = useLeadsStore((s) => s.startLoading);
+  const setError = useLeadsStore((s) => s.setError);
+
+  // Hydrate the store with initial empty state
+  useEffect(() => {
+    setInitialLeads(orgId, []);
+  }, [orgId, setInitialLeads]);
 
   useEffect(() => {
     let mounted = true;
@@ -30,8 +40,7 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
     async function loadLeads() {
       if (!mounted) return;
 
-      setLoading(true);
-      setError(null);
+      startLoading();
 
       try {
         // 1) Wait for Supabase session token to be ready
@@ -60,8 +69,6 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
           console.error("[Leads] API error", errorText);
           if (mounted) {
             setError("Failed to load leads");
-            setLeads([]);
-            setLoading(false);
           }
           return;
         }
@@ -72,14 +79,11 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
         if (mounted) {
           setLeads(json.leads ?? []);
           console.log('[DashboardClientRoot] Loaded leads:', json.leads?.length || 0);
-          setLoading(false);
         }
       } catch (err: any) {
         console.error('[DashboardClientRoot] Error fetching leads:', err);
         if (mounted) {
-          setError(err.message || 'Failed to load leads');
-          setLeads([]);
-          setLoading(false);
+          setError(err?.message || 'Failed to load leads');
         }
       }
     }
@@ -89,7 +93,7 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
     return () => {
       mounted = false;
     };
-  }, [orgId]);
+  }, [orgId, startLoading, setLeads, setError]);
 
   if (loading) {
     return (

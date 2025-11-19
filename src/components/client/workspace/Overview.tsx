@@ -3,19 +3,33 @@
 import Card from '@/components/ui/Card';
 import type { Lead } from './WorkspaceLayout';
 import { useThemeStyles } from './ThemeContext';
+import { useLeadsStore } from '@/store/useLeadsStore';
 
 interface OverviewProps {
   leads?: Lead[];
   totals?: { all: number; needs: number; approved: number; completed: number };
 }
 
-export default function Overview({ leads = [], totals }: OverviewProps) {
+export default function Overview({ leads: _propLeads, totals: _propTotals }: OverviewProps) {
   const themeStyles = useThemeStyles();
+  const leads = useLeadsStore((s) => s.leads);
+  
+  const totalLeads = leads.length;
+  const newCount = leads.filter(
+    (l) => l.status?.toUpperCase() === "NEW"
+  ).length;
+  const approvedCount = leads.filter(
+    (l) => l.status?.toUpperCase() === "APPROVED"
+  ).length;
+  const completedCount = leads.filter(
+    (l) => l.status?.toUpperCase() === "COMPLETED"
+  ).length;
+
   const stats = [
-    { label: 'Total Leads', value: totals?.all ?? 26 },
-    { label: 'New', value: totals?.needs ?? 10 },
-    { label: 'Approved', value: totals?.approved ?? 13 },
-    { label: 'Completed', value: totals?.completed ?? 3 },
+    { label: 'Total Leads', value: totalLeads },
+    { label: 'New', value: newCount },
+    { label: 'Approved', value: approvedCount },
+    { label: 'Completed', value: completedCount },
   ];
 
   const recent = (leads.length > 0
