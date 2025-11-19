@@ -4,7 +4,12 @@ import { create } from "zustand";
 
 export type Lead = {
   id: string;
-  status?: string | null;
+  name: string;
+  phone: string;
+  source: string;
+  description: string | null;
+  status: 'NEW' | 'APPROVED' | 'COMPLETED';
+  created_at: string;
   [key: string]: any;
 };
 
