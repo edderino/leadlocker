@@ -73,3 +73,9 @@ export const useLeadsStore = create<LeadsState>((set) => ({
     }),
 }));
 
+// DEBUG: expose store for browser console
+if (typeof window !== "undefined") {
+  // @ts-ignore
+  window.useLeadsStore = useLeadsStore;
+}
+
