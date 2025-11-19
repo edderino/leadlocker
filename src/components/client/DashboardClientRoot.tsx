@@ -28,6 +28,55 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
   const startLoading = useLeadsStore((s) => s.startLoading);
   const setError = useLeadsStore((s) => s.setError);
 
+  // --- AUTO REFRESH GUARANTEE ---
+  useEffect(() => {
+    console.log("[AutoRefresh] mounted");
+    const supabase = createClient();
+
+    const tick = async () => {
+      try {
+        // get session token
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          console.warn("[AutoRefresh] No session yet, skipping tick");
+          return;
+        }
+
+        console.log("[AutoRefresh] PING");
+
+        // secure fetch — same as initial load
+        const res = await fetch("/api/client/leads", {
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          console.warn("[AutoRefresh] API 401 or error");
+          return;
+        }
+
+        const json = await res.json();
+        if (json?.leads) {
+          useLeadsStore.getState().setLeads(json.leads);
+          console.log("[AutoRefresh] Updated leads:", json.leads.length);
+        }
+      } catch (err) {
+        console.error("[AutoRefresh] ERROR", err);
+      }
+    };
+
+    // first immediate run
+    tick();
+
+    // then interval
+    const interval = setInterval(tick, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+  // --- END AUTO REFRESH ---
+
   // Hydrate the store with initial empty state
   useEffect(() => {
     setInitialLeads(orgId, []);
