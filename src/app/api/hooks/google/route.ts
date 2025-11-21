@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const orgId = "demo-org";
 
     // 3. Insert into Supabase
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { error: insertError } = await supabase
       .from("leads")
@@ -79,4 +79,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

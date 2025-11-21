@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const htmlBody = fullEmail?.html ?? "";
 
     // Parse lead fields
-    const { parseLeadFromEmail } = await import("@/_lib/parseEmail");
+    const { parseLeadFromEmail } = await import("@/libs/parseEmail");
     const parsed = parseLeadFromEmail(textBody || htmlBody || "");
 
     const fallbackName =
