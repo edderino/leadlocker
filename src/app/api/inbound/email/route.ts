@@ -63,13 +63,15 @@ export async function POST(req: NextRequest) {
     const defaultUserId = "aaea51a8-eba4-4ee8-83fa-3bc444d8197b"; // YOUR USER ID
 
     const { error } = await supabase.from("leads").insert({
-      org_id: orgId,
-      name: lead.name,
-      phone: lead.phone,
-      description: lead.description,
-      status: "NEW",
-      source: "email",
-    });
+        org_id: orgId,
+        user_id: defaultUserId,
+        name: lead.name,
+        phone: lead.phone,
+        description: lead.description,
+        status: "NEW",
+        source: "email",
+      });
+      
 
     if (error) {
       console.error("Lead insert failed:", error);
