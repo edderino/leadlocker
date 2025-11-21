@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       emailId,
     });
 
-    // Fetch email body
+    // Fetch full email body from Resend
     const emailRes = await fetch(`https://api.resend.com/emails/${emailId}`, {
       headers: {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const textBody = fullEmail?.text ?? "";
     const htmlBody = fullEmail?.html ?? "";
 
-    // Parse lead fields
+    // Parse
     const { parseLeadFromEmail } = await import("@/libs/parseEmail");
     const parsed = parseLeadFromEmail(textBody || htmlBody || "");
 
@@ -52,17 +52,19 @@ export async function POST(req: NextRequest) {
 
     console.log("Parsed lead:", lead);
 
-    // --- FIX: use org_id not client_id ---
+    // Create Supabase client
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Pick *any* client (we only have demo-org)
+    // Hard-code default org + user for now
     const orgId = "demo-org";
+    const defaultUserId = "aaea51a8-eba4-4ee8-83fa-3bc444d8197b"; // YOUR USER ID
 
     const { error } = await supabase.from("leads").insert({
       org_id: orgId,
+      user_id: defaultUserId,
       name: lead.name,
       phone: lead.phone,
       description: lead.description,
