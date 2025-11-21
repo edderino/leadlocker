@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       emailId,
     });
 
-    // Fetch full email body from Resend
+    // Fetch email body
     const emailRes = await fetch(`https://api.resend.com/emails/${emailId}`, {
       headers: {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
@@ -52,25 +52,17 @@ export async function POST(req: NextRequest) {
 
     console.log("Parsed lead:", lead);
 
-    // Insert lead in Supabase
+    // --- FIX: use org_id not client_id ---
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { data: client, error: clientErr } = await supabase
-      .from("clients")
-      .select("id")
-      .limit(1)
-      .single();
+    // Pick *any* client (we only have demo-org)
+    const orgId = "demo-org";
 
-    if (clientErr || !client) {
-      console.error("Client lookup failed:", clientErr);
-      return NextResponse.json({ error: "No client found" }, { status: 500 });
-    }
-
-    const { data, error } = await supabase.from("leads").insert({
-        org_id: client.id,
+    const { error } = await supabase.from("leads").insert({
+      org_id: orgId,
       name: lead.name,
       phone: lead.phone,
       description: lead.description,
@@ -81,33 +73,6 @@ export async function POST(req: NextRequest) {
     if (error) {
       console.error("Lead insert failed:", error);
       return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
-    }
-
-    // Send SMS via Twilio
-    try {
-      const smsRes = await fetch(
-        `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
-        {
-          method: "POST",
-          headers: {
-            Authorization:
-              "Basic " +
-              Buffer.from(
-                `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
-              ).toString("base64"),
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            To: process.env.CLIENT_PHONE!,
-            From: process.env.TWILIO_PHONE_NUMBER!,
-            Body: `New lead: ${lead.name}\nPhone: ${lead.phone}\nSource: Email`,
-          }),
-        }
-      );
-
-      console.log("SMS sent:", await smsRes.json());
-    } catch (smsErr) {
-      console.error("Failed to send SMS:", smsErr);
     }
 
     return NextResponse.json({ ok: true });
