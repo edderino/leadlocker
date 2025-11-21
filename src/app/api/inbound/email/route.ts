@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabase.from("leads").insert({
         org_id: orgId,
-        // no user_id – leave null
+        email: lead.email || from || "unknown@example.com",
         name: lead.name,
         phone: lead.phone,
         description: lead.description,
