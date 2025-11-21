@@ -4,6 +4,11 @@ import type { NextRequest } from "next/server";
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // --- Allow inbound Resend webhook ---
+  if (pathname.startsWith("/api/inbound/email")) {
+    return NextResponse.next();
+  }
+
   // --- 1. Allow all PWA public assets ---
   if (
     pathname === "/manifest.json" ||
@@ -32,7 +37,6 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // apply middleware globally EXCEPT known static dirs
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ]
 };
