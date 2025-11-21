@@ -72,6 +72,8 @@ export async function POST(req: NextRequest) {
         source: "email",
       });
 
+      console.log("Lead inserted successfully");
+
     if (error) {
       console.error("Lead insert failed:", error);
       return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
