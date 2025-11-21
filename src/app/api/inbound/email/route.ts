@@ -64,14 +64,13 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabase.from("leads").insert({
         org_id: orgId,
-        user_id: defaultUserId,
+        // no user_id – leave null
         name: lead.name,
         phone: lead.phone,
         description: lead.description,
         status: "NEW",
         source: "email",
       });
-      
 
     if (error) {
       console.error("Lead insert failed:", error);
