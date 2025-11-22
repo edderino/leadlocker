@@ -74,6 +74,33 @@ export async function POST(req: NextRequest) {
 
       console.log("Lead inserted successfully");
 
+ // Send SMS alert via Twilio
+try {
+    const smsRes = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            "Basic " +
+            Buffer.from(
+              `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
+            ).toString("base64"),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          To: process.env.CLIENT_PHONE!,
+          From: process.env.TWILIO_PHONE_NUMBER!,
+          Body: `New Lead from Email\nName: ${lead.name}\nPhone: ${lead.phone}\nSource: Email`,
+        }),
+      }
+    );
+  
+    console.log("SMS sent:", await smsRes.json());
+  } catch (smsErr) {
+    console.error("Failed to send SMS:", smsErr);
+  }
+       
     if (error) {
       console.error("Lead insert failed:", error);
       return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
