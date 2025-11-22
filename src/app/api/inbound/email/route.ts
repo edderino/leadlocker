@@ -89,8 +89,8 @@ try {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
-          To: process.env.CLIENT_PHONE!,
-          From: process.env.TWILIO_PHONE_NUMBER!,
+            To: process.env.LL_DEFAULT_USER_PHONE!,
+            From: process.env.TWILIO_FROM_NUMBER!,
           Body: `New Lead from Email\nName: ${lead.name}\nPhone: ${lead.phone}\nSource: Email`,
         }),
       }
