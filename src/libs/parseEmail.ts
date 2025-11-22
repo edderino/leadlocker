@@ -1,44 +1,43 @@
-export function parseLeadFromEmail(body: string) {
-  if (!body) return {};
+export function parseLeadFromEmail(input: string) {
+  if (!input) return { name: null, email: null, phone: null, message: null };
 
-  // Remove HTML tags just in case
-  const clean = body.replace(/<[^>]+>/g, "").replace(/\r/g, "").trim();
+  // Convert HTML to text by replacing <br> and block tags
+  let text = input
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>|<\/div>|<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, "") // remove other HTML tags
+    .replace(/\r/g, "")
+    .trim();
 
-  // Extract values in a flexible way
   const extract = (label: string) => {
-    const regex = new RegExp(`${label}\\s*[:\\-]\\s*(.+)`, "i");
-    const match = clean.match(regex);
+    const regex = new RegExp(`${label}\\s*[:\\-]?\\s*(.+)`, "i");
+    const match = text.match(regex);
     return match ? match[1].trim() : null;
   };
 
-  // Name detection
   const name =
     extract("name") ||
     extract("full name") ||
     extract("contact") ||
     null;
 
-  // Email detection (fallback to regex)
   const email =
+    text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ||
     extract("email") ||
-    clean.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ||
     null;
 
-  // Phone detection — VERY flexible
   const phone =
     extract("phone") ||
     extract("mobile") ||
     extract("contact number") ||
-    clean.match(/(\+?\d[\d\s\-()]{7,15})/)?.[0]?.trim() ||
+    text.match(/(\+?\d[\d\s\-()]{7,15})/)?.[0]?.trim() ||
     null;
 
-  // Message detection
   const message =
     extract("message") ||
-    extract("msg") ||
     extract("details") ||
     extract("body") ||
-    null;
+    text;
 
   return {
     name,
