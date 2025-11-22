@@ -1,42 +1,59 @@
 export function parseLeadFromEmail(input: string) {
-  if (!input) return { name: null, email: null, phone: null, message: null };
+  if (!input) {
+    return { name: null, email: null, phone: null, message: null };
+  }
 
-  // Convert HTML to text by replacing <br> and block tags
+  // ---- CLEAN HTML → TEXT ----
   let text = input
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>|<\/div>|<\/li>/gi, "\n")
-    .replace(/<[^>]+>/g, "") // remove other HTML tags
+    .replace(/<[^>]+>/g, "") // strip other HTML
     .replace(/\r/g, "")
     .trim();
 
-  const extract = (label: string) => {
-    const regex = new RegExp(`${label}\\s*[:\\-]?\\s*(.+)`, "i");
+  // Normalize weird spacing
+  text = text.replace(/\n{2,}/g, "\n").trim();
+
+  // ---- GENERIC FIELD EXTRACTOR (stops at next label) ----
+  const field = (label: string) => {
+    const regex = new RegExp(
+      `${label}\\s*[:\\-]?\\s*([^\\n]+)`,
+      "i"
+    );
     const match = text.match(regex);
     return match ? match[1].trim() : null;
   };
 
+  // ---- NAME ----
   const name =
-    extract("name") ||
-    extract("full name") ||
-    extract("contact") ||
+    field("name") ||
+    field("full name") ||
+    field("contact") ||
     null;
 
+  // ---- EMAIL ----
   const email =
     text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ||
-    extract("email") ||
+    field("email") ||
     null;
 
+  // ---- PHONE (robust multi-format). Order matters. ----
   const phone =
-    extract("phone") ||
-    extract("mobile") ||
-    extract("contact number") ||
-    text.match(/(\+?\d[\d\s\-()]{7,15})/)?.[0]?.trim() ||
+    field("phone") ||
+    field("mobile") ||
+    field("contact number") ||
+    // Aussie numbers + international formats
+    text.match(/(\+?61\s?\d{1}\s?\d{3}\s?\d{3})/)?.[0]?.trim() || // +61 XXXX XXX
+    text.match(/(\+?61\d{9})/)?.[0]?.trim() || // +61421114622
+    text.match(/(0\d{9})/)?.[0]?.trim() || // 0421114622
+    text.match(/(\+?\d[\d\s\-()]{7,15})/)?.[0]?.trim() || // fallback
     null;
 
+  // ---- MESSAGE ----
   const message =
-    extract("message") ||
-    extract("details") ||
-    extract("body") ||
+    field("message") ||
+    field("details") ||
+    field("body") ||
     text;
 
   return {
