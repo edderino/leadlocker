@@ -3,57 +3,56 @@ export function parseLeadFromEmail(input: string) {
     return { name: null, email: null, phone: null, message: null };
   }
 
-  // ---- CLEAN HTML → TEXT ----
+  // 1. Convert common HTML to text safely
   let text = input
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>|<\/div>|<\/li>/gi, "\n")
-    .replace(/<[^>]+>/g, "") // strip other HTML
+    .replace(/<p[^>]*>/gi, "\n")
+    .replace(/<div[^>]*>/gi, "\n")
+    .replace(/<\/p>|<\/div>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, "") // remove any other tags
     .replace(/\r/g, "")
+    .replace(/\t/g, " ")
+    .replace(/[ ]{2,}/g, " ") // collapse double spaces
     .trim();
 
-  // Normalize weird spacing
+  // Normalize multiple newlines
   text = text.replace(/\n{2,}/g, "\n").trim();
 
-  // ---- GENERIC FIELD EXTRACTOR (stops at next label) ----
-  const field = (label: string) => {
-    const regex = new RegExp(
-      `${label}\\s*[:\\-]?\\s*([^\\n]+)`,
-      "i"
-    );
+  // Helper extractor
+  const extract = (label: string) => {
+    const regex = new RegExp(`${label}\\s*[:\\-]?\\s*(.+)`, "i");
     const match = text.match(regex);
     return match ? match[1].trim() : null;
   };
 
-  // ---- NAME ----
+  // Extract values
   const name =
-    field("name") ||
-    field("full name") ||
-    field("contact") ||
+    extract("name") ||
+    extract("full name") ||
+    extract("contact") ||
     null;
 
-  // ---- EMAIL ----
   const email =
     text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ||
-    field("email") ||
+    extract("email") ||
     null;
 
-  // ---- PHONE (robust multi-format). Order matters. ----
+  // PHONE EXTRACTION — stronger version
   const phone =
-    field("phone") ||
-    field("mobile") ||
-    field("contact number") ||
-    // Aussie numbers + international formats
-    text.match(/(\+?61\s?\d{1}\s?\d{3}\s?\d{3})/)?.[0]?.trim() || // +61 XXXX XXX
-    text.match(/(\+?61\d{9})/)?.[0]?.trim() || // +61421114622
-    text.match(/(0\d{9})/)?.[0]?.trim() || // 0421114622
-    text.match(/(\+?\d[\d\s\-()]{7,15})/)?.[0]?.trim() || // fallback
+    extract("phone") ||
+    extract("mobile") ||
+    extract("contact number") ||
+    text.match(/(\+?\d[\d\s\-()]{7,20})/)?.[0]?.replace(/\D/g, "") ||
     null;
 
-  // ---- MESSAGE ----
   const message =
-    field("message") ||
-    field("details") ||
-    field("body") ||
+    extract("message") ||
+    extract("details") ||
+    extract("body") ||
     text;
 
   return {
