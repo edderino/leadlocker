@@ -10,7 +10,6 @@ export async function POST(req: NextRequest) {
     }
 
     const received = payload.data;
-
     const from = received.from;
     const to = received.to?.[0];
     const subject = received.subject;
@@ -58,52 +57,51 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Hard-code default org + user for now
+    // Hard-coded org for now
     const orgId = "demo-org";
-    const defaultUserId = "aaea51a8-eba4-4ee8-83fa-3bc444d8197b"; // YOUR USER ID
 
     const { error } = await supabase.from("leads").insert({
-        org_id: orgId,
-        email: lead.email || from || "unknown@example.com",
-        name: lead.name,
-        phone: lead.phone,
-        description: lead.description,
-        status: "NEW",
-        source: "email",
-      });
+      org_id: orgId,
+      email: lead.email || from || "unknown@example.com",
+      name: lead.name,
+      phone: lead.phone,
+      description: lead.description,
+      status: "NEW",
+      source: "email",
+    });
 
-      console.log("Lead inserted successfully");
-
- // Send SMS alert via Twilio
-try {
-    const smsRes = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization:
-            "Basic " +
-            Buffer.from(
-              `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
-            ).toString("base64"),
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-            To: process.env.LL_DEFAULT_USER_PHONE!,
-            From: process.env.TWILIO_FROM_NUMBER!,
-          Body: `New Lead from Email\nName: ${lead.name}\nPhone: ${lead.phone}\nSource: Email`,
-        }),
-      }
-    );
-  
-    console.log("SMS sent:", await smsRes.json());
-  } catch (smsErr) {
-    console.error("Failed to send SMS:", smsErr);
-  }
-       
     if (error) {
       console.error("Lead insert failed:", error);
       return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
+    }
+
+    console.log("Lead inserted successfully");
+
+    // Send SMS alert via Twilio
+    try {
+      const smsRes = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
+        {
+          method: "POST",
+          headers: {
+            Authorization:
+              "Basic " +
+              Buffer.from(
+                `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
+              ).toString("base64"),
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            To: process.env.LL_DEFAULT_USER_PHONE!,
+            From: process.env.TWILIO_FROM_NUMBER!,
+            Body: `New Lead from Email\nName: ${lead.name}\nPhone: ${lead.phone}\nSource: Email`,
+          }),
+        }
+      );
+
+      console.log("SMS sent:", await smsRes.json());
+    } catch (smsErr) {
+      console.error("Failed to send SMS:", smsErr);
     }
 
     return NextResponse.json({ ok: true });
