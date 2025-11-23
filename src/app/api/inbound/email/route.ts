@@ -4,6 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
+    console.log("FULL RAW PAYLOAD:", JSON.stringify(payload, null, 2));
+
 
     if (payload.type !== "email.received") {
       return NextResponse.json({ ok: true });
