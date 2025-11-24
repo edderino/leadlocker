@@ -161,16 +161,15 @@ export async function POST(req: NextRequest) {
 
         // SMS notify (best-effort)
         try {
-          const fallbackFrom = row.from_addr ? row.from_addr.split("<")[0].replace(/["']/g, "").trim() : null;
-          const subject = row.subject || null;
-          
+          const subject = row.subject ?? null;
+          const snippet = (lead.description ?? '').slice(0, 120);
+
           const smsText =
             `New Lead from Email\n` +
-            `Name: ${lead.name || fallbackFrom || 'Unknown'}\n` +
-            `Email: ${lead.email || fallbackFrom || 'N/A'}\n` +
-            `Phone: ${lead.phone || 'N/A'}\n` +
-            `Subject: ${subject || '(no subject)'}\n` +
-            `Snippet: ${(lead.description || lead.message || '').slice(0, 120)}`;
+            `Name: ${lead.name}\n` +
+            `Phone: ${lead.phone ?? 'N/A'}\n` +
+            `Subject: ${subject ?? '(no subject)'}\n` +
+            `Snippet: ${snippet}`;
 
           const body = smsText;
 
