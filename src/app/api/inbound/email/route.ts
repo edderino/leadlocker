@@ -1,126 +1,185 @@
+// src/app/api/inbound/email/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-function extractPhone(src: string | null | undefined) {
-  if (!src) return null;
-  // AU-focused but general enough: +61, 04xx xxx xxx, (02) 9xxx xxxx, etc.
+type ResendEmailEvent = {
+  type: string;
+  created_at?: string;
+  data?: {
+    email_id?: string;
+    from?: string;
+    to?: string[]; // usually an array
+    subject?: string;
+    text?: string;   // ✅ sometimes present in the webhook
+    html?: string;   // ✅ sometimes present in the webhook
+    message_id?: string;
+    attachments?: any[];
+    cc?: string[];
+    bcc?: string[];
+  };
+};
+
+function extractAUPhone(str: string | null | undefined): string | null {
+  if (!str) return null;
+  // AU patterns: 04XXXXXXXX, +61 4XX XXX XXX, landlines, with punctuation/spaces
   const re =
-    /(\+?\s?61\s?[\d\s]{8,12}|0?\s?4\d[\s-]?\d{3}[\s-]?\d{3}|0[2378]\s?\d{4}\s?\d{4}|\+?\d[\d\s\-()]{7,16})/;
-  const m = src.match(re);
-  return m ? m[0].replace(/\s+/g, "").replace(/^(\+?61)0/, "$1") : null;
+    /(?:\+?61|0)\s*(?:[2-478])(?:\s*\d){8,9}|\+?61\s*4\s*(?:\d\s*){8}/g;
+  const m = str.match(re);
+  if (!m) return null;
+
+  // Normalise first match to E.164 where possible
+  let raw = m[0].replace(/[^\d+]/g, "");
+  if (raw.startsWith("04")) raw = "+61" + raw.slice(1);
+  if (raw.startsWith("0") && raw.length === 10) raw = "+61" + raw.slice(1);
+  if (!raw.startsWith("+")) raw = "+" + raw; // last-ditch
+  return raw;
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|tr|h[1-6])>/gi, "\n")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\r/g, "")
+    .trim();
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const payload = await req.json();
+    const payload = (await req.json()) as ResendEmailEvent;
 
-    if (payload?.type !== "email.received") {
+    if (payload?.type !== "email.received" || !payload?.data) {
       return NextResponse.json({ ok: true });
     }
 
-    const received = payload.data ?? {};
-    const from: string | null = received.from ?? null;
-    const to: string | null = Array.isArray(received.to) ? received.to[0] : received.to ?? null;
-    const subject: string | null = received.subject ?? null;
-    const emailId: string | null = received.email_id ?? null;
+    const d = payload.data;
+    const emailId = d.email_id || d.message_id || "";
+    const from = d.from || "";
+    const to = Array.isArray(d.to) ? d.to[0] : d.to || "";
+    const subject = d.subject || "";
 
-    console.log("FULL RAW PAYLOAD:", JSON.stringify(payload, null, 2));
+    console.log("Inbound email received:", { from, to, subject, emailId });
 
-    // --- Try to fetch full body from Resend ---------------------------------
-    let textBody = received.text ?? "";   // webhook fallback if present
-    let htmlBody = received.html ?? "";
+    // ---------- 1) Get body text: payload first, then Resend fetch ----------
+    let textBody = d.text || "";
+    let htmlBody = d.html || "";
 
-    async function fetchResend(path: string) {
-      const r = await fetch(`https://api.resend.com${path}`, {
-        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
-        // no need for content-type on GET
-        cache: "no-store",
-      });
-      let data: any = null;
-      try { data = await r.json(); } catch {}
-      return { ok: r.ok, status: r.status, data };
+    if (!textBody && !htmlBody && emailId) {
+      try {
+        const r = await fetch(`https://api.resend.com/emails/${emailId}`, {
+          headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+          // Some accounts require this header to allow content
+        });
+        const ok = r.ok;
+        let text: string | null = null;
+        let html: string | null = null;
+        if (ok) {
+          const j = await r.json();
+          text = j?.text ?? null;
+          html = j?.html ?? null;
+        }
+        console.log("Resend fetch:", {
+          status: r.status,
+          hasText: !!text,
+          hasHtml: !!html,
+        });
+        textBody = textBody || text || "";
+        htmlBody = htmlBody || html || "";
+      } catch (e) {
+        console.log("Resend fetch failed (ignored):", (e as Error).message);
+      }
     }
 
-    if (emailId && (!textBody && !htmlBody)) {
-      // First try /emails/{id}
-      const a = await fetchResend(`/emails/${emailId}`);
-      // If not found or missing content, try inbound endpoint variant
-      const b = !a.ok || (!a.data?.text && !a.data?.html)
-        ? await fetchResend(`/inbound_emails/${emailId}`)
-        : null;
+    const rawText = textBody || stripHtml(htmlBody) || "";
+    const emailForParse =
+      [
+        subject,
+        rawText,
+        // include headers in case phone is there
+        `From: ${from}`,
+        `To: ${to}`,
+      ]
+        .filter(Boolean)
+        .join("\n")
+        .trim() || "";
 
-      const picked = (b && b.ok ? b : a);
-      const hasText = !!picked?.data?.text;
-      const hasHtml = !!picked?.data?.html;
-
-      console.log("Resend fetch:", {
-        status: picked?.status ?? a.status,
-        hasText,
-        hasHtml,
-      });
-
-      if (hasText) textBody = picked!.data.text;
-      if (hasHtml) htmlBody = picked!.data.html;
-    }
-
-    // Compose the best available plain text for parsing
-    const compositeText =
-      (textBody && typeof textBody === "string" ? textBody : "") ||
-      (htmlBody && typeof htmlBody === "string"
-        ? htmlBody
-            .replace(/<br\s*\/?>/gi, "\n")
-            .replace(/<\/(p|div|li|tr|h\d)>/gi, "\n")
-            .replace(/<[^>]+>/g, "")
-        : "");
-
-    // --- Parse lead fields ---------------------------------------------------
-    const { parseLeadFromEmail } = await import("@/libs/parseEmail");
-    const parsed = parseLeadFromEmail(compositeText || "");
-
-    // Extra fallback for phone: scan subject + from + composite text
-    let phone =
-      parsed.phone ||
-      extractPhone(`${subject ?? ""}\n${from ?? ""}\n${compositeText}`) ||
-      null;
-
+    // ---------- 2) Parse ----------
+    // name/email fallbacks
     const fallbackName =
-      (from?.split("<")[0]?.trim().replace(/["']/g, "") || "Unknown").trim();
+      from.split("<")[0]?.trim().replace(/["']/g, "") ||
+      from ||
+      "Unknown";
+
+    const emailMatch =
+      emailForParse.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || null;
+
+    const phone =
+      // explicit label first
+      (emailForParse.match(/(?:phone|mobile|contact)\s*[:\-]\s*([^\n]+)/i)?.[1] ??
+        extractAUPhone(emailForParse)) || null;
 
     const lead = {
-      name: parsed.name || fallbackName,
-      email: parsed.email || from || null,
+      name: fallbackName,
+      email: emailMatch,
       phone,
-      description: parsed.message || compositeText.slice(0, 2000) || "",
-      raw: compositeText || "",
+      description: rawText || subject || "",
+      raw: rawText,
+      external_id: emailId || null,
+      source: "email" as const,
     };
 
     console.log("Parsed lead:", lead);
 
-    // --- Insert into Supabase -----------------------------------------------
+    // ---------- 3) Idempotency guard (avoid dup inserts/SMS) ----------
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+    const orgId = "demo-org";
 
-    const { error } = await supabase.from("leads").insert({
-      org_id: "demo-org",
-      email: lead.email || "unknown@example.com",
-      name: lead.name,
-      phone: lead.phone,
-      description: lead.description,
-      status: "NEW",
-      source: "Email",
-    });
+    if (lead.external_id) {
+      const { data: existing, error: selErr } = await supabase
+        .from("leads")
+        .select("id")
+        .eq("source", "email")
+        .eq("external_id", lead.external_id)
+        .limit(1);
 
-    if (error) {
-      console.error("Lead insert failed:", error);
-      return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
+      if (selErr) console.error("Select error (ignored):", selErr);
+      if (existing && existing.length > 0) {
+        console.log("Duplicate email_id; skipping insert/SMS");
+        return NextResponse.json({ ok: true, deduped: true });
+      }
     }
 
+    // ---------- 4) Insert ----------
+    const { error: insErr } = await supabase.from("leads").insert({
+      org_id: orgId,
+      status: "NEW",
+      source: "email",
+      external_id: lead.external_id,
+      name: lead.name,
+      email: lead.email ?? from ?? "unknown@example.com",
+      phone: lead.phone,
+      description: lead.description,
+      raw: lead.raw,
+    });
+
+    if (insErr) {
+      console.error("Lead insert failed:", insErr);
+      return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
+    }
     console.log("Lead inserted successfully");
 
-    // --- SMS alert via Twilio -----------------------------------------------
+    // ---------- 5) SMS (with clean fallback) ----------
     try {
+      const smsBody = `New Lead from Email
+Name: ${lead.name}
+Phone: ${lead.phone ?? "N/A"}
+Source: Email`;
+
       const smsRes = await fetch(
         `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
         {
@@ -135,11 +194,8 @@ export async function POST(req: NextRequest) {
           },
           body: new URLSearchParams({
             To: process.env.LL_DEFAULT_USER_PHONE!,
-            From: process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_PHONE_NUMBER || "",
-            Body: `New Lead from Email
-Name: ${lead.name}
-Phone: ${lead.phone || "N/A"}
-Source: Email`,
+            From: process.env.TWILIO_FROM_NUMBER!, // ✅ use the right env
+            Body: smsBody,
           }),
         }
       );
