@@ -1,66 +1,87 @@
-// src/libs/parseEmail.ts
-export type ParsedLead = {
-  name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  message?: string | null;
-};
+// Normalize + extract AU phone
+function extractAuPhone(input: string): string | null {
+  if (!input) return null;
 
-const AU_PHONE_REGEXES = [
-  /\b(?:\+?61\s?|\(0\)\s?0?|\b)4\s?\d(?:[\s-]?\d){7}\b/i,          // mobiles: 04xxxxxxxx or +61 4xx...
-  /\b(?:\+?61\s?|0)(2|3|7|8)\s?\d(?:[\s-]?\d){7}\b/i,              // landlines: 02/03/07/08...
-];
+  // keep digits and leading +
+  const cleaned = input
+    .replace(/[\u00A0]/g, ' ') // non-breaking spaces
+    .replace(/[()\-_.]/g, ' ')
+    .replace(/\s+/g, ' ');
 
-const EMAIL_REGEX = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
+  // Try common cues to improve precision
+  const cueBlocks = (cleaned.match(
+    /(?:phone|mobile|mob|call|txt|text|ring|contact(?: me)?(?: on)?)[^:\n]*[:\-]?\s*([+()\d][^.\n\r]*)/gi
+  ) || []).map(s => s.trim());
 
-function findFirst(reArr: RegExp[], text: string): string | null {
-  for (const re of reArr) {
-    const m = text.match(re);
-    if (m) return m[0].replace(/\s+/g, "");
-  }
-  return null;
+  const searchSpace = [cleaned, ...cueBlocks].join('  ');
+
+  // Match AU mobiles/landlines (04xx… or +61 4xx…; also landlines like 02/03/07/08)
+  const re =
+    /(?:\+?61[\s]*\(?(?:0)?\)?[\s]*|0)(?:4[\s]*\d{2}|\d{1,2})[\s]*\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d[\s]*\d(?:[\s]*\d{0,2})?/g;
+
+  const cand = searchSpace.match(re);
+  if (!cand) return null;
+
+  // Normalize: convert +61X… to 0X…, strip spaces
+  const norm = cand
+    .map(s => s.replace(/\s+/g, ''))
+    .map(s => {
+      // +61(0?)4… or +61(0?)[2,3,7,8]…
+      const m = s.match(/^\+?61(?:0)?(\d+)/);
+      if (m) return '0' + m[1];
+      return s;
+    })
+    // Keep likely 10–11 digit local numbers (AU mobiles are 10)
+    .map(s => s.replace(/[^\d]/g, ''))
+    .filter(s => s.length >= 9 && s.length <= 11);
+
+  if (norm.length === 0) return null;
+
+  // Prefer mobiles starting with 04
+  const mobile = norm.find(n => n.startsWith('04') && n.length === 10);
+  return mobile || norm[0];
 }
 
-function clean(text: string) {
-  return (text || "").replace(/\r/g, "").trim();
-}
+export function parseLeadFromEmail(body: string) {
+  const text = (body || '').toString();
 
-export function parseLeadFromEmail(raw: string): ParsedLead {
-  const body = clean(raw);
+  // email
+  const emailMatch = text.match(
+    /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i
+  );
+  const email = emailMatch?.[1]?.toLowerCase() ?? null;
 
-  // Email (explicit “Email:” line wins; fallback to first email-like token)
-  const emailLine = body.match(/(?:email|e-mail)\s*[:\-]\s*(.+)/i)?.[1]?.trim();
-  const email =
-    (emailLine && (emailLine.match(EMAIL_REGEX)?.[0] || null)) ||
-    body.match(EMAIL_REGEX)?.[0] ||
-    null;
-
-  // Phone: handle AU formats (04…, +61…, 02/03/07/08…)
-  const phone =
-    body.match(/(?:phone|mobile|contact)\s*[:\-]\s*([+\d\(\)\s-]{8,})/i)?.[1]
-      ?.replace(/[^\d+]/g, "") ||
-    findFirst(AU_PHONE_REGEXES, body);
-
-  // Name: prefer explicit “Name:” line; else name before @; else null
-  const nameLine = body.match(/(?:name|full\s*name)\s*[:\-]\s*(.+)/i)?.[1]?.trim();
+  // name fallback: before "<" or the email local part
   let name: string | null = null;
-  if (nameLine) {
-    name = nameLine.replace(/["']/g, "");
-  } else if (email) {
-    const local = email.split("@")[0].replace(/[._-]+/g, " ");
-    name = local
-      .split(" ")
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
+  if (email) {
+    const local = email.split('@')[0];
+    name = local.includes('.')
+      ? local
+          .split('.')
+          .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+          .join(' ')
+      : local;
   }
 
-  // Message: strip common prefixes lines, keep first ~500 chars
-  const message =
-    body
-      .replace(/^(from:|sent:|to:|subject:).*$\n?/gim, "")
-      .replace(/^>.*$\n?/gm, "")
-      .trim()
-      .slice(0, 500) || null;
+  // phone
+  const phone = extractAuPhone(text);
 
-  return { name, email, phone, message };
+  // description/snippet: first clean line
+  const snippet =
+    text
+      .replace(/\r/g, '')
+      .split('\n')
+      .map(s => s.trim())
+      .filter(Boolean)
+      .slice(0, 6) // short snippet
+      .join(' ')
+      .slice(0, 240) || '';
+
+  return {
+    name: name || null,
+    email,
+    phone,
+    message: snippet,      // keep for backwards compat
+    description: snippet,  // used by callers
+  };
 }
