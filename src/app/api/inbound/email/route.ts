@@ -2,77 +2,61 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Mini-Zap intake: accept Resend inbound webhooks and enqueue the full payload.
- * No parsing, no DB writes to `leads`, no SMS. Downstream worker will process.
+ * Resend Inbound Webhook -> enqueue into public.inbound_emails
+ * We DO NOT parse or send SMS here. Keep it idempotent & fast.
  */
 export async function POST(req: NextRequest) {
   try {
-    const payload = await req.json();
-
-    // Accept only Resend inbound events
-    if (payload?.type !== "email.received") {
-      return NextResponse.json({ ok: true, ignored: true });
+    const payload = await req.json().catch(() => null);
+    if (!payload || payload.type !== "email.received") {
+      // ignore pings/other event types
+      return NextResponse.json({ ok: true });
     }
 
-    const data = payload.data || {};
+    const data = payload.data ?? {};
     const emailId: string | null = data.email_id ?? null;
-    const fromAddr: string | null = data.from ?? null;
-    const toAddr: string | null = Array.isArray(data.to) ? data.to[0] : data.to ?? null;
     const subject: string | null = data.subject ?? null;
+    const from: string | null = data.from ?? null;
+    const to: string | null = Array.isArray(data.to) ? data.to[0] : data.to ?? null;
 
-    console.log("🔵 [INBOUND] enqueue request:", {
-      type: payload.type,
+    // Resend often includes parsed body parts on the webhook:
+    const text: string | null = data.text ?? null;
+    const html: string | null = data.html ?? null;
+
+    // Basic log for sanity
+    console.log("✅ [INBOUND] enqueued:", {
       emailId,
-      from: fromAddr,
-      to: toAddr,
       subject,
     });
 
-    // Create Supabase service client
+    // Supabase (service role for server-side insert)
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Idempotency: if we’ve already enqueued this email_id for provider=resend, skip
-    if (emailId) {
-      const { data: existing, error: selErr } = await supabase
-        .from("inbound_queue")
-        .select("id")
-        .eq("provider", "resend")
-        .eq("external_id", emailId)
-        .limit(1);
-
-      if (selErr) {
-        console.error("❌ [INBOUND] select existing failed:", selErr);
-      }
-
-      if (existing && existing.length > 0) {
-        console.log("🟡 [INBOUND] duplicate email_id, already enqueued:", emailId);
-        return NextResponse.json({ ok: true, duplicate: true });
-      }
-    }
-
-    // Enqueue full raw payload (jsonb), mark as PENDING
-    const { error: insErr } = await supabase.from("inbound_queue").insert({
-      provider: "resend",
-      external_id: emailId,
-      from_addr: fromAddr,
-      to_addr: toAddr,
-      subject,
-      payload,            // store the entire raw payload for the worker
-      status: "PENDING",
+    // Insert a lightweight row for the processor to pick up
+    const { error } = await supabase.from("inbound_emails").insert({
+      source: "resend",
+      external_id: emailId ?? crypto.randomUUID(),
+      status: "new",
+      payload: {
+        from,
+        to,
+        subject,
+        text,
+        html,
+      },
     });
 
-    if (insErr) {
-      console.error("❌ [INBOUND] enqueue failed:", insErr);
-      return NextResponse.json({ ok: false, error: "enqueue_failed" }, { status: 500 });
+    if (error) {
+      console.error("[INBOUND] enqueue failed:", error);
+      return NextResponse.json({ ok: false, error: "enqueue-failed" }, { status: 500 });
     }
 
-    console.log("✅ [INBOUND] enqueued:", { emailId, subject });
-    return NextResponse.json({ ok: true, enqueued: true });
+    return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("❌ [INBOUND] crash:", err);
-    return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
+    console.error("[INBOUND] webhook error:", err);
+    return NextResponse.json({ ok: false, error: "server-error" }, { status: 500 });
   }
 }

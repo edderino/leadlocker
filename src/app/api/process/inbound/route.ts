@@ -1,178 +1,119 @@
 import { NextRequest, NextResponse } from "next/server";
-
 import { createClient } from "@supabase/supabase-js";
 
-// Safety: only allow cron/you to hit this endpoint
+/**
+ * CRON/Manual endpoint:
+ * - Auth via Bearer CRON_SECRET
+ * - Pull NEW inbound_emails
+ * - Parse body (text/html), create a lead, send SMS
+ * - Mark as DONE (or ERROR with last_error in payload)
+ */
 
-function assertAuth(req: NextRequest) {
-  const auth = req.headers.get("authorization") || "";
-  const token = auth.replace(/^Bearer\s+/i, "").trim();
-  if (!token || token !== process.env.CRON_SECRET) {
-    throw new Error("unauthorized");
-  }
+function authOk(req: NextRequest) {
+  const hdr = req.headers.get("authorization") || "";
+  const token = hdr.toLowerCase().startsWith("bearer ") ? hdr.slice(7) : "";
+  return !!token && token === process.env.CRON_SECRET;
 }
 
-type QueueRow = {
-  id: string;
-  provider: "resend" | string;
-  external_id: string | null;
-  from_addr: string | null;
-  to_addr: string | null;
-  subject: string | null;
-  payload: any;          // raw jsonb
-  status: "PENDING" | "PROCESSING" | "DONE" | "ERROR";
-  error_message?: string | null;
-  created_at: string;
-};
-
-export const dynamic = "force-dynamic";
+function stripHtml(input: string) {
+  return input.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
 
 export async function POST(req: NextRequest) {
+  if (!authOk(req)) {
+    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   try {
-    assertAuth(req);
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    // 1) Lock a small batch of PENDING rows
-    const BATCH = 5;
-
-    const { data: todo, error: selErr } = await supabase
-      .from("inbound_queue")
-      .select("*")
-      .eq("status", "PENDING")
+    // 1) Fetch a small batch of NEW items
+    const { data: rows, error: selErr } = await supabase
+      .from("inbound_emails")
+      .select("id, external_id, status, payload, created_at")
+      .eq("status", "new")
       .order("created_at", { ascending: true })
-      .limit(BATCH);
+      .limit(10);
 
     if (selErr) {
-      console.error("[PROCESS] select PENDING failed:", selErr);
-      return NextResponse.json({ ok: false, error: "select_failed" }, { status: 500 });
+      console.error("[PROCESS] select error:", selErr);
+      return NextResponse.json({ ok: false, error: "select-failed" }, { status: 500 });
     }
 
-    if (!todo || todo.length === 0) {
+    if (!rows || rows.length === 0) {
       return NextResponse.json({ ok: true, processed: 0 });
     }
 
-    // mark PROCESSING
-    const ids = todo.map((r) => r.id);
+    // 2) Mark them 'processing'
+    const ids = rows.map((r) => r.id);
     const { error: markErr } = await supabase
-      .from("inbound_queue")
-      .update({ status: "PROCESSING" })
+      .from("inbound_emails")
+      .update({ status: "processing" })
       .in("id", ids);
 
     if (markErr) {
-      console.error("[PROCESS] mark PROCESSING failed:", markErr);
-      return NextResponse.json({ ok: false, error: "mark_processing_failed" }, { status: 500 });
+      console.error("[PROCESS] mark processing error:", markErr);
+      return NextResponse.json({ ok: false, error: "mark-processing-failed" }, { status: 500 });
     }
 
-    // util: very forgiving phone/email extraction
-    const extractText = (row: QueueRow) => {
-      const p = row.payload || {};
-      const data = p.data || {};
-      const textPieces: string[] = [];
-      if (row.subject) textPieces.push(row.subject);
-      if (typeof data.text === "string") textPieces.push(data.text);
-      if (typeof data.html === "string") {
-        const html = data.html
-          .replace(/<br\s*\/?>/gi, "\n")
-          .replace(/<\/(p|div|li|tr|td)>/gi, "\n")
-          .replace(/<[^>]+>/g, "");
-        textPieces.push(html);
-      }
-      if (typeof p.raw === "string") textPieces.push(p.raw);
-      return textPieces.join("\n").trim();
-    };
+    const results: Array<{ id: string; status: "done" | "error"; err?: string }> = [];
 
-    const parseLead = (row: QueueRow) => {
-      const text = extractText(row);
-      const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-      const phoneMatch = text.match(/(\+?\d[\d\s\-()]{7,15})/);
-
-      // basic labeled extraction
-      const grab = (label: string) => {
-        const m = text.match(new RegExp(`${label}\\s*[:\\-]?\\s*(.+)`, "i"));
-        return m ? m[1].trim() : null;
-      };
-
-      const name =
-        grab("name") ||
-        (row.from_addr ? row.from_addr.split("<")[0].replace(/["']/g, "").trim() : null) ||
-        null;
-
-      const description =
-        grab("message") ||
-        grab("details") ||
-        text || "";
-
-      return {
-        name: name || "Unknown",
-        email: emailMatch?.[0] || grab("email") || row.from_addr || null,
-        phone: grab("phone") || grab("mobile") || phoneMatch?.[0]?.trim() || null,
-        description,
-      };
-    };
-
-    // 2) process each row
-    const results: Array<{ id: string; status: string; err?: string }> = [];
-
-    for (const row of todo as QueueRow[]) {
+    // 3) Process each
+    for (const row of rows) {
       try {
-        const lead = parseLead(row);
+        const payload = (row as any).payload || {};
+        const subject: string = payload.subject || "(no subject)";
+        const from: string | null = payload.from || null;
+        const textPart: string = payload.text || "";
+        const htmlPart: string = payload.html || "";
 
+        // Prefer text, then strip html, else subject as last resort
+        const candidateBody =
+          textPart || (htmlPart ? stripHtml(htmlPart) : "") || subject;
+
+        // Parse
+        const { parseLeadFromEmail } = await import("@/libs/parseEmail");
+        const parsed = parseLeadFromEmail(candidateBody);
+
+        const fallbackName =
+          (from?.split("<")[0]?.trim().replace(/["']/g, "") || "Unknown").toString();
+
+        const lead = {
+          name: parsed.name || fallbackName,
+          email: parsed.email || from || null,
+          phone: parsed.phone || null,
+          description: parsed.message || subject || "",
+        };
+
+        // 3a) Insert Lead
         const orgId = "demo-org";
-
-        // Optional: skip if we already created a lead for this external_id
-        if (row.external_id) {
-          const { data: existing, error: exErr } = await supabase
-            .from("leads")
-            .select("id")
-            .eq("source", "email")
-            .eq("external_id", row.external_id)
-            .limit(1);
-
-          if (exErr) console.error("[PROCESS] check existing lead err:", exErr);
-
-          if (existing && existing.length > 0) {
-            await supabase
-              .from("inbound_queue")
-              .update({ status: "DONE" })
-              .eq("id", row.id);
-            results.push({ id: row.id, status: "skipped_duplicate" });
-            continue;
-          }
-        }
-
-        // Insert lead
-        const { error: insLeadErr } = await supabase.from("leads").insert({
+        const { error: insErr } = await supabase.from("leads").insert({
           org_id: orgId,
           name: lead.name,
-          email: lead.email || null,
-          phone: lead.phone || null,
-          description: lead.description?.slice(0, 2000) || "",
+          email: lead.email,
+          phone: lead.phone,
+          description: lead.description,
           status: "NEW",
           source: "email",
-          external_id: row.external_id ?? null,
-          raw: JSON.stringify(row.payload ?? {}),
         });
 
-        if (insLeadErr) throw insLeadErr;
+        if (insErr) {
+          throw new Error("lead-insert-failed: " + (insErr.message || JSON.stringify(insErr)));
+        }
 
-        // SMS notify (best-effort)
+        // 3b) SMS alert
+        const snippet = candidateBody.slice(0, 120);
+        const body =
+          `New Lead from Email\n` +
+          `Name: ${lead.email || lead.name}\n` +
+          `Phone: ${lead.phone || "N/A"}\n` +
+          `Subject: ${subject}\n` +
+          `Snippet: ${snippet}`;
+
         try {
-          const subject = row.subject ?? null;
-          const snippet = (lead.description ?? '').slice(0, 120);
-
-          const smsText =
-            `New Lead from Email\n` +
-            `Name: ${lead.name}\n` +
-            `Phone: ${lead.phone ?? 'N/A'}\n` +
-            `Subject: ${subject ?? '(no subject)'}\n` +
-            `Snippet: ${snippet}`;
-
-          const body = smsText;
-
           await fetch(
             `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
             {
@@ -187,41 +128,41 @@ export async function POST(req: NextRequest) {
               },
               body: new URLSearchParams({
                 To: process.env.LL_DEFAULT_USER_PHONE!,
-                From: process.env.TWILIO_FROM_NUMBER!, // uses the correct env
+                From: process.env.TWILIO_PHONE_NUMBER!,
                 Body: body,
               }),
             }
           );
         } catch (smsErr) {
-          console.error("[PROCESS] SMS failed (ignored):", smsErr);
+          // don't fail the whole job on SMS; we still mark as done
+          console.error("[PROCESS] SMS failed:", smsErr);
         }
 
-        // Mark DONE
+        // 3c) Mark done
+        await supabase.from("inbound_emails").update({ status: "done" }).eq("id", row.id);
+        results.push({ id: row.id as string, status: "done" });
+      } catch (e: any) {
+        console.error("[PROCESS] item error:", e);
+
+        // Park the error on the payload so we can see it later
         await supabase
-          .from("inbound_queue")
-          .update({ status: "DONE", error_message: null })
+          .from("inbound_emails")
+          .update({
+            status: "error",
+            payload: {
+              ...(row as any).payload,
+              last_error: String(e?.message || e),
+            },
+          })
           .eq("id", row.id);
 
-        results.push({ id: row.id, status: "done" });
-      } catch (rowErr: any) {
-        console.error("[PROCESS] row failed:", row.id, rowErr);
-
-        await supabase
-          .from("inbound_queue")
-          .update({ status: "ERROR", error_message: String(rowErr?.message || rowErr) })
-          .eq("id", row.id);
-
-        results.push({ id: row.id, status: "error", err: String(rowErr?.message || rowErr) });
+        results.push({ id: row.id as string, status: "error", err: String(e?.message || e) });
       }
     }
 
     return NextResponse.json({ ok: true, processed: results.length, results });
-  } catch (e: any) {
-    if (e?.message === "unauthorized") {
-      return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-    }
-    console.error("[PROCESS] crash:", e);
-    return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
+  } catch (err) {
+    console.error("[PROCESS] fatal error:", err);
+    return NextResponse.json({ ok: false, error: "server-error" }, { status: 500 });
   }
 }
-
