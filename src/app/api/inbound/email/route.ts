@@ -1,107 +1,115 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-function stripHtml(s: string) {
-  return s
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|li|tr|table)>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\r/g, "")
-    .trim();
+function extractPhone(src: string | null | undefined) {
+  if (!src) return null;
+  // AU-focused but general enough: +61, 04xx xxx xxx, (02) 9xxx xxxx, etc.
+  const re =
+    /(\+?\s?61\s?[\d\s]{8,12}|0?\s?4\d[\s-]?\d{3}[\s-]?\d{3}|0[2378]\s?\d{4}\s?\d{4}|\+?\d[\d\s\-()]{7,16})/;
+  const m = src.match(re);
+  return m ? m[0].replace(/\s+/g, "").replace(/^(\+?61)0/, "$1") : null;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
 
-    // Only handle inbound emails
     if (payload?.type !== "email.received") {
       return NextResponse.json({ ok: true });
     }
 
-    const data = payload.data ?? {};
-    const emailId: string | undefined = data.email_id;
-    const from: string = data.from ?? "";
-    const to: string | undefined = Array.isArray(data.to) ? data.to[0] : data.to;
-    const subject: string | undefined = data.subject;
+    const received = payload.data ?? {};
+    const from: string | null = received.from ?? null;
+    const to: string | null = Array.isArray(received.to) ? received.to[0] : received.to ?? null;
+    const subject: string | null = received.subject ?? null;
+    const emailId: string | null = received.email_id ?? null;
 
     console.log("FULL RAW PAYLOAD:", JSON.stringify(payload, null, 2));
 
-    // --- Try to fetch the full message from Resend API ---
-    let apiText = "";
-    let apiHtml = "";
-    let apiStatus = 0;
+    // --- Try to fetch full body from Resend ---------------------------------
+    let textBody = received.text ?? "";   // webhook fallback if present
+    let htmlBody = received.html ?? "";
 
-    if (emailId) {
-      const emailRes = await fetch(`https://api.resend.com/emails/${emailId}`, {
+    async function fetchResend(path: string) {
+      const r = await fetch(`https://api.resend.com${path}`, {
         headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+        // no need for content-type on GET
+        cache: "no-store",
       });
-      apiStatus = emailRes.status;
-
-      let apiJson: any = {};
-      try {
-        apiJson = await emailRes.json();
-      } catch (e) {
-        console.error("Resend API: failed to parse JSON");
-      }
-
-      apiText = apiJson?.text || "";
-      apiHtml = apiJson?.html || "";
-
-      console.log("Resend fetch:", {
-        status: apiStatus,
-        hasText: Boolean(apiText?.length),
-        hasHtml: Boolean(apiHtml?.length),
-      });
+      let data: any = null;
+      try { data = await r.json(); } catch {}
+      return { ok: r.ok, status: r.status, data };
     }
 
-    // --- Fallbacks: use payload’s inline body if API didn’t return content ---
-    const inlineText: string = data.text ?? "";
-    const inlineHtml: string = data.html ?? "";
+    if (emailId && (!textBody && !htmlBody)) {
+      // First try /emails/{id}
+      const a = await fetchResend(`/emails/${emailId}`);
+      // If not found or missing content, try inbound endpoint variant
+      const b = !a.ok || (!a.data?.text && !a.data?.html)
+        ? await fetchResend(`/inbound_emails/${emailId}`)
+        : null;
 
-    const bodyText =
-      apiText ||
-      stripHtml(apiHtml || "") ||
-      inlineText ||
-      stripHtml(inlineHtml || "");
+      const picked = (b && b.ok ? b : a);
+      const hasText = !!picked?.data?.text;
+      const hasHtml = !!picked?.data?.html;
 
-    // --- Parse lead fields ---
+      console.log("Resend fetch:", {
+        status: picked?.status ?? a.status,
+        hasText,
+        hasHtml,
+      });
+
+      if (hasText) textBody = picked!.data.text;
+      if (hasHtml) htmlBody = picked!.data.html;
+    }
+
+    // Compose the best available plain text for parsing
+    const compositeText =
+      (textBody && typeof textBody === "string" ? textBody : "") ||
+      (htmlBody && typeof htmlBody === "string"
+        ? htmlBody
+            .replace(/<br\s*\/?>/gi, "\n")
+            .replace(/<\/(p|div|li|tr|h\d)>/gi, "\n")
+            .replace(/<[^>]+>/g, "")
+        : "");
+
+    // --- Parse lead fields ---------------------------------------------------
     const { parseLeadFromEmail } = await import("@/libs/parseEmail");
+    const parsed = parseLeadFromEmail(compositeText || "");
 
-    const parsed = parseLeadFromEmail(bodyText || "");
+    // Extra fallback for phone: scan subject + from + composite text
+    let phone =
+      parsed.phone ||
+      extractPhone(`${subject ?? ""}\n${from ?? ""}\n${compositeText}`) ||
+      null;
 
-    // Fallbacks for name/email if parser missed them
     const fallbackName =
-      from.split("<")[0]?.trim().replace(/["']/g, "") || "Unknown";
-
-    const fallbackEmail =
-      (from.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i) || [null])[0];
+      (from?.split("<")[0]?.trim().replace(/["']/g, "") || "Unknown").trim();
 
     const lead = {
       name: parsed.name || fallbackName,
-      email: parsed.email || fallbackEmail || null,
-      phone: parsed.phone || null,
-      description: parsed.message || "",
-      raw: bodyText || "",
+      email: parsed.email || from || null,
+      phone,
+      description: parsed.message || compositeText.slice(0, 2000) || "",
+      raw: compositeText || "",
     };
 
     console.log("Parsed lead:", lead);
 
-    // --- Insert into DB ---
+    // --- Insert into Supabase -----------------------------------------------
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const orgId = "demo-org";
     const { error } = await supabase.from("leads").insert({
-      org_id: orgId,
-      email: lead.email || from || "unknown@example.com",
+      org_id: "demo-org",
+      email: lead.email || "unknown@example.com",
       name: lead.name,
       phone: lead.phone,
       description: lead.description,
       status: "NEW",
-      source: "email",
+      source: "Email",
     });
 
     if (error) {
@@ -111,7 +119,7 @@ export async function POST(req: NextRequest) {
 
     console.log("Lead inserted successfully");
 
-    // --- SMS alert (use the correct FROM env name) ---
+    // --- SMS alert via Twilio -----------------------------------------------
     try {
       const smsRes = await fetch(
         `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
@@ -127,7 +135,7 @@ export async function POST(req: NextRequest) {
           },
           body: new URLSearchParams({
             To: process.env.LL_DEFAULT_USER_PHONE!,
-            From: process.env.TWILIO_FROM_NUMBER!, // ← ensure this env exists
+            From: process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_PHONE_NUMBER || "",
             Body: `New Lead from Email
 Name: ${lead.name}
 Phone: ${lead.phone || "N/A"}
@@ -135,9 +143,7 @@ Source: Email`,
           }),
         }
       );
-
-      const smsJson = await smsRes.json();
-      console.log("SMS sent:", smsJson);
+      console.log("SMS sent:", await smsRes.json());
     } catch (smsErr) {
       console.error("Failed to send SMS:", smsErr);
     }
