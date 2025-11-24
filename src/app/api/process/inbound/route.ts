@@ -161,11 +161,18 @@ export async function POST(req: NextRequest) {
 
         // SMS notify (best-effort)
         try {
-          const body = `New Lead from Email
+          const fallbackFrom = row.from_addr ? row.from_addr.split("<")[0].replace(/["']/g, "").trim() : null;
+          const subject = row.subject || null;
+          
+          const smsText =
+            `New Lead from Email\n` +
+            `Name: ${lead.name || fallbackFrom || 'Unknown'}\n` +
+            `Email: ${lead.email || fallbackFrom || 'N/A'}\n` +
+            `Phone: ${lead.phone || 'N/A'}\n` +
+            `Subject: ${subject || '(no subject)'}\n` +
+            `Snippet: ${(lead.description || lead.message || '').slice(0, 120)}`;
 
-Name: ${lead.name}
-Phone: ${lead.phone ?? "N/A"}
-Source: Email`;
+          const body = smsText;
 
           await fetch(
             `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
