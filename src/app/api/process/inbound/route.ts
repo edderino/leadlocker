@@ -9,6 +9,12 @@ import { createClient } from "@supabase/supabase-js";
  * - Mark as DONE (or ERROR with last_error in payload)
  */
 
+// ──────────────────────────────────────────────────────────────────────────────
+// CONFIG – force numbers so Twilio never errors with 21612 (undefined From/To)
+// ──────────────────────────────────────────────────────────────────────────────
+const TWILIO_TO = "+61421114622";    // recipient (your mobile)
+const TWILIO_FROM = "+15074787192";  // your Twilio purchased number
+
 function authOk(req: NextRequest) {
   const hdr = req.headers.get("authorization") || "";
   const token = hdr.toLowerCase().startsWith("bearer ") ? hdr.slice(7) : "";
@@ -48,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 2) Mark them 'processing'
-    const ids = rows.map((r) => r.id);
+    const ids = rows.map((r: any) => r.id);
     const { error: markErr } = await supabase
       .from("inbound_emails")
       .update({ status: "processing" })
@@ -62,11 +68,11 @@ export async function POST(req: NextRequest) {
     const results: Array<{ id: string; status: "done" | "error"; err?: string }> = [];
 
     // 3) Process each
-    for (const row of rows) {
+    for (const row of rows as any[]) {
       try {
-        const payload = (row as any).payload || {};
+        const payload = row?.payload ?? {};
         const subject: string = payload.subject || "(no subject)";
-        const from: string | null = payload.from || null;
+        const fromHdr: string | null = payload.from || null;
         const textPart: string = payload.text || "";
         const htmlPart: string = payload.html || "";
 
@@ -79,13 +85,13 @@ export async function POST(req: NextRequest) {
         const parsed = parseLeadFromEmail(candidateBody);
 
         const fallbackName =
-          (from?.split("<")[0]?.trim().replace(/["']/g, "") || "Unknown").toString();
+          (fromHdr?.split("<")[0]?.trim().replace(/["']/g, "") || "Unknown").toString();
 
         const lead = {
           name: parsed.name || fallbackName,
-          email: parsed.email || from || null,
+          email: parsed.email || fromHdr || null,
           phone: parsed.phone || null,
-          description: parsed.message || subject || "",
+          description: (parsed.message || subject || "") as string,
         };
 
         // 3a) Insert Lead
@@ -104,9 +110,9 @@ export async function POST(req: NextRequest) {
           throw new Error("lead-insert-failed: " + (insErr.message || JSON.stringify(insErr)));
         }
 
-        // 3b) SMS alert
+        // 3b) SMS alert (forced From/To)
         const snippet = candidateBody.slice(0, 120);
-        const body =
+        const smsText =
           `New Lead from Email\n` +
           `Name: ${lead.email || lead.name}\n` +
           `Phone: ${lead.phone || "N/A"}\n` +
@@ -114,7 +120,7 @@ export async function POST(req: NextRequest) {
           `Snippet: ${snippet}`;
 
         try {
-          await fetch(
+          const smsRes = await fetch(
             `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
             {
               method: "POST",
@@ -127,12 +133,23 @@ export async function POST(req: NextRequest) {
                 "Content-Type": "application/x-www-form-urlencoded",
               },
               body: new URLSearchParams({
-                To: process.env.LL_DEFAULT_USER_PHONE!,
-                From: process.env.TWILIO_PHONE_NUMBER!,
-                Body: body,
+                To: TWILIO_TO,
+                From: TWILIO_FROM, // FORCE explicit From so Twilio never sees "undefined"
+                Body: smsText,
               }),
             }
           );
+          const smsJson = await smsRes.json().catch(() => ({}));
+          console.log("[Twilio] send result", {
+            status: smsRes.status,
+            ok: smsRes.ok,
+            to: TWILIO_TO,
+            fromUsed: TWILIO_FROM,
+            sid: (smsJson as any)?.sid,
+            twilioStatus: (smsJson as any)?.status,
+            errorCode: (smsJson as any)?.error_code,
+            errorMessage: (smsJson as any)?.message || (smsJson as any)?.error_message,
+          });
         } catch (smsErr) {
           // don't fail the whole job on SMS; we still mark as done
           console.error("[PROCESS] SMS failed:", smsErr);
