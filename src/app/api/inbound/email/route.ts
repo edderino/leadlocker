@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     await client.messages.create({
       body: `📩 New Lead Received\nFrom: ${from_email}\nSubject: ${subject}\n\n${body_plain}`,
       from: process.env.TWILIO_FROM_NUMBER!,
-      to: process.env.NOTIFY_PHONE!,
+      to: process.env.LL_DEFAULT_USER_PHONE!,
     });
 
     console.log("📲 SMS sent!");
