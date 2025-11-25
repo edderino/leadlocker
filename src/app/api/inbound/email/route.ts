@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json().catch(() => null);
+    console.log("[INBOUND][RAW PAYLOAD]", JSON.stringify(payload, null, 2));
     if (!payload || payload.type !== "email.received") {
       // ignore pings/other event types
       return NextResponse.json({ ok: true });
