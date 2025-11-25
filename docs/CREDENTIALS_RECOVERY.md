@@ -26,7 +26,7 @@ All credentials were successfully recovered by analyzing the `.next/server/` com
 | Variable | Value | Source |
 |----------|-------|--------|
 | `TWILIO_ACCOUNT_SID` | `TWILIO_ACCOUNT_SID_REDACTED` | User provided |
-| `TWILIO_AUTH_TOKEN` | `f39358fe2e663552ce1be9aa5f890f01` | User provided |
+| `TWILIO_AUTH_TOKEN` | `43747e6a3ea1de13e05b4d6720a1e236` | User provided |
 | `TWILIO_FROM_NUMBER` | `+15074787192` | User provided |
 
 ### **3. LeadLocker Configuration (4 variables)**

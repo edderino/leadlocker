@@ -20,7 +20,7 @@ All credentials have been successfully recovered and restored. The Advanced Anal
 
 ### **Twilio (3 variables)**
 - ✅ `TWILIO_ACCOUNT_SID` → `TWILIO_ACCOUNT_SID_REDACTED`
-- ✅ `TWILIO_AUTH_TOKEN` → `f39358fe2e663552ce1be9aa5f890f01`
+- ✅ `TWILIO_AUTH_TOKEN` → `43747e6a3ea1de13e05b4d6720a1e236`
 - ✅ `TWILIO_FROM_NUMBER` → `+15074787192`
 
 ### **LeadLocker (4 variables)**
