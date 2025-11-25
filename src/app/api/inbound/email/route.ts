@@ -1,63 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-/**
- * Resend Inbound Webhook -> enqueue into public.inbound_emails
- * We DO NOT parse or send SMS here. Keep it idempotent & fast.
- */
-export async function POST(req: NextRequest) {
-  try {
-    const payload = await req.json().catch(() => null);
-    console.log("[INBOUND][RAW PAYLOAD]", JSON.stringify(payload, null, 2));
-    if (!payload || payload.type !== "email.received") {
-      // ignore pings/other event types
-      return NextResponse.json({ ok: true });
-    }
+export async function POST(req: Request) {
+  console.log("📩 [INBOUND] Mailgun hit endpoint");
 
-    const data = payload.data ?? {};
-    const emailId: string | null = data.email_id ?? null;
-    const subject: string | null = data.subject ?? null;
-    const from: string | null = data.from ?? null;
-    const to: string | null = Array.isArray(data.to) ? data.to[0] : data.to ?? null;
+  // Mailgun sends data as form-urlencoded, not JSON
+  const form = await req.formData();
+  const payload: Record<string, any> = {};
 
-    // Resend often includes parsed body parts on the webhook:
-    const text: string | null = data.text ?? null;
-    const html: string | null = data.html ?? null;
-
-    // Basic log for sanity
-    console.log("✅ [INBOUND] enqueued:", {
-      emailId,
-      subject,
-    });
-
-    // Supabase (service role for server-side insert)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    // Insert a lightweight row for the processor to pick up
-    const { error } = await supabase.from("inbound_emails").insert({
-      source: "resend",
-      external_id: emailId ?? crypto.randomUUID(),
-      status: "new",
-      payload: {
-        from,
-        to,
-        subject,
-        text,
-        html,
-      },
-    });
-
-    if (error) {
-      console.error("[INBOUND] enqueue failed:", error);
-      return NextResponse.json({ ok: false, error: "enqueue-failed" }, { status: 500 });
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("[INBOUND] webhook error:", err);
-    return NextResponse.json({ ok: false, error: "server-error" }, { status: 500 });
+  for (const [key, value] of form.entries()) {
+    payload[key] = value;
   }
+
+  console.log("📩 [INBOUND] Parsed payload:", payload);
+
+  // Extract the fields we care about
+  const from_email = payload.sender || payload.From || payload.from || "";
+  const to_email = payload.recipient || payload.Recipient || payload.to || "";
+  const subject = payload.subject || "";
+  const body_plain = payload["body-plain"] || payload["stripped-text"] || "";
+  const external_id = payload["Message-Id"] || "";
+  const source = "email";
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  // Insert into inbound_emails
+  const { error } = await supabase.from("inbound_emails").insert({
+    source,
+    external_id,
+    subject,
+    from_email,
+    to_email,
+    payload,
+  });
+
+  if (error) {
+    console.error("❌ Error storing inbound email", error);
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
