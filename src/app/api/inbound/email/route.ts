@@ -1,20 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import twilio from "twilio";
 
 export async function POST(req: Request) {
   console.log("📩 [INBOUND] Mailgun hit endpoint");
 
-  // Mailgun sends data as form-urlencoded, not JSON
   const form = await req.formData();
   const payload: Record<string, any> = {};
-
   for (const [key, value] of form.entries()) {
     payload[key] = value;
   }
 
   console.log("📩 [INBOUND] Parsed payload:", payload);
 
-  // Extract the fields we care about
   const from_email = payload.sender || payload.From || payload.from || "";
   const to_email = payload.recipient || payload.Recipient || payload.to || "";
   const subject = payload.subject || "";
@@ -27,8 +25,7 @@ export async function POST(req: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Insert into inbound_emails
-  const { error } = await supabase.from("inbound_emails").insert({
+  const { error: dbError } = await supabase.from("inbound_emails").insert({
     source,
     external_id,
     subject,
@@ -37,9 +34,29 @@ export async function POST(req: Request) {
     payload,
   });
 
-  if (error) {
-    console.error("❌ Error storing inbound email", error);
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  if (dbError) {
+    console.error("❌ DB Error", dbError);
+    return NextResponse.json({ ok: false, error: dbError.message }, { status: 500 });
+  }
+
+  // -------------------------
+  // 📲 SEND TEXT NOTIFICATION
+  // -------------------------
+  try {
+    const client = twilio(
+      process.env.TWILIO_ACCOUNT_SID!,
+      process.env.TWILIO_AUTH_TOKEN!
+    );
+
+    await client.messages.create({
+      body: `📩 New Lead Received\nFrom: ${from_email}\nSubject: ${subject}\n\n${body_plain}`,
+      from: process.env.TWILIO_FROM_NUMBER!,
+      to: process.env.NOTIFY_PHONE!,
+    });
+
+    console.log("📲 SMS sent!");
+  } catch (err: any) {
+    console.error("🚨 SMS Error:", err);
   }
 
   return NextResponse.json({ ok: true });
