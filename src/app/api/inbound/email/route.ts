@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import twilio from "twilio";
 
 /**
- * LeadLocker – Mailgun Inbound Email Handler
+ * LeadLocker – Mailgun Inbound Email Handler (Schema-Corrected)
  * - Parses Mailgun form-data
  * - Finds correct client via public.clients.inbound_email
  * - Stores clean lead (user_id + client_id)
@@ -21,7 +21,6 @@ export async function POST(req: Request) {
 
   console.log("📩 [INBOUND] Parsed payload:", payload);
 
-  // Extract emails
   const from_email =
     payload.sender || payload.From || payload.from || "unknown@unknown.com";
 
@@ -37,16 +36,14 @@ export async function POST(req: Request) {
 
   const stripped = payload["stripped-text"] || payload["body-plain"] || "";
 
-  // Extract name from email
   const nameMatch = from_email.match(/^(.*)</);
   const name = nameMatch ? nameMatch[1].trim() : "Unknown";
 
-  // Extract phone from body
   const phoneMatch = stripped.match(/(\+?\d[\d\s-]{7,15})/);
   const phone = phoneMatch ? phoneMatch[1].replace(/\s+/g, "") : "N/A";
 
   // -----------------------------
-  // Init Supabase client
+  // Init Supabase
   // -----------------------------
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,7 +51,7 @@ export async function POST(req: Request) {
   );
 
   // -----------------------------
-  // Identify the correct client
+  // Identify correct client
   // -----------------------------
   const { data: client, error: clientErr } = await supabase
     .from("clients")
@@ -73,7 +70,7 @@ export async function POST(req: Request) {
   console.log("🏷 Matched client:", client.id);
 
   // -----------------------------
-  // Insert clean lead
+  // Insert clean lead (schema-corrected)
   // -----------------------------
   const { error: dbError } = await supabase
     .from("leads")
@@ -81,10 +78,11 @@ export async function POST(req: Request) {
       user_id: client.user_id,
       client_id: client.id,
       source: "email",
-      subject,
-      from_email,
       name,
       phone,
+      email: from_email,       // ✔ correct column
+      description: subject,    // ✔ correct column
+      status: "NEW",
     });
 
   if (dbError) {
