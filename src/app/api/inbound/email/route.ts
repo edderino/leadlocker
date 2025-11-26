@@ -3,56 +3,72 @@ import { createClient } from "@supabase/supabase-js";
 import twilio from "twilio";
 
 /**
- * LeadLocker – Mailgun Inbound Email Handler (Schema-Corrected)
- * - Parses Mailgun form-data
- * - Finds correct client via public.clients.inbound_email
- * - Stores clean lead (user_id + client_id)
- * - Sends SMS alert (NO BODY INCLUDED)
+ * LeadLocker – Mailgun Inbound Email Handler
+ * Handles forwarded Gmail → Mailgun → Lead creation + SMS alert.
  */
 export async function POST(req: Request) {
   console.log("📩 [INBOUND] Mailgun hit endpoint");
 
-  // -----------------------------
   // Parse Mailgun FormData
-  // -----------------------------
   const form = await req.formData();
   const payload: Record<string, any> = {};
-  for (const [key, value] of form.entries()) payload[key] = value;
+  for (const [key, value] of form.entries()) {
+    payload[key] = value;
+  }
 
   console.log("📩 [INBOUND] Parsed payload:", payload);
 
+  // Extract basics
   const from_email =
-    payload.sender || payload.From || payload.from || "unknown@unknown.com";
+    payload.sender ||
+    payload.From ||
+    payload.from ||
+    "unknown@unknown.com";
 
   const to_email =
-    payload.recipient || payload.Recipient || payload.to || "";
+    payload.recipient ||
+    payload.Recipient ||
+    payload.to ||
+    "";
 
-  // -----------------------------
-  // Trim subject to 100 chars
-  // -----------------------------
-  const subjectRaw = payload.subject || "";
+  // Trim subject
+  const rawSubject = payload.subject || "";
   const subject =
-    subjectRaw.length > 100 ? subjectRaw.slice(0, 100) + "..." : subjectRaw;
+    rawSubject.length > 100 ? rawSubject.slice(0, 100) + "..." : rawSubject;
 
-  const stripped = payload["stripped-text"] || payload["body-plain"] || "";
+  const stripped =
+    payload["stripped-text"] ||
+    payload["body-plain"] ||
+    "";
 
-  const nameMatch = from_email.match(/^(.*)</);
-  const name = nameMatch ? nameMatch[1].trim() : "Unknown";
+  // -----------------------------------
+  // NAME EXTRACTION (FINAL LOGIC)
+  // -----------------------------------
+  let name = "Unknown";
 
+  // Case 1: "Display Name <email>"
+  const match = from_email.match(/^(.*)<(.+)>$/);
+  if (match) {
+    const extracted = match[1].trim();
+    name = extracted.length > 0 ? extracted : match[2];
+  } else {
+    // Case 2: plain email → use entire email as name
+    name = from_email.trim();
+  }
+
+  // Extract phone from message
   const phoneMatch = stripped.match(/(\+?\d[\d\s-]{7,15})/);
-  const phone = phoneMatch ? phoneMatch[1].replace(/\s+/g, "") : "N/A";
+  const phone = phoneMatch
+    ? phoneMatch[1].replace(/\s+/g, "")
+    : "N/A";
 
-  // -----------------------------
-  // Init Supabase
-  // -----------------------------
+  // Supabase
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // -----------------------------
-  // Identify correct client
-  // -----------------------------
+  // Find matching client
   const { data: client, error: clientErr } = await supabase
     .from("clients")
     .select("*")
@@ -60,29 +76,26 @@ export async function POST(req: Request) {
     .single();
 
   if (clientErr || !client) {
-    console.error("❌ No matching client for inbound email:", to_email);
+    console.error("❌ No matching client for email:", to_email);
     return NextResponse.json(
-      { ok: false, error: "Client not found for inbound email" },
+      { ok: false, error: "Client not found" },
       { status: 404 }
     );
   }
 
   console.log("🏷 Matched client:", client.id);
 
-  // -----------------------------
-  // Insert clean lead (schema-corrected)
-  // -----------------------------
+  // Insert lead
   const { error: dbError } = await supabase
     .from("leads")
     .insert({
       user_id: client.user_id,
       client_id: client.id,
       source: "email",
+      subject,
+      from_email,
       name,
       phone,
-      email: from_email,       // ✔ correct column
-      description: subject,    // ✔ correct column
-      status: "NEW",
     });
 
   if (dbError) {
@@ -93,20 +106,19 @@ export async function POST(req: Request) {
     );
   }
 
-  // -----------------------------
-  // SEND SMS (NO BODY INCLUDED)
-  // -----------------------------
+  // SMS body
+  const smsBody =
+    `📩 New Lead via Email\n\n` +
+    `👤 Name: ${name}\n` +
+    `📞 Phone: ${phone}\n` +
+    `📝 Subject: ${subject}`;
+
+  // Send SMS
   try {
     const twilioClient = twilio(
       process.env.TWILIO_ACCOUNT_SID!,
       process.env.TWILIO_AUTH_TOKEN!
     );
-
-    const smsBody =
-      `📩 New Lead via Email\n\n` +
-      `👤 Name: ${name}\n` +
-      `📞 Phone: ${phone}\n` +
-      `📝 Subject: ${subject}`;
 
     await twilioClient.messages.create({
       body: smsBody,
