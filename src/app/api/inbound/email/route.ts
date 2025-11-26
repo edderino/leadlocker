@@ -4,11 +4,15 @@ import twilio from "twilio";
 
 /**
  * LeadLocker – Mailgun Inbound Handler
- * - DEDUPES via Message-Id
- * - Uses real "From:" header (not Gmail forwarding alias)
- * - Stores clean lead
- * - Sends SMS once only
+ * With HARD-BLOCK filtering for:
+ * - no-reply/auto senders
+ * - verification emails
+ * - bounce notifications
+ * - social alerts
+ * - newsletters
+ * - empty subject/body
  */
+
 export async function POST(req: Request) {
   console.log("📩 [INBOUND] Mailgun hit endpoint");
 
@@ -19,15 +23,117 @@ export async function POST(req: Request) {
 
   console.log("📩 [INBOUND] Parsed payload:", payload);
 
-  // -----------------------------
-  // Extract Message-ID (dedupe key)
-  // -----------------------------
+  const rawSubject = (payload.subject || "").toLowerCase();
+  const fromHeader =
+    payload.From ||
+    payload.from ||
+    "";
+  const stripped =
+    payload["stripped-text"] ||
+    payload["body-plain"] ||
+    "";
+
+  // ======================================================
+  // HARD-BLOCK FILTERS
+  // ======================================================
+
+  // A) Auto-reply / no-reply senders
+  const fromLower = fromHeader.toLowerCase();
+  const AUTO_BLOCK = [
+    "no-reply",
+    "noreply",
+    "donotreply",
+    "auto",
+    "automated",
+    "mailer-daemon",
+  ];
+  if (AUTO_BLOCK.some((w) => fromLower.includes(w))) {
+    console.log("🛑 BLOCKED: Auto/no-reply sender");
+    return NextResponse.json({ ok: true, blocked: "auto-sender" });
+  }
+
+  // B) Gmail/Outlook verification / security codes
+  const VERIFICATION_WORDS = [
+    "verification",
+    "verify",
+    "confirm",
+    "confirmation",
+    "code",
+    "otp",
+    "security",
+  ];
+  const VERIFICATION_DOMAINS = [
+    "google.com",
+    "outlook.com",
+    "microsoft.com",
+  ];
+  if (
+    VERIFICATION_WORDS.some((w) => rawSubject.includes(w)) ||
+    VERIFICATION_DOMAINS.some((d) => fromLower.includes(d))
+  ) {
+    console.log("🛑 BLOCKED: Verification/security email");
+    return NextResponse.json({ ok: true, blocked: "verification" });
+  }
+
+  // C) Bounce notifications
+  const BOUNCE_WORDS = [
+    "delivery status notification",
+    "undelivered",
+    "failed",
+    "address not found",
+    "returned mail",
+  ];
+  if (BOUNCE_WORDS.some((w) => rawSubject.includes(w))) {
+    console.log("🛑 BLOCKED: Bounce notification");
+    return NextResponse.json({ ok: true, blocked: "bounce" });
+  }
+
+  // D) Social/media platform NON-lead alerts
+  const SOCIAL_WORDS = [
+    "facebook",
+    "instagram",
+    "meta",
+    "security alert",
+    "new login",
+    "new follower",
+    "page activity",
+    "your ad has been approved",
+  ];
+  if (SOCIAL_WORDS.some((w) => rawSubject.includes(w))) {
+    console.log("🛑 BLOCKED: Social/media alert");
+    return NextResponse.json({ ok: true, blocked: "social-alert" });
+  }
+
+  // E) Empty subject + empty body
+  if (rawSubject.trim() === "" && stripped.trim() === "") {
+    console.log("🛑 BLOCKED: Empty subject/body");
+    return NextResponse.json({ ok: true, blocked: "empty" });
+  }
+
+  // F) Newsletter / bulk messages
+  const newsletterBody = stripped.toLowerCase();
+  const NEWSLETTER_WORDS = [
+    "unsubscribe",
+    "view in browser",
+  ];
+  if (
+    NEWSLETTER_WORDS.some((w) => newsletterBody.includes(w)) ||
+    payload["List-Unsubscribe"]
+  ) {
+    console.log("🛑 BLOCKED: Newsletter/bulk email");
+    return NextResponse.json({ ok: true, blocked: "newsletter" });
+  }
+
+  // ======================================================
+  // CONTINUE — Email is a legit lead
+  // ======================================================
+
+  // Deduce Message-ID
   let message_id =
     payload["Message-Id"] ||
     payload["message-id"] ||
     null;
 
-  // Try extracting from message-headers
   if (!message_id && payload["message-headers"]) {
     try {
       const headers = JSON.parse(payload["message-headers"]);
@@ -37,21 +143,17 @@ export async function POST(req: Request) {
   }
 
   if (!message_id) {
-    console.warn("⚠️ No Message-Id found, generating fallback ID");
+    console.warn("⚠️ No Message-Id found, generating fallback");
     message_id = crypto.randomUUID();
   }
 
-  // -----------------------------
   // Init Supabase
-  // -----------------------------
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // -----------------------------
-  // DEDUPE CHECK
-  // -----------------------------
+  // Dedupe
   const { data: existing } = await supabase
     .from("leads")
     .select("id")
@@ -63,9 +165,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, deduped: true });
   }
 
-  // -----------------------------
-  // Extract TO address (which client?)
-  // -----------------------------
+  // Match client
   const to_email =
     payload.recipient ||
     payload.Recipient ||
@@ -80,14 +180,15 @@ export async function POST(req: Request) {
 
   if (clientErr || !client) {
     console.error("❌ No matching client for email:", to_email);
-    return NextResponse.json({ ok: false, error: "Client not found" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "Client not found" },
+      { status: 404 }
+    );
   }
 
   console.log("🏷 Matched client:", client.id);
 
-  // -----------------------------
-  // Extract REAL From email (ignore Gmail forwarding alias)
-  // -----------------------------
+  // Parse real sender
   const from_header =
     payload.From ||
     payload.from ||
@@ -107,25 +208,14 @@ export async function POST(req: Request) {
     }
   }
 
-  // -----------------------------
-  // Subject + Body
-  // -----------------------------
-  const rawSubject = payload.subject || "";
   const subject =
     rawSubject.length > 100 ? rawSubject.slice(0, 100) + "..." : rawSubject;
-
-  const stripped =
-    payload["stripped-text"] ||
-    payload["body-plain"] ||
-    "";
 
   // Extract phone
   const phoneMatch = stripped.match(/(\+?\d[\d\s-]{7,15})/);
   const phone = phoneMatch ? phoneMatch[1].replace(/\s+/g, "") : "N/A";
 
-  // -----------------------------
-  // INSERT LEAD (WITH message_id)
-  // -----------------------------
+  // Insert lead
   const { error: dbError } = await supabase
     .from("leads")
     .insert({
@@ -142,12 +232,13 @@ export async function POST(req: Request) {
 
   if (dbError) {
     console.error("❌ DB Error", dbError);
-    return NextResponse.json({ ok: false, error: dbError.message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: dbError.message },
+      { status: 500 }
+    );
   }
 
-  // -----------------------------
-  // SEND SMS ONCE
-  // -----------------------------
+  // Send SMS
   try {
     const twilioClient = twilio(
       process.env.TWILIO_ACCOUNT_SID!,
