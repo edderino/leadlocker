@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import twilio from "twilio";
+import crypto from "crypto";
 
 /**
  * LeadLocker – Mailgun Inbound Handler
- * With HARD-BLOCK filtering for:
- * - no-reply/auto senders
- * - verification emails
- * - bounce notifications
- * - social alerts
- * - newsletters
- * - empty subject/body
+ * HARD-BLOCK filtering + signature dedupe
  */
 
 export async function POST(req: Request) {
@@ -125,10 +120,46 @@ export async function POST(req: Request) {
   }
 
   // ======================================================
-  // CONTINUE — Email is a legit lead
+  // MAILGUN SIGNATURE DEDUPE (bulletproof)
   // ======================================================
 
-  // Deduce Message-ID
+  const timestamp = payload.timestamp || "";
+  const token = payload.token || "";
+  const signature = payload.signature || "";
+
+  const signatureKey = crypto
+    .createHash("sha256")
+    .update(`${timestamp}:${token}:${signature}`)
+    .digest("hex");
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data: got } = await supabase
+    .from("inbound_webhook_dedupes")
+    .select("id")
+    .eq("signature_key", signatureKey)
+    .maybeSingle();
+
+  if (got) {
+    console.log("🛑 DUPLICATE MAILGUN WEBHOOK — SKIPPING EVERYTHING");
+    return NextResponse.json({ ok: true, deduped: true });
+  }
+
+  // Store signature for next time
+  await supabase.from("inbound_webhook_dedupes").insert({
+    signature_key: signatureKey,
+    timestamp: timestamp,
+    received_at: new Date().toISOString(),
+  });
+
+  // ======================================================
+  // CONTINUE — Email is legit & not a duplicate
+  // ======================================================
+
+  // Deduce Message-ID (still useful for audit)
   let message_id =
     payload["Message-Id"] ||
     payload["message-id"] ||
@@ -145,24 +176,6 @@ export async function POST(req: Request) {
   if (!message_id) {
     console.warn("⚠️ No Message-Id found, generating fallback");
     message_id = crypto.randomUUID();
-  }
-
-  // Init Supabase
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // Dedupe
-  const { data: existing } = await supabase
-    .from("leads")
-    .select("id")
-    .eq("message_id", message_id)
-    .maybeSingle();
-
-  if (existing) {
-    console.log("🛑 Duplicate webhook detected — skipping lead + SMS");
-    return NextResponse.json({ ok: true, deduped: true });
   }
 
   // Match client
