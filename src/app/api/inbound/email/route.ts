@@ -5,7 +5,7 @@ import crypto from "crypto";
 
 /**
  * LeadLocker – Mailgun Inbound Handler
- * HARD-BLOCK filtering + signature dedupe
+ * HARD-BLOCK filtering + BODY-HASH billionaire dedupe
  */
 
 export async function POST(req: Request) {
@@ -120,16 +120,21 @@ export async function POST(req: Request) {
   }
 
   // ======================================================
-  // MAILGUN SIGNATURE DEDUPE (bulletproof)
+  // BILLIONAIRE DEDUPE — BODY HASH + SUBJECT + FROM
   // ======================================================
 
-  const timestamp = payload.timestamp || "";
-  const token = payload.token || "";
-  const signature = payload.signature || "";
+  const cleanSubject = (payload.subject || "").trim();
+  const cleanFrom = fromLower.trim();
+  const cleanBody = stripped.trim();
 
-  const signatureKey = crypto
+  const bodyHash = crypto
     .createHash("sha256")
-    .update(`${timestamp}:${token}:${signature}`)
+    .update(cleanBody)
+    .digest("hex");
+
+  const dedupeKey = crypto
+    .createHash("sha256")
+    .update(`${cleanFrom}::${cleanSubject}::${bodyHash}`)
     .digest("hex");
 
   const supabase = createClient(
@@ -137,29 +142,30 @@ export async function POST(req: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: got } = await supabase
+  const { data: dupe } = await supabase
     .from("inbound_webhook_dedupes")
     .select("id")
-    .eq("signature_key", signatureKey)
+    .eq("dedupe_key", dedupeKey)
     .maybeSingle();
 
-  if (got) {
-    console.log("🛑 DUPLICATE MAILGUN WEBHOOK — SKIPPING EVERYTHING");
+  if (dupe) {
+    console.log("🛑 BILLIONAIRE DEDUPE TRIGGERED — SKIP EVERYTHING");
     return NextResponse.json({ ok: true, deduped: true });
   }
 
-  // Store signature for next time
   await supabase.from("inbound_webhook_dedupes").insert({
-    signature_key: signatureKey,
-    timestamp: timestamp,
+    dedupe_key: dedupeKey,
+    from_email: cleanFrom,
+    subject: cleanSubject,
+    body_hash: bodyHash,
     received_at: new Date().toISOString(),
   });
 
   // ======================================================
-  // CONTINUE — Email is legit & not a duplicate
+  // CONTINUE — legitimate, unique lead
   // ======================================================
 
-  // Deduce Message-ID (still useful for audit)
+  // Extract message-id (auditing only)
   let message_id =
     payload["Message-Id"] ||
     payload["message-id"] ||
@@ -174,7 +180,6 @@ export async function POST(req: Request) {
   }
 
   if (!message_id) {
-    console.warn("⚠️ No Message-Id found, generating fallback");
     message_id = crypto.randomUUID();
   }
 
@@ -201,7 +206,7 @@ export async function POST(req: Request) {
 
   console.log("🏷 Matched client:", client.id);
 
-  // Parse real sender
+  // Parse sender name + email
   const from_header =
     payload.From ||
     payload.from ||
@@ -222,17 +227,16 @@ export async function POST(req: Request) {
   }
 
   const subject =
-    rawSubject.length > 100 ? rawSubject.slice(0, 100) + "..." : rawSubject;
+    cleanSubject.length > 100 ? cleanSubject.slice(0, 100) + "..." : cleanSubject;
 
   // Extract phone
-  const phoneMatch = stripped.match(/(\+?\d[\d\s-]{7,15})/);
+  const phoneMatch = cleanBody.match(/(\+?\d[\d\s-]{7,15})/);
   const phone = phoneMatch ? phoneMatch[1].replace(/\s+/g, "") : "N/A";
 
-// UPSERT = insert OR ignore if message_id already exists
-const { data: inserted, error: upsertError } = await supabase
-  .from("leads")
-  .upsert(
-    {
+  // Insert lead
+  const { error: dbError } = await supabase
+    .from("leads")
+    .insert({
       user_id: client.user_id,
       client_id: client.id,
       source: "email",
@@ -242,26 +246,15 @@ const { data: inserted, error: upsertError } = await supabase
       phone,
       message_id,
       status: "NEW",
-    },
-    { onConflict: "message_id", ignoreDuplicates: true }
-  )
-  .select()
-  .maybeSingle();
+    });
 
-if (upsertError) {
-  console.error("❌ DB Upsert Error", upsertError);
-  return NextResponse.json(
-    { ok: false, error: upsertError.message },
-    { status: 500 }
-  );
-}
-
-// If row already existed, skip SMS.
-if (!inserted) {
-  console.log("🛑 Duplicate lead — SMS suppressed");
-  return NextResponse.json({ ok: true, deduped: true });
-}
-
+  if (dbError) {
+    console.error("❌ DB Error", dbError);
+    return NextResponse.json(
+      { ok: false, error: dbError.message },
+      { status: 500 }
+    );
+  }
 
   // Send SMS
   try {
