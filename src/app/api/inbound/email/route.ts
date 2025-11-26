@@ -228,10 +228,11 @@ export async function POST(req: Request) {
   const phoneMatch = stripped.match(/(\+?\d[\d\s-]{7,15})/);
   const phone = phoneMatch ? phoneMatch[1].replace(/\s+/g, "") : "N/A";
 
-  // Insert lead
-  const { error: dbError } = await supabase
-    .from("leads")
-    .insert({
+// UPSERT = insert OR ignore if message_id already exists
+const { data: inserted, error: upsertError } = await supabase
+  .from("leads")
+  .upsert(
+    {
       user_id: client.user_id,
       client_id: client.id,
       source: "email",
@@ -241,15 +242,26 @@ export async function POST(req: Request) {
       phone,
       message_id,
       status: "NEW",
-    });
+    },
+    { onConflict: "message_id", ignoreDuplicates: true }
+  )
+  .select()
+  .maybeSingle();
 
-  if (dbError) {
-    console.error("❌ DB Error", dbError);
-    return NextResponse.json(
-      { ok: false, error: dbError.message },
-      { status: 500 }
-    );
-  }
+if (upsertError) {
+  console.error("❌ DB Upsert Error", upsertError);
+  return NextResponse.json(
+    { ok: false, error: upsertError.message },
+    { status: 500 }
+  );
+}
+
+// If row already existed, skip SMS.
+if (!inserted) {
+  console.log("🛑 Duplicate lead — SMS suppressed");
+  return NextResponse.json({ ok: true, deduped: true });
+}
+
 
   // Send SMS
   try {
