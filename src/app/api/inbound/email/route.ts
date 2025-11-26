@@ -6,7 +6,7 @@ import twilio from "twilio";
  * LeadLocker – Mailgun Inbound Email Handler
  * - Parses Mailgun form-data
  * - Finds correct client via public.clients.inbound_email
- * - Stores clean lead
+ * - Stores clean lead (user_id + client_id)
  * - Sends SMS alert (NO BODY INCLUDED)
  */
 export async function POST(req: Request) {
@@ -21,11 +21,12 @@ export async function POST(req: Request) {
 
   console.log("📩 [INBOUND] Parsed payload:", payload);
 
-  // Extract basics
+  // Extract emails
   const from_email =
     payload.sender || payload.From || payload.from || "unknown@unknown.com";
 
-  const to_email = payload.recipient || payload.Recipient || payload.to || "";
+  const to_email =
+    payload.recipient || payload.Recipient || payload.to || "";
 
   // -----------------------------
   // Trim subject to 100 chars
@@ -36,16 +37,16 @@ export async function POST(req: Request) {
 
   const stripped = payload["stripped-text"] || payload["body-plain"] || "";
 
-  // Extract name safely
+  // Extract name from email
   const nameMatch = from_email.match(/^(.*)</);
   const name = nameMatch ? nameMatch[1].trim() : "Unknown";
 
-  // Extract phone number from stripped body
+  // Extract phone from body
   const phoneMatch = stripped.match(/(\+?\d[\d\s-]{7,15})/);
   const phone = phoneMatch ? phoneMatch[1].replace(/\s+/g, "") : "N/A";
 
   // -----------------------------
-  // Init Supabase
+  // Init Supabase client
   // -----------------------------
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -72,16 +73,19 @@ export async function POST(req: Request) {
   console.log("🏷 Matched client:", client.id);
 
   // -----------------------------
-  // Store clean lead
+  // Insert clean lead
   // -----------------------------
-  const { error: dbError } = await supabase.from("leads").insert({
-    client_id: client.id,
-    source: "email",
-    subject,
-    from_email,
-    name,
-    phone,
-  });
+  const { error: dbError } = await supabase
+    .from("leads")
+    .insert({
+      user_id: client.user_id,
+      client_id: client.id,
+      source: "email",
+      subject,
+      from_email,
+      name,
+      phone,
+    });
 
   if (dbError) {
     console.error("❌ DB Error", dbError);
@@ -95,7 +99,7 @@ export async function POST(req: Request) {
   // SEND SMS (NO BODY INCLUDED)
   // -----------------------------
   try {
-    const clientTwilio = twilio(
+    const twilioClient = twilio(
       process.env.TWILIO_ACCOUNT_SID!,
       process.env.TWILIO_AUTH_TOKEN!
     );
@@ -106,7 +110,7 @@ export async function POST(req: Request) {
       `📞 Phone: ${phone}\n` +
       `📝 Subject: ${subject}`;
 
-    await clientTwilio.messages.create({
+    await twilioClient.messages.create({
       body: smsBody,
       from: client.twilio_from || process.env.TWILIO_FROM_NUMBER!,
       to: client.twilio_to || process.env.LL_DEFAULT_USER_PHONE!,
