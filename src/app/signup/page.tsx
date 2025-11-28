@@ -103,15 +103,20 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
-      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-sm border text-gray-900">
-        <h1 className="text-2xl font-semibold text-center mb-6">
-          Create your account
-        </h1>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-slate-50 to-slate-100">
+      <div className="w-full max-w-md bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-slate-100 text-gray-900">
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Create your account
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Start capturing and tracking leads in under a minute.
+          </p>
+        </div>
 
         {/* API Error */}
         {apiError && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
             {apiError}
           </div>
         )}
@@ -119,10 +124,13 @@ export default function SignupPage() {
         <form onSubmit={submit} className="space-y-5">
           {/* Email */}
           <div>
-            <label className="block font-medium mb-1">Email</label>
+            <label className="block text-sm font-medium mb-1 text-gray-700">
+              Work email
+            </label>
             <input
               type="email"
-              className="w-full border rounded-lg px-3 py-2"
+              placeholder="you@company.com"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -133,10 +141,13 @@ export default function SignupPage() {
 
           {/* Password */}
           <div>
-            <label className="block font-medium mb-1">Password</label>
+            <label className="block text-sm font-medium mb-1 text-gray-700">
+              Password
+            </label>
             <input
               type="password"
-              className="w-full border rounded-lg px-3 py-2"
+              placeholder="At least 6 characters"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -147,10 +158,13 @@ export default function SignupPage() {
 
           {/* Company Name */}
           <div>
-            <label className="block font-medium mb-1">Company Name</label>
+            <label className="block text-sm font-medium mb-1 text-gray-700">
+              Company name
+            </label>
             <input
               type="text"
-              className="w-full border rounded-lg px-3 py-2"
+              placeholder="Redinc Plumbing"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
             />
@@ -161,10 +175,12 @@ export default function SignupPage() {
 
           {/* Mobile Number */}
           <div>
-            <label className="block font-medium mb-1">Mobile Number</label>
+            <label className="block text-sm font-medium mb-1 text-gray-700">
+              Mobile number
+            </label>
             <input
               type="tel"
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
               placeholder="+61412345678"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -178,7 +194,7 @@ export default function SignupPage() {
           <button
             disabled={loading}
             type="submit"
-            className="w-full bg-black text-white py-2 rounded-lg font-semibold disabled:opacity-60"
+            className="w-full bg-black text-white py-2.5 rounded-lg font-semibold text-sm tracking-wide disabled:opacity-60 disabled:cursor-not-allowed hover:bg-zinc-900 transition"
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
@@ -186,7 +202,7 @@ export default function SignupPage() {
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Already have an account?{" "}
-          <a href="/login" className="text-black underline">
+          <a href="/login" className="text-black font-medium underline">
             Login
           </a>
         </p>
