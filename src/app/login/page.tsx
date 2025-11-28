@@ -1,19 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
-  const search = useSearchParams();
 
-  const from = search.get("from") || "/dashboard";
-  const accountCreated = search.get("created") === "1";
+  const [from, setFrom] = useState("/dashboard");
+  const [accountCreated, setAccountCreated] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+
+  // Read search params on the client to avoid build-time CSR bailout issues
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const fromParam = params.get("from");
+    if (fromParam) setFrom(fromParam);
+    setAccountCreated(params.get("created") === "1");
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
