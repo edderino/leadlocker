@@ -1,41 +1,51 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+
+/**
+ * LeadLocker Middleware
+ * - Protects dashboard and lead routes
+ * - Reads auth cookie
+ * - Redirects if missing
+ * - Keeps static/assets and build safe
+ */
 
 export function middleware(req: NextRequest) {
-  const path = req.nextUrl.pathname;
+  const url = req.nextUrl;
 
-  // Public routes (no auth required)
-  const publicPaths = ["/login", "/signup", "/api/auth/login", "/api/auth/signup"];
-  const isPublic = publicPaths.some((p) => path.startsWith(p));
-  const isApi = path.startsWith("/api");
-
-  // Read token from cookies (prefer explicit ll_token, fallback to sb-access-token)
-  const cookieToken =
-    req.cookies.get("ll_token")?.value ||
+  // Prefer app-level session, then Supabase access token
+  const token =
+    req.cookies.get("ll_session")?.value ||
     req.cookies.get("sb-access-token")?.value;
 
-  // If user hits a protected page without a token → redirect to login
-  if (!isPublic && !isApi && !cookieToken) {
+  const isProtected =
+    url.pathname.startsWith("/dashboard") ||
+    url.pathname.startsWith("/leads") ||
+    url.pathname === "/";
+
+  // Not logged in → redirect to /login
+  if (isProtected && !token) {
     const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("from", path);
+    loginUrl.searchParams.set("from", url.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // If logged in and tries to access /login or /signup → send to dashboard
-  if (cookieToken && (path === "/login" || path === "/signup")) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+  // Logged in → prevent access to /login or /signup
+  const isAuthPage =
+    url.pathname.startsWith("/login") ||
+    url.pathname.startsWith("/signup");
+
+  if (isAuthPage && token) {
+    const dashUrl = new URL("/dashboard", req.url);
+    return NextResponse.redirect(dashUrl);
   }
 
   return NextResponse.next();
 }
 
+// Only run middleware on these routes
 export const config = {
-  matcher: [
-    "/dashboard/:path*", // protect dashboard + nested routes
-    "/login",
-    "/signup",
-  ],
+  matcher: ["/", "/login", "/signup", "/dashboard/:path*", "/leads/:path*"],
 };
+
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
