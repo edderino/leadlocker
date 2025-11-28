@@ -18,28 +18,11 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Validate token via auth/me API
-  const res = await fetch("/api/auth/me", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  const data = await res.json();
-
-  if (!res.ok || !data?.client) {
-    // Bad/expired token → redirect to login
-    redirect("/login");
-  }
-
-  const user = data.client;
-
-  // If we get here → user is valid
+  // If we get here → user appears to have a session.
+  // Deeper validation is handled in API routes (/api/auth/me, Supabase RLS).
   return (
     <section className="min-h-screen bg-gray-50">
-      <DashboardNav user={user} />
+      <DashboardNav user={null} />
       <div className="max-w-5xl mx-auto px-4 py-6">{children}</div>
     </section>
   );
