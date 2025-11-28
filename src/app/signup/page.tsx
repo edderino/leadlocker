@@ -10,6 +10,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [company, setCompany] = useState("");
+  const [phone, setPhone] = useState("");
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -20,13 +21,20 @@ export default function SignupPage() {
     email: "",
     password: "",
     company: "",
+    phone: "",
   });
 
   function validate() {
-    const newErrs: { email: string; password: string; company: string } = {
+    const newErrs: {
+      email: string;
+      password: string;
+      company: string;
+      phone: string;
+    } = {
       email: "",
       password: "",
       company: "",
+      phone: "",
     };
     let ok = true;
 
@@ -42,6 +50,11 @@ export default function SignupPage() {
 
     if (company.trim().length < 2) {
       newErrs.company = "Enter your business or company name.";
+      ok = false;
+    }
+
+    if (phone.trim().length < 6) {
+      newErrs.phone = "Enter a valid mobile number.";
       ok = false;
     }
 
@@ -66,7 +79,7 @@ export default function SignupPage() {
           owner_name: company,
           business_name: company,
           contact_email: email,
-          sms_number: "", // optional / can be extended later
+          sms_number: phone,
           password,
         }),
       });
@@ -91,8 +104,8 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
-      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-sm border">
-        <h1 className="text-2xl font-bold text-center mb-6">
+      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-sm border text-gray-900">
+        <h1 className="text-2xl font-semibold text-center mb-6">
           Create your account
         </h1>
 
@@ -143,6 +156,21 @@ export default function SignupPage() {
             />
             {errors.company && (
               <p className="text-red-600 text-sm mt-1">{errors.company}</p>
+            )}
+          </div>
+
+          {/* Mobile Number */}
+          <div>
+            <label className="block font-medium mb-1">Mobile Number</label>
+            <input
+              type="tel"
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="+61412345678"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            {errors.phone && (
+              <p className="text-red-600 text-sm mt-1">{errors.phone}</p>
             )}
           </div>
 
