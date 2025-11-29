@@ -1,6 +1,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+// Force dynamic rendering since we use cookies()
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {
