@@ -11,16 +11,27 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
-      const res = await fetch("/api/auth/me");
-      const data = await res.json();
+      try {
+        // Explicitly include credentials (cookies) in the request
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+        });
 
-      if (!res.ok || !data.client) {
+        const data = await res.json();
+
+        if (!res.ok || !data.client) {
+          console.error("[Dashboard] Auth check failed:", data.error || "No client");
+          router.push("/login");
+          return;
+        }
+
+        setClient(data.client);
+        setLoading(false);
+      } catch (err) {
+        console.error("[Dashboard] Error loading client:", err);
         router.push("/login");
-        return;
       }
-
-      setClient(data.client);
-      setLoading(false);
     }
 
     load();

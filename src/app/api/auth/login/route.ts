@@ -70,22 +70,31 @@ export async function POST(req: Request) {
 
     if (accessToken) {
       // Use secure: true only in production (HTTPS), false in development
-      const isProduction = process.env.NODE_ENV === "production";
+      // On Vercel, always use secure: true since it's always HTTPS
+      const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
       
-      res.cookies.set("sb-access-token", accessToken, {
+      const cookieOptions = {
         httpOnly: true,
         secure: isProduction,
-        sameSite: "lax",
+        sameSite: "lax" as const,
         path: "/",
+      };
+      
+      res.cookies.set("sb-access-token", accessToken, {
+        ...cookieOptions,
         maxAge: accessMaxAge,
       });
       // Also set ll_session for app-level checks
       res.cookies.set("ll_session", accessToken, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: "lax",
-        path: "/",
+        ...cookieOptions,
         maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+      
+      console.log("[Login] Cookies set:", {
+        sb_access_token: "set",
+        ll_session: "set",
+        secure: isProduction,
+        maxAge: accessMaxAge,
       });
     }
 

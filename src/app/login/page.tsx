@@ -50,17 +50,14 @@ export default function LoginPage() {
         localStorage.setItem("ll_token", data.token as string);
       }
 
-      // Wait a moment for cookies to be set, then redirect
+      // Wait longer for cookies to be fully set and propagated
       // This ensures middleware sees the cookies on the next request
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Use window.location for a full page reload to ensure cookies are read
-      try {
-        window.location.href = from;
-      } catch (err) {
-        console.error("[Login] Redirect failed, using router:", err);
-        router.push(from);
-      }
+      // This forces a complete page reload so cookies are definitely sent
+      console.log("[Login] Redirecting to:", from);
+      window.location.href = from;
     } catch (err) {
       console.error(err);
       setApiError("Unexpected error — try again.");
