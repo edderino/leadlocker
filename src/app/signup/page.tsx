@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
@@ -15,6 +15,17 @@ export default function SignupPage() {
   // UI state
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+
+  // Check for error in URL params
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "no_client") {
+      setApiError(
+        "Your account exists but is missing profile information. Please complete signup below."
+      );
+    }
+  }, []);
 
   // Field-level errors
   const [errors, setErrors] = useState({

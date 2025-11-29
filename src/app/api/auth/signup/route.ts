@@ -183,17 +183,21 @@ export async function POST(req: Request) {
     // ---------------------------------------------
     // 6. Insert into clients table
     // ---------------------------------------------
-    const { error: insertError } = await supabaseAdmin.from("clients").insert({
-      id: `client_${crypto.randomUUID()}`,
-      user_id,
-      slug,
-      business_name,
-      owner_name,
-      contact_email,
-      sms_number,
-      inbound_email,
-      api_key,
-    });
+    const { data: insertedClient, error: insertError } = await supabaseAdmin
+      .from("clients")
+      .insert({
+        id: `client_${crypto.randomUUID()}`,
+        user_id,
+        slug,
+        business_name,
+        owner_name,
+        contact_email,
+        sms_number,
+        inbound_email,
+        api_key,
+      })
+      .select()
+      .single();
 
     if (insertError) {
       console.error("[Signup] insert client failed:", insertError);
@@ -202,6 +206,21 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
+
+    // Verify the client was actually created
+    if (!insertedClient) {
+      console.error("[Signup] Client insert returned no data");
+      return NextResponse.json(
+        { error: "Failed to create client account." },
+        { status: 500 }
+      );
+    }
+
+    console.log("[Signup] Client created successfully:", {
+      id: insertedClient.id,
+      user_id: insertedClient.user_id,
+      slug: insertedClient.slug,
+    });
 
     // ---------------------------------------------
     // 7. Auto-login: create a session for them

@@ -22,6 +22,13 @@ export default function DashboardPage() {
 
         if (!res.ok || !data.client) {
           console.error("[Dashboard] Auth check failed:", data.error || "No client");
+          
+          // If no client row exists, redirect to signup with a message
+          if (data.error?.includes("No client") || data.error?.includes("client account")) {
+            router.push("/signup?error=no_client");
+            return;
+          }
+          
           router.push("/login");
           return;
         }
