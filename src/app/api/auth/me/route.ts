@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get("sb-access-token")?.value;
+    // Check both cookies, matching middleware and layout logic
+    const token =
+      cookieStore.get("ll_session")?.value ||
+      cookieStore.get("sb-access-token")?.value;
 
     if (!token) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
