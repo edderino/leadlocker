@@ -50,8 +50,27 @@ export async function GET() {
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (error || !client) {
-      return NextResponse.json({ error: "No client for user" }, { status: 401 });
+    if (error) {
+      console.error("[AUTH_ME] Database error fetching client:", error);
+      return NextResponse.json(
+        { error: "Database error", details: error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!client) {
+      console.error(
+        "[AUTH_ME] No client found for user_id:",
+        userId,
+        "email:",
+        userRes.user.email
+      );
+      return NextResponse.json(
+        {
+          error: "No client account found. Please sign up to create an account.",
+        },
+        { status: 401 }
+      );
     }
 
     return NextResponse.json({ client });
