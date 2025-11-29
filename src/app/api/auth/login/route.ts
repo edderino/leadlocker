@@ -69,9 +69,12 @@ export async function POST(req: Request) {
         : 60 * 60;
 
     if (accessToken) {
+      // Use secure: true only in production (HTTPS), false in development
+      const isProduction = process.env.NODE_ENV === "production";
+      
       res.cookies.set("sb-access-token", accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProduction,
         sameSite: "lax",
         path: "/",
         maxAge: accessMaxAge,
@@ -79,7 +82,7 @@ export async function POST(req: Request) {
       // Also set ll_session for app-level checks
       res.cookies.set("ll_session", accessToken, {
         httpOnly: true,
-        secure: true,
+        secure: isProduction,
         sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 7 days

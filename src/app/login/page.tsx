@@ -38,11 +38,13 @@ export default function LoginPage() {
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.ok) {
         setApiError(data.error || "Login failed");
         setLoading(false);
         return;
       }
+
+      console.log("[Login] Success, redirecting to:", from);
 
       if (data.token) {
         localStorage.setItem("ll_token", data.token as string);
@@ -50,10 +52,15 @@ export default function LoginPage() {
 
       // Wait a moment for cookies to be set, then redirect
       // This ensures middleware sees the cookies on the next request
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Use window.location for a full page reload to ensure cookies are read
-      window.location.href = from;
+      try {
+        window.location.href = from;
+      } catch (err) {
+        console.error("[Login] Redirect failed, using router:", err);
+        router.push(from);
+      }
     } catch (err) {
       console.error(err);
       setApiError("Unexpected error — try again.");
