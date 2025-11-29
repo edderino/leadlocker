@@ -48,8 +48,12 @@ export default function LoginPage() {
         localStorage.setItem("ll_token", data.token as string);
       }
 
-      // Successful → redirect to original protected route or dashboard
-      router.push(from);
+      // Wait a moment for cookies to be set, then redirect
+      // This ensures middleware sees the cookies on the next request
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Use window.location for a full page reload to ensure cookies are read
+      window.location.href = from;
     } catch (err) {
       console.error(err);
       setApiError("Unexpected error — try again.");

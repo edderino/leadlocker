@@ -76,6 +76,14 @@ export async function POST(req: Request) {
         path: "/",
         maxAge: accessMaxAge,
       });
+      // Also set ll_session for app-level checks
+      res.cookies.set("ll_session", accessToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
     }
 
     if (refreshToken) {
