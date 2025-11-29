@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import DashboardNav from "@/components/DashboardNav";
 
 export default async function DashboardLayout({
   children,
@@ -20,12 +19,8 @@ export default async function DashboardLayout({
 
   // If we get here → user appears to have a session.
   // Deeper validation is handled in API routes (/api/auth/me, Supabase RLS).
-  return (
-    <section className="min-h-screen bg-gray-50">
-      <DashboardNav user={null} />
-      <div className="max-w-5xl mx-auto px-4 py-6">{children}</div>
-    </section>
-  );
+  // WorkspaceLayout has its own sidebar and navigation, so we just render children.
+  return <>{children}</>;
 }
 
 
