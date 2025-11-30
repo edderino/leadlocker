@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import EmailForwardingWizard from "./EmailForwardingWizard";
 
 interface OnboardingWizardProps {
   client: any;
@@ -95,25 +96,14 @@ function Step1({ client }: { client: any }) {
 
 /* -------------------------------
    STEP 2: Forwarding Instructions
-   (This gets completed in Step 7)
 --------------------------------*/
 function Step2({ client }: { client: any }) {
   return (
-    <div className="bg-neutral-900 border border-neutral-700 rounded-xl p-6">
-      <h2 className="text-2xl font-bold mb-4">
-        Step 2: Set Up Email Forwarding
-      </h2>
-      <p className="text-gray-300 mb-4">
-        In this step, you'll set up email forwarding from your business email to:
-      </p>
-
-      <div className="bg-neutral-800 p-4 rounded-lg font-mono text-sm break-all">
-        {client.inbound_email}
-      </div>
-
-      <p className="text-gray-300 mt-6">
-        Instructions will appear here. (We build them in the next step.)
-      </p>
+    <div>
+      <EmailForwardingWizard 
+        inboundEmail={client.inbound_email} 
+        contactEmail={client.contact_email}
+      />
     </div>
   );
 }
