@@ -6,10 +6,12 @@ import { cn } from "@/libs/utils";
 
 export default function EmailForwardingWizard({ 
   inboundEmail,
-  contactEmail 
+  contactEmail,
+  autoVerificationEnabled = false
 }: { 
   inboundEmail: string;
   contactEmail?: string;
+  autoVerificationEnabled?: boolean;
 }) {
   const [provider, setProvider] = useState<string>("gmail");
   const [copied, setCopied] = useState(false);
