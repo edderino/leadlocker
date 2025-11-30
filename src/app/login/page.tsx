@@ -66,32 +66,35 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm bg-white shadow-md p-6 rounded-md">
-        <h1 className="text-xl font-semibold text-gray-900 mb-4">Login</h1>
+    <div className="min-h-screen flex items-center justify-center bg-black px-4">
+      <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 shadow-md p-6 rounded-md text-white">
+        <div className="mb-6 text-center">
+          <h1 className="text-3xl font-bold text-white mb-2">LeadLocker</h1>
+          <h2 className="text-xl font-semibold text-neutral-200">Login</h2>
+        </div>
 
         {/* ACCOUNT CREATED SUCCESS */}
         {accountCreated && (
-          <div className="mb-4 p-3 bg-green-100 text-green-700 border border-green-300 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-green-900/30 text-green-300 border border-green-800 rounded-lg text-sm">
             Your account has been created. You can now log in.
           </div>
         )}
 
         {/* API ERROR */}
         {apiError && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-red-900/30 text-red-300 border border-red-800 rounded-lg text-sm">
             {apiError}
           </div>
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-neutral-300">
               Email
             </label>
             <input
               type="email"
-              className="mt-1 w-full border rounded-md px-3 py-2"
+              className="mt-1 w-full bg-neutral-800 border border-neutral-700 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-white transition placeholder:text-neutral-500"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -99,12 +102,12 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-neutral-300">
               Password
             </label>
             <input
               type="password"
-              className="mt-1 w-full border rounded-md px-3 py-2"
+              className="mt-1 w-full bg-neutral-800 border border-neutral-700 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white focus:border-white transition placeholder:text-neutral-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -114,15 +117,15 @@ export default function LoginPage() {
           <button
             disabled={loading}
             type="submit"
-            className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-900 disabled:opacity-60"
+            className="w-full bg-white text-black py-2 rounded-md hover:bg-neutral-100 disabled:opacity-60 font-semibold transition"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
-        <p className="text-sm text-center text-gray-600 mt-4">
-          Don’t have an account?{" "}
-          <a href="/signup" className="text-black font-medium underline">
+        <p className="text-sm text-center text-neutral-400 mt-4">
+          Don't have an account?{" "}
+          <a href="/signup" className="text-white font-medium underline hover:text-neutral-200">
             Create one
           </a>
         </p>

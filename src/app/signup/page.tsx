@@ -114,20 +114,21 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-slate-50 to-slate-100">
-      <div className="w-full max-w-md bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-slate-100 text-gray-900">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-black">
+      <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 p-8 rounded-2xl shadow-lg text-white">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-3xl font-bold text-white mb-2">LeadLocker</h1>
+          <h2 className="text-xl font-semibold tracking-tight text-neutral-200">
             Create your account
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          </h2>
+          <p className="mt-1 text-sm text-neutral-400">
             Start capturing and tracking leads in under a minute.
           </p>
         </div>
 
         {/* API Error */}
         {apiError && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-red-900/30 text-red-300 border border-red-800 rounded-lg text-sm">
             {apiError}
           </div>
         )}
@@ -135,69 +136,69 @@ export default function SignupPage() {
         <form onSubmit={submit} className="space-y-5">
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">
+            <label className="block text-sm font-medium mb-1 text-neutral-300">
               Work email
             </label>
             <input
               type="email"
               placeholder="you@company.com"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+              className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:border-white transition placeholder:text-neutral-500"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
             {errors.email && (
-              <p className="text-red-600 text-sm mt-1">{errors.email}</p>
+              <p className="text-red-400 text-sm mt-1">{errors.email}</p>
             )}
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">
+            <label className="block text-sm font-medium mb-1 text-neutral-300">
               Password
             </label>
             <input
               type="password"
               placeholder="At least 6 characters"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+              className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:border-white transition placeholder:text-neutral-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
             {errors.password && (
-              <p className="text-red-600 text-sm mt-1">{errors.password}</p>
+              <p className="text-red-400 text-sm mt-1">{errors.password}</p>
             )}
           </div>
 
           {/* Company Name */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">
+            <label className="block text-sm font-medium mb-1 text-neutral-300">
               Company name
             </label>
             <input
               type="text"
               placeholder="Redinc Plumbing"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+              className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:border-white transition placeholder:text-neutral-500"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
             />
             {errors.company && (
-              <p className="text-red-600 text-sm mt-1">{errors.company}</p>
+              <p className="text-red-400 text-sm mt-1">{errors.company}</p>
             )}
           </div>
 
           {/* Mobile Number */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">
+            <label className="block text-sm font-medium mb-1 text-neutral-300">
               Mobile number
             </label>
             <input
               type="tel"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+              className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:border-white transition placeholder:text-neutral-500"
               placeholder="+61412345678"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
             {errors.phone && (
-              <p className="text-red-600 text-sm mt-1">{errors.phone}</p>
+              <p className="text-red-400 text-sm mt-1">{errors.phone}</p>
             )}
           </div>
 
@@ -205,15 +206,15 @@ export default function SignupPage() {
           <button
             disabled={loading}
             type="submit"
-            className="w-full bg-black text-white py-2.5 rounded-lg font-semibold text-sm tracking-wide disabled:opacity-60 disabled:cursor-not-allowed hover:bg-zinc-900 transition"
+            className="w-full bg-white text-black py-2.5 rounded-lg font-semibold text-sm tracking-wide disabled:opacity-60 disabled:cursor-not-allowed hover:bg-neutral-100 transition"
           >
             {loading ? "Creating account..." : "Create Account"}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-4 text-center text-sm text-neutral-400">
           Already have an account?{" "}
-          <a href="/login" className="text-black font-medium underline">
+          <a href="/login" className="text-white font-medium underline hover:text-neutral-200">
             Login
           </a>
         </p>
