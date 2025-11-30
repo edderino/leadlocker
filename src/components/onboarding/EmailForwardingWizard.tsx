@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Clipboard, Check } from "lucide-react";
 import { cn } from "@/libs/utils";
-import { AUTO_GMAIL_VERIFICATION_ENABLED } from "@/config/leadlocker";
 
 export default function EmailForwardingWizard({ 
   inboundEmail,
