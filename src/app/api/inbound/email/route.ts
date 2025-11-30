@@ -456,6 +456,51 @@ export async function POST(req: Request) {
 
   console.log("🏷 Matched client:", client.id);
 
+  // ======================================================
+  // GMAIL VERIFICATION CODE AUTO-DETECTION
+  // ======================================================
+  // Check if this is a Gmail forwarding verification email
+  const fromLower = (payload.from || "").toString().toLowerCase();
+  const isGmailVerification =
+    fromLower.includes("noreply@google.com") ||
+    fromLower.includes("mail-noreply@google.com") ||
+    subjectNorm.includes("confirmation code") ||
+    subjectNorm.includes("verify forwarding");
+
+  if (isGmailVerification) {
+    // Extract 6-digit code from body
+    // Gmail sends: "Confirmation code: 123456" or "Your code is 123456"
+    const codeMatch = bodyRaw.match(/(?:confirmation code|code is|code:)\s*(\d{6})/i) ||
+                     bodyRaw.match(/(\d{6})/); // Fallback: any 6-digit number
+
+    if (codeMatch && codeMatch[1]) {
+      const verificationCode = codeMatch[1];
+      console.log("🔐 Gmail verification code detected:", verificationCode);
+
+      // Save code to client record
+      const { error: codeError } = await supabase
+        .from("clients")
+        .update({
+          gmail_forwarding_code: verificationCode,
+          gmail_forwarding_verified: true,
+        })
+        .eq("id", client.id);
+
+      if (codeError) {
+        console.error("❌ Failed to save verification code:", codeError);
+      } else {
+        console.log("✅ Gmail verification code saved automatically!");
+      }
+
+      // Don't create a lead for verification emails, just return success
+      return NextResponse.json({
+        ok: true,
+        gmail_verification: true,
+        code: verificationCode,
+      });
+    }
+  }
+
   // Sender details
   const { fromEmail, name } = parseSender(payload);
 
