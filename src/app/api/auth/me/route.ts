@@ -107,11 +107,19 @@ export async function GET() {
           details: createError.details,
           hint: createError.hint,
           code: createError.code,
+          insertData: {
+            ...insertData,
+            api_key: "[REDACTED]",
+          },
         });
+        
+        // Return the actual error so we can debug it
         return NextResponse.json(
           {
             error: "Account setup incomplete. Please contact support.",
             details: createError.message,
+            code: createError.code,
+            hint: createError.hint,
           },
           { status: 500 }
         );

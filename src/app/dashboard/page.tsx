@@ -29,7 +29,10 @@ export default function DashboardPage() {
           console.error("[Dashboard] Auth check failed:", {
             status: res.status,
             error: data.error || "No client",
-            data,
+            details: data.details,
+            code: data.code,
+            hint: data.hint,
+            fullResponse: data,
           });
           
           // If no client row exists, redirect to signup with a message
