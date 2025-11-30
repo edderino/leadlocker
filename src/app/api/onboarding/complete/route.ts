@@ -1,108 +1,91 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-type CompleteBody = {
-  phone?: string;
-};
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as CompleteBody;
-    const { phone } = body;
+    const body = await req.json();
+    const phone = (body.phone || "").trim();
 
-    if (!phone || !phone.trim()) {
+    if (!phone) {
       return NextResponse.json(
-        { error: "Phone number is required" },
+        { error: "Phone number required" },
         { status: 400 }
       );
     }
 
-    const cookieStore = await cookies();
-    const token =
-      cookieStore.get("ll_session")?.value ||
-      cookieStore.get("sb-access-token")?.value;
+    // Read token from Cookie or Authorization header
+    const cookieHeader = req.headers.get("cookie") || "";
+    const authHeader = req.headers.get("authorization") || "";
 
-    if (!token) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    let token = null;
+
+    // First priority: Authorization: Bearer <token>
+    if (authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.slice(7);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    // Fallback: sb-access-token cookie
+    if (!token) {
+      const match = cookieHeader.match(/sb-access-token=([^;]+)/);
+      if (match) token = match[1];
+    }
 
-    if (!supabaseUrl || !serviceKey) {
+    if (!token) {
       return NextResponse.json(
-        { error: "Server auth not configured" },
-        { status: 500 }
+        { error: "No session token found" },
+        { status: 401 }
       );
     }
 
-    const admin = createClient(supabaseUrl, serviceKey, {
-      auth: { persistSession: false },
-    });
+    // Supabase admin client (service role)
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
+    // Validate user
     const {
-      data: userRes,
+      data: { user },
       error: userErr,
-    } = await admin.auth.getUser(token);
+    } = await supabaseAdmin.auth.getUser(token);
 
-    if (userErr || !userRes?.user) {
+    if (userErr || !user) {
       return NextResponse.json({ error: "Invalid session" }, { status: 401 });
     }
 
-    const userId = userRes.user.id;
+    // Lookup this user's client row
+    const { data: client, error: clientErr } = await supabaseAdmin
+      .from("clients")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    // Update client with phone number and mark onboarding as complete
-    const { data: client, error: updateError } = await admin
+    if (clientErr || !client) {
+      return NextResponse.json(
+        { error: "Client row not found" },
+        { status: 404 }
+      );
+    }
+
+    // Update client with phone + onboarding flag
+    const { error: updateErr } = await supabaseAdmin
       .from("clients")
       .update({
-        sms_number: phone.trim(),
-        onboarding_complete: true, // Assuming this column exists
+        sms_number: phone,
+        onboarding_complete: true,
       })
-      .eq("user_id", userId)
-      .select()
-      .single();
+      .eq("id", client.id);
 
-    if (updateError) {
-      console.error("[Onboarding] Error updating client:", updateError);
-      
-      // If onboarding_complete column doesn't exist, just update phone
-      if (updateError.message?.includes("onboarding_complete")) {
-        const { data: fallbackClient, error: fallbackError } = await admin
-          .from("clients")
-          .update({
-            sms_number: phone.trim(),
-          })
-          .eq("user_id", userId)
-          .select()
-          .single();
-
-        if (fallbackError) {
-          return NextResponse.json(
-            { error: "Failed to save phone number", details: fallbackError.message },
-            { status: 500 }
-          );
-        }
-
-        return NextResponse.json({ success: true, client: fallbackClient });
-      }
-
+    if (updateErr) {
       return NextResponse.json(
-        { error: "Failed to complete onboarding", details: updateError.message },
+        { error: updateErr.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true, client });
-  } catch (err) {
-    console.error("[Onboarding] Server error:", err);
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    console.error("❌ Onboarding error:", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
-
