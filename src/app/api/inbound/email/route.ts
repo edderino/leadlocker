@@ -412,32 +412,9 @@ export async function POST(req: Request) {
   }
 
   // ======================================================
-  // HARD FILTERS
+  // CLIENT MATCH (needed for verification code detection)
   // ======================================================
-  const filterResult = applyHardFilters({
-    subjectNorm,
-    bodyNorm,
-    fromLower,
-    headerMap,
-    payload,
-  });
-
-  if (filterResult.blocked) {
-    console.log(`🛑 BLOCKED EMAIL – reason: ${filterResult.reason}`);
-    return NextResponse.json({
-      ok: true,
-      blocked: filterResult.reason,
-    });
-  }
-
-  // ======================================================
-  // CONTINUE – Email is considered a legit lead
-  // ======================================================
-
-  // Message-ID (for de-duping leads)
   const messageId = getMessageId(payload, headerMap);
-
-  // Client match
   const toEmail = getRecipientEmail(payload, headerMap);
 
   const { data: client, error: clientErr } = await supabase
@@ -458,20 +435,23 @@ export async function POST(req: Request) {
 
   // ======================================================
   // GMAIL VERIFICATION CODE AUTO-DETECTION
+  // Check BEFORE hard filters so we can process verification emails
   // ======================================================
-  // Check if this is a Gmail forwarding verification email
-  const fromLower = (payload.from || "").toString().toLowerCase();
   const isGmailVerification =
     fromLower.includes("noreply@google.com") ||
     fromLower.includes("mail-noreply@google.com") ||
-    subjectNorm.includes("confirmation code") ||
-    subjectNorm.includes("verify forwarding");
+    fromLower.includes("@google.com") && (
+      subjectNorm.includes("confirmation code") ||
+      subjectNorm.includes("verify forwarding") ||
+      subjectNorm.includes("forwarding verification")
+    );
 
   if (isGmailVerification) {
     // Extract 6-digit code from body
     // Gmail sends: "Confirmation code: 123456" or "Your code is 123456"
     const codeMatch = bodyRaw.match(/(?:confirmation code|code is|code:)\s*(\d{6})/i) ||
-                     bodyRaw.match(/(\d{6})/); // Fallback: any 6-digit number
+                     bodyRaw.match(/(?:your code|verification code)\s*[:\-]?\s*(\d{6})/i) ||
+                     bodyRaw.match(/\b(\d{6})\b/); // Fallback: any 6-digit number
 
     if (codeMatch && codeMatch[1]) {
       const verificationCode = codeMatch[1];
@@ -500,6 +480,29 @@ export async function POST(req: Request) {
       });
     }
   }
+
+  // ======================================================
+  // HARD FILTERS (after verification check)
+  // ======================================================
+  const filterResult = applyHardFilters({
+    subjectNorm,
+    bodyNorm,
+    fromLower,
+    headerMap,
+    payload,
+  });
+
+  if (filterResult.blocked) {
+    console.log(`🛑 BLOCKED EMAIL – reason: ${filterResult.reason}`);
+    return NextResponse.json({
+      ok: true,
+      blocked: filterResult.reason,
+    });
+  }
+
+  // ======================================================
+  // CONTINUE – Email is considered a legit lead
+  // ======================================================
 
   // Sender details
   const { fromEmail, name } = parseSender(payload);
