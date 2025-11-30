@@ -1,91 +1,55 @@
 import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { verifyClientSession } from "@/app/api/_lib/verifyClientSession";
 import { createClient } from "@supabase/supabase-js";
 
-export async function POST(req: Request) {
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const phone = (body.phone || "").trim();
+    const session = await verifyClientSession(req);
 
-    if (!phone) {
-      return NextResponse.json(
-        { error: "Phone number required" },
-        { status: 400 }
-      );
+    if (session.error || !session.user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Read token from Cookie or Authorization header
-    const cookieHeader = req.headers.get("cookie") || "";
-    const authHeader = req.headers.get("authorization") || "";
-
-    let token = null;
-
-    // First priority: Authorization: Bearer <token>
-    if (authHeader.toLowerCase().startsWith("bearer ")) {
-      token = authHeader.slice(7);
-    }
-
-    // Fallback: sb-access-token cookie
-    if (!token) {
-      const match = cookieHeader.match(/sb-access-token=([^;]+)/);
-      if (match) token = match[1];
-    }
-
-    if (!token) {
-      return NextResponse.json(
-        { error: "No session token found" },
-        { status: 401 }
-      );
-    }
-
-    // Supabase admin client (service role)
-    const supabaseAdmin = createClient(
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: { persistSession: false },
+      }
     );
 
-    // Validate user
-    const {
-      data: { user },
-      error: userErr,
-    } = await supabaseAdmin.auth.getUser(token);
-
-    if (userErr || !user) {
-      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
-    }
-
-    // Lookup this user's client row
-    const { data: client, error: clientErr } = await supabaseAdmin
+    // Get client by user_id
+    const { data: client, error: clientError } = await supabase
       .from("clients")
-      .select("*")
-      .eq("user_id", user.id)
+      .select("id")
+      .eq("user_id", session.user.id)
       .maybeSingle();
 
-    if (clientErr || !client) {
+    if (clientError || !client) {
       return NextResponse.json(
-        { error: "Client row not found" },
+        { error: "Client not found" },
         { status: 404 }
       );
     }
 
-    // Update client with phone + onboarding flag
-    const { error: updateErr } = await supabaseAdmin
+    // Update client to mark onboarding complete
+    const { error } = await supabase
       .from("clients")
-      .update({
-        sms_number: phone,
-        onboarding_complete: true,
-      })
+      .update({ onboarding_complete: true })
       .eq("id", client.id);
 
-    if (updateErr) {
-      return NextResponse.json(
-        { error: updateErr.message },
-        { status: 500 }
-      );
+    if (error) {
+      console.error("[OnboardingComplete] DB error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
-    console.error("❌ Onboarding error:", err);
+    console.error("[OnboardingComplete] Server error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

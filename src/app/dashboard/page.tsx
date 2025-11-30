@@ -48,6 +48,13 @@ export default function DashboardPage() {
         }
 
         console.log("[Dashboard] Auth check successful, client:", data.client);
+        
+        // ⬅ NEW: redirect if onboarding incomplete
+        if (!data.client?.onboarding_complete) {
+          router.push("/onboarding");
+          return;
+        }
+        
         setClient(data.client);
         setLoading(false);
       } catch (err) {
