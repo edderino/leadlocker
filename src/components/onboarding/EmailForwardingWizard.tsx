@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Clipboard, Check } from "lucide-react";
 import { cn } from "@/libs/utils";
+import { AUTO_GMAIL_VERIFICATION_ENABLED } from "@/config/leadlocker";
 
 export default function EmailForwardingWizard({ 
   inboundEmail,
@@ -42,6 +43,26 @@ export default function EmailForwardingWizard({
   const renderInstructions = () => {
     switch (provider) {
       case "gmail":
+        if (!AUTO_GMAIL_VERIFICATION_ENABLED) {
+          return (
+            <div className="space-y-4">
+              <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-800 rounded-lg">
+                <p className="text-sm text-yellow-300">
+                  Gmail auto-verification is temporarily disabled. You'll receive instructions on how to forward manually.
+                </p>
+              </div>
+              <Step n="1" text="Open Gmail on desktop (not mobile)." />
+              <Step n="2" text='Click the gear icon → "See all settings".' />
+              <Step n="3" text='Go to the tab "Forwarding and POP/IMAP".' />
+              <Step n="4" text='Click "Add forwarding address".' />
+              <Step n="5" text={`Paste this address: ${inboundEmail}`} highlight />
+              <Step n="6" text="Click Continue → Proceed." />
+              <Step n="7" text="Google will send a verification code to your LeadLocker address." />
+              <Step n="8" text="You'll need to manually enter the code when you receive it." />
+            </div>
+          );
+        }
+        
         return (
           <div className="space-y-4">
             <Step n="1" text="Open Gmail on desktop (not mobile)." />

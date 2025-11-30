@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import twilio from "twilio";
 import crypto from "crypto";
+import { AUTO_GMAIL_VERIFICATION_ENABLED } from "@/config/leadlocker";
 
 /**
  * LeadLocker – Mailgun Inbound Handler (Billionaire CTO version)
@@ -437,48 +438,54 @@ export async function POST(req: Request) {
   // GMAIL VERIFICATION CODE AUTO-DETECTION
   // Check BEFORE hard filters so we can process verification emails
   // ======================================================
-  const isGmailVerification =
-    fromLower.includes("noreply@google.com") ||
-    fromLower.includes("mail-noreply@google.com") ||
-    fromLower.includes("@google.com") && (
-      subjectNorm.includes("confirmation code") ||
-      subjectNorm.includes("verify forwarding") ||
-      subjectNorm.includes("forwarding verification")
-    );
+  if (AUTO_GMAIL_VERIFICATION_ENABLED) {
+    console.log("⚡ Auto Gmail forwarding verification running...");
+    
+    const isGmailVerification =
+      fromLower.includes("noreply@google.com") ||
+      fromLower.includes("mail-noreply@google.com") ||
+      (fromLower.includes("@google.com") && (
+        subjectNorm.includes("confirmation code") ||
+        subjectNorm.includes("verify forwarding") ||
+        subjectNorm.includes("forwarding verification")
+      ));
 
-  if (isGmailVerification) {
-    // Extract 6-digit code from body
-    // Gmail sends: "Confirmation code: 123456" or "Your code is 123456"
-    const codeMatch = bodyRaw.match(/(?:confirmation code|code is|code:)\s*(\d{6})/i) ||
-                     bodyRaw.match(/(?:your code|verification code)\s*[:\-]?\s*(\d{6})/i) ||
-                     bodyRaw.match(/\b(\d{6})\b/); // Fallback: any 6-digit number
+    if (isGmailVerification) {
+      // Extract 6-digit code from body
+      // Gmail sends: "Confirmation code: 123456" or "Your code is 123456"
+      const codeMatch = bodyRaw.match(/(?:confirmation code|code is|code:)\s*(\d{6})/i) ||
+                       bodyRaw.match(/(?:your code|verification code)\s*[:\-]?\s*(\d{6})/i) ||
+                       bodyRaw.match(/\b(\d{6})\b/); // Fallback: any 6-digit number
 
-    if (codeMatch && codeMatch[1]) {
-      const verificationCode = codeMatch[1];
-      console.log("🔐 Gmail verification code detected:", verificationCode);
+      if (codeMatch && codeMatch[1]) {
+        const verificationCode = codeMatch[1];
+        console.log("🔐 Gmail verification code detected:", verificationCode);
 
-      // Save code to client record
-      const { error: codeError } = await supabase
-        .from("clients")
-        .update({
-          gmail_forwarding_code: verificationCode,
-          gmail_forwarding_verified: true,
-        })
-        .eq("id", client.id);
+        // Save code to client record
+        const { error: codeError } = await supabase
+          .from("clients")
+          .update({
+            gmail_forwarding_code: verificationCode,
+            gmail_forwarding_verified: true,
+          })
+          .eq("id", client.id);
 
-      if (codeError) {
-        console.error("❌ Failed to save verification code:", codeError);
-      } else {
-        console.log("✅ Gmail verification code saved automatically!");
+        if (codeError) {
+          console.error("❌ Failed to save verification code:", codeError);
+        } else {
+          console.log("✅ Gmail verification code saved automatically!");
+        }
+
+        // Don't create a lead for verification emails, just return success
+        return NextResponse.json({
+          ok: true,
+          gmail_verification: true,
+          code: verificationCode,
+        });
       }
-
-      // Don't create a lead for verification emails, just return success
-      return NextResponse.json({
-        ok: true,
-        gmail_verification: true,
-        code: verificationCode,
-      });
     }
+  } else {
+    console.log("🔒 Auto Gmail verification disabled (inbound/email)");
   }
 
   // ======================================================

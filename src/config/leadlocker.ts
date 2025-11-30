@@ -1,0 +1,3 @@
+export const AUTO_GMAIL_VERIFICATION_ENABLED =
+  process.env.AUTO_GMAIL_VERIFICATION_ENABLED === "true";
+
