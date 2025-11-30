@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
+import { AUTO_GMAIL_VERIFICATION_ENABLED } from "@/config/leadlocker";
 
 export const dynamic = "force-dynamic"; // required for reading cookies
 
@@ -49,6 +50,13 @@ export default async function OnboardingPage() {
           Before your dashboard is ready, we just need to set up your email
           forwarding so new enquiries instantly turn into Leads + SMS alerts.
         </p>
+
+        {/* Inject auto-verification flag into window for client components */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__AUTO_GMAIL_VERIFICATION_ENABLED = "${AUTO_GMAIL_VERIFICATION_ENABLED}";`,
+          }}
+        />
 
         {/* Onboarding Wizard Component */}
         <OnboardingWizard client={client} />

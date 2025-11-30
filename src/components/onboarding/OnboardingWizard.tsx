@@ -99,12 +99,20 @@ function Step1({ client }: { client: any }) {
    STEP 2: Forwarding Instructions
 --------------------------------*/
 function Step2({ client }: { client: any }) {
+  // Check if auto-verification is enabled (client-side safe check)
+  // This will be false by default since we're not exposing the env var to client
+  const autoVerificationEnabled = 
+    typeof window !== "undefined" 
+      ? (window as any).__AUTO_GMAIL_VERIFICATION_ENABLED === "true"
+      : false;
+
   return (
     <div>
       <ForwardingStatus clientId={client.id} />
       <EmailForwardingWizard 
         inboundEmail={client.inbound_email} 
         contactEmail={client.contact_email}
+        autoVerificationEnabled={autoVerificationEnabled}
       />
     </div>
   );

@@ -43,7 +43,7 @@ export default function EmailForwardingWizard({
   const renderInstructions = () => {
     switch (provider) {
       case "gmail":
-        if (!AUTO_GMAIL_VERIFICATION_ENABLED) {
+        if (!autoVerificationEnabled) {
           return (
             <div className="space-y-4">
               <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-800 rounded-lg">
