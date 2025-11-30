@@ -32,18 +32,11 @@ export default function Overview({ leads: _propLeads, totals: _propTotals }: Ove
     { label: 'Completed', value: completedCount },
   ];
 
-  const recent = (leads.length > 0
-    ? leads.slice(0, 4).map((lead) => ({
-        name: lead.name || 'Unknown',
-        action: `New lead created from ${lead.source}`,
-        date: new Date(lead.created_at).toLocaleDateString(),
-      }))
-    : [
-        { name: 'reg', action: 'New lead created from FB', date: '05/11/2025' },
-        { name: 'Feed Smoke Test', action: 'New lead created from API', date: '05/11/2025' },
-        { name: 'john doe', action: 'New lead created from FB', date: '20/10/2025' },
-        { name: 'ray', action: 'New lead created from fb', date: '20/10/2025' },
-      ]) as Array<{ name: string; action: string; date: string }>;
+  const recent = leads.slice(0, 4).map((lead) => ({
+    name: lead.name || 'Unknown',
+    action: `New lead created from ${lead.source || 'Unknown'}`,
+    date: new Date(lead.created_at).toLocaleDateString(),
+  }));
 
   return (
     <div className="p-6 space-y-6">
@@ -83,15 +76,21 @@ export default function Overview({ leads: _propLeads, totals: _propTotals }: Ove
             <h3 className="text-sm font-semibold uppercase text-neutral-300 mb-3 tracking-wide">
               Recent Activity
             </h3>
-            <ul className="divide-y divide-neutral-800">
-              {recent.map((r, i) => (
-                <li key={`${r.name}-${i}`} className="py-3">
-                  <p className="text-neutral-100 text-sm font-medium">{r.name}</p>
-                  <p className="text-neutral-400 text-xs">{r.action}</p>
-                  <p className="text-neutral-500 text-xs mt-1">{r.date}</p>
-                </li>
-              ))}
-            </ul>
+            {recent.length > 0 ? (
+              <ul className="divide-y divide-neutral-800">
+                {recent.map((r, i) => (
+                  <li key={`${r.name}-${i}`} className="py-3">
+                    <p className="text-neutral-100 text-sm font-medium">{r.name}</p>
+                    <p className="text-neutral-400 text-xs">{r.action}</p>
+                    <p className="text-neutral-500 text-xs mt-1">{r.date}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-neutral-400 text-sm py-4 text-center">
+                No recent activity. Leads will appear here as they come in.
+              </p>
+            )}
           </Card>
         </div>
       </div>
