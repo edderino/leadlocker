@@ -52,11 +52,23 @@ export async function POST() {
     // This will be processed by the inbound email handler and create a test lead
     const testEmailTo = client.inbound_email;
 
-    // Use Resend if available, otherwise log for manual testing
-    if (process.env.RESEND_API_KEY) {
-      const { Resend } = await import("resend");
-      const resend = new Resend(process.env.RESEND_API_KEY);
+    // Check if Resend is configured
+    if (!process.env.RESEND_API_KEY) {
+      console.error("❌ [SendTestEmail] RESEND_API_KEY not configured");
+      return NextResponse.json(
+        {
+          error: "Email service not configured",
+          message: "RESEND_API_KEY environment variable is not set. Please configure Resend to send test emails.",
+        },
+        { status: 500 }
+      );
+    }
 
+    // Import and use Resend
+    const { Resend } = await import("resend");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    try {
       await resend.emails.send({
         from: "LeadLocker Test <noreply@leadlocker.app>",
         to: testEmailTo,
@@ -64,22 +76,23 @@ export async function POST() {
         html: `
           <p>This is a test email from LeadLocker.</p>
           <p>If you've received this, forwarding is working!</p>
-          <p>Name: Test User<br>Phone: +61400000000<br>Message: This is a test email to verify email forwarding is configured correctly.</p>
+          <p><strong>Name:</strong> Test User<br>
+          <strong>Phone:</strong> +61400000000<br>
+          <strong>Message:</strong> This is a test email to verify email forwarding is configured correctly.</p>
         `,
         text: "This is a test email from LeadLocker. If you've received this, forwarding is working! Name: Test User, Phone: +61400000000, Message: This is a test email to verify email forwarding is configured correctly.",
       });
-    } else {
-      // Fallback: Log the test email details for manual testing
-      console.log("📧 [TEST EMAIL] Would send to:", testEmailTo);
-      console.log("📧 [TEST EMAIL] Install Resend package: npm install resend");
-      console.log("📧 [TEST EMAIL] Set RESEND_API_KEY environment variable");
-      
-      // For now, return success but note that Resend is not configured
-      return NextResponse.json({
-        ok: true,
-        message: "Resend not configured. Please install 'resend' package and set RESEND_API_KEY.",
-        testEmailTo,
-      });
+
+      console.log("✅ [SendTestEmail] Test email sent to:", testEmailTo);
+    } catch (resendError: any) {
+      console.error("❌ [SendTestEmail] Resend error:", resendError);
+      return NextResponse.json(
+        {
+          error: "Failed to send email",
+          message: resendError.message || "Resend API error",
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ ok: true, message: "Test email sent successfully" });
