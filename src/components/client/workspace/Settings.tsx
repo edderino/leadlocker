@@ -61,8 +61,11 @@ export default function Settings() {
       const json = await response.json();
       if (response.ok) {
         setMessage("Profile updated successfully.");
+        console.log("[Settings] Profile updated, dispatching clientUpdated event");
+        
         // Trigger a refresh of client data in sidebar by dispatching a custom event
-        window.dispatchEvent(new Event('clientUpdated'));
+        window.dispatchEvent(new CustomEvent('clientUpdated', { detail: { name, phone } }));
+        
         // Also reload client data in this component
         const refreshRes = await fetch("/api/auth/me", {
           credentials: "include",
@@ -72,6 +75,7 @@ export default function Settings() {
         if (refreshData.client) {
           setName(refreshData.client.owner_name || refreshData.client.business_name || "");
           setPhone(refreshData.client.sms_number || "");
+          console.log("[Settings] Refreshed client data:", refreshData.client);
         }
       } else {
         setMessage(json.error || "Failed to update profile.");

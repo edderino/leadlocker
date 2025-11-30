@@ -187,13 +187,19 @@ export async function PATCH(req: Request) {
     const userId = userRes.user.id;
     const body = await req.json();
 
-    // Update client row
+    // Update client row - update both name and owner_name for consistency
+    const updateData: any = {
+      sms_number: body.sms_number,
+    };
+    
+    if (body.owner_name) {
+      updateData.owner_name = body.owner_name;
+      updateData.name = body.owner_name; // Also update the name field
+    }
+
     const { data: client, error: updateError } = await admin
       .from("clients")
-      .update({
-        owner_name: body.owner_name,
-        sms_number: body.sms_number,
-      })
+      .update(updateData)
       .eq("user_id", userId)
       .select()
       .single();

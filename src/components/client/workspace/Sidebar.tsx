@@ -18,6 +18,7 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
   useEffect(() => {
     async function loadClient() {
       try {
+        console.log("[Sidebar] Loading client data...");
         const res = await fetch("/api/auth/me", {
           credentials: "include",
           cache: "no-store",
@@ -25,10 +26,14 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
         const data = await res.json();
         if (data.client) {
           const name = data.client.owner_name || data.client.business_name || data.client.name || orgId;
+          console.log("[Sidebar] Setting client name to:", name);
           setClientName(name);
+        } else {
+          console.warn("[Sidebar] No client data in response");
+          setClientName(orgId); // Fallback to orgId
         }
       } catch (err) {
-        console.error("Failed to load client data:", err);
+        console.error("[Sidebar] Failed to load client data:", err);
         setClientName(orgId); // Fallback to orgId
       }
     }
@@ -36,12 +41,18 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
 
     // Listen for custom event when profile is updated
     const handleClientUpdate = () => {
-      loadClient();
+      console.log("[Sidebar] clientUpdated event received, reloading...");
+      // Small delay to ensure DB update is complete
+      setTimeout(loadClient, 100);
     };
     window.addEventListener('clientUpdated', handleClientUpdate);
 
+    // Also poll periodically as a fallback (every 10 seconds)
+    const pollInterval = setInterval(loadClient, 10000);
+
     return () => {
       window.removeEventListener('clientUpdated', handleClientUpdate);
+      clearInterval(pollInterval);
     };
   }, [orgId]);
 
