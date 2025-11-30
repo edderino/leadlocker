@@ -12,27 +12,39 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
+        console.log("[Dashboard] Starting auth check...");
+        
         // Explicitly include credentials (cookies) in the request
         const res = await fetch("/api/auth/me", {
           credentials: "include",
           cache: "no-store",
         });
 
+        console.log("[Dashboard] Auth check response status:", res.status);
+
         const data = await res.json();
+        console.log("[Dashboard] Auth check response data:", data);
 
         if (!res.ok || !data.client) {
-          console.error("[Dashboard] Auth check failed:", data.error || "No client");
+          console.error("[Dashboard] Auth check failed:", {
+            status: res.status,
+            error: data.error || "No client",
+            data,
+          });
           
           // If no client row exists, redirect to signup with a message
           if (data.error?.includes("No client") || data.error?.includes("client account")) {
+            console.log("[Dashboard] Redirecting to signup (no client)");
             router.push("/signup?error=no_client");
             return;
           }
           
+          console.log("[Dashboard] Redirecting to login");
           router.push("/login");
           return;
         }
 
+        console.log("[Dashboard] Auth check successful, client:", data.client);
         setClient(data.client);
         setLoading(false);
       } catch (err) {

@@ -9,27 +9,10 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  try {
-    // Read session/access cookie
-    const cookieStore = await cookies();
-    const token =
-      cookieStore.get("ll_session")?.value ||
-      cookieStore.get("sb-access-token")?.value;
-
-    if (!token) {
-      // No session cookie → kick them to login
-      redirect("/login");
-    }
-
-    // If we get here → user appears to have a session.
-    // Deeper validation is handled in API routes (/api/auth/me, Supabase RLS).
-    // WorkspaceLayout has its own sidebar and navigation, so we just render children.
-    return <>{children}</>;
-  } catch (error) {
-    // If anything fails, redirect to login instead of breaking the layout
-    console.error("[DashboardLayout] Error:", error);
-    redirect("/login");
-  }
+  // Don't check cookies server-side - let the client-side page handle auth
+  // This avoids timing issues where cookies aren't available immediately after login
+  // The dashboard page will check /api/auth/me and redirect if needed
+  return <>{children}</>;
 }
 
 
