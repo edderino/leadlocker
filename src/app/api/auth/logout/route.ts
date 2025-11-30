@@ -1,68 +1,47 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
 export async function POST() {
-  try {
-    const cookieStore = await cookies();
-    const token =
-      cookieStore.get("ll_session")?.value ||
-      cookieStore.get("sb-access-token")?.value;
+  // Clear any legacy/session cookie if present
+  const cookieStore = await cookies();
+  cookieStore.set("ll_session", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(0),
+  });
 
-    // If we have a token, sign out from Supabase to invalidate the session server-side
-    if (token) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const res = NextResponse.json({ ok: true });
 
-      if (supabaseUrl && serviceKey) {
-        const admin = createClient(supabaseUrl, serviceKey, {
-          auth: { persistSession: false },
-        });
+  // Clear Supabase auth cookies
+  res.cookies.set("sb-access-token", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+  res.cookies.set("sb-refresh-token", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
 
-        // Get user ID from token
-        const { data: userRes } = await admin.auth.getUser(token);
-        if (userRes?.user) {
-          // Sign out the user in Supabase (invalidates all sessions)
-          await admin.auth.admin.signOut(userRes.user.id);
-        }
-      }
-    }
+  // If we ever move ll_token to a cookie, clear it here too
+  res.cookies.set("ll_token", "", {
+    httpOnly: false,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
 
-    // Clear all cookies
-    const res = NextResponse.json({ ok: true });
-
-    // Clear all possible session cookies
-    const cookieNames = [
-      "ll_session",
-      "sb-access-token",
-      "sb-refresh-token",
-      "ll_token",
-      "sb-auth-token", // Legacy
-    ];
-
-    cookieNames.forEach((name) => {
-      res.cookies.set(name, "", {
-        httpOnly: name !== "ll_token",
-        secure: true,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 0,
-        expires: new Date(0),
-      });
-    });
-
-    return res;
-  } catch (err) {
-    console.error("[Logout] Error:", err);
-    // Still clear cookies even if Supabase signout fails
-    const res = NextResponse.json({ ok: true });
-    res.cookies.set("ll_session", "", { maxAge: 0, path: "/" });
-    res.cookies.set("sb-access-token", "", { maxAge: 0, path: "/" });
-    res.cookies.set("sb-refresh-token", "", { maxAge: 0, path: "/" });
-    return res;
-  }
+  return res;
 }
 
 
