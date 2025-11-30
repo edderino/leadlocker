@@ -31,29 +31,19 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
   // --- AUTO REFRESH GUARANTEE ---
   useEffect(() => {
     console.log("[AutoRefresh] mounted");
-    const supabase = createClient();
 
     const tick = async () => {
       try {
-        // get session token
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          console.warn("[AutoRefresh] No session yet, skipping tick");
-          return;
-        }
-
         console.log("[AutoRefresh] PING");
 
-        // secure fetch — same as initial load
+        // Call API - it reads cookies server-side, no token needed
         const res = await fetch("/api/client/leads", {
-          headers: {
-            "Authorization": `Bearer ${session.access_token}`,
-          },
+          credentials: "include",
           cache: "no-store",
         });
 
         if (!res.ok) {
-          console.warn("[AutoRefresh] API 401 or error");
+          console.warn("[AutoRefresh] API error:", res.status);
           return;
         }
 
@@ -67,13 +57,16 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
       }
     };
 
-    // first immediate run
-    tick();
+    // Wait a bit before first run to let initial load complete
+    const initialTimeout = setTimeout(tick, 2000);
 
     // then interval
     const interval = setInterval(tick, 10000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
   }, []);
   // --- END AUTO REFRESH ---
 
@@ -84,43 +77,50 @@ export default function DashboardClientRoot({ orgId }: DashboardClientRootProps)
 
   useEffect(() => {
     let mounted = true;
-    const supabase = createClient();
+    let retryCount = 0;
+    const MAX_RETRIES = 5;
 
     async function loadLeads() {
       if (!mounted) return;
 
+      if (retryCount >= MAX_RETRIES) {
+        console.error("[DashboardClientRoot] Max retries reached, giving up");
+        if (mounted) {
+          setError("Failed to load leads after multiple attempts");
+        }
+        return;
+      }
+
       startLoading();
 
       try {
-        // 1) Wait for Supabase session token to be ready
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session?.access_token) {
-          console.warn("⏳ No session yet — waiting before fetch");
-          setTimeout(() => {
-            if (mounted) loadLeads();
-          }, 500); // retry after 0.5s
-          return;
-        }
-
-        console.log("🧠 Session ready, fetching leads...");
-
-        // 2) call the API with Authorization: Bearer <token>
+        // Call the API - it will read cookies server-side via verifyClientSession
+        // No need to pass token, the API route handles auth via cookies
         const res = await fetch("/api/client/leads", {
-          headers: {
-            "Authorization": `Bearer ${session.access_token}`,
-          },
+          credentials: "include",
           cache: "no-store",
         });
 
         if (!res.ok) {
+          if (res.status === 401 && retryCount < MAX_RETRIES) {
+            // Auth might not be ready yet, retry
+            retryCount++;
+            console.warn(`[Leads] API 401, retrying (${retryCount}/${MAX_RETRIES})...`);
+            setTimeout(() => {
+              if (mounted) loadLeads();
+            }, 1000);
+            return;
+          }
+          
           const errorText = await res.text();
-          console.error("[Leads] API error", errorText);
+          console.error("[Leads] API error", res.status, errorText);
           if (mounted) {
             setError("Failed to load leads");
           }
           return;
         }
+        
+        retryCount = 0; // Reset on success
 
         const json = await res.json();
         console.log("✅ Leads fetched:", json);
