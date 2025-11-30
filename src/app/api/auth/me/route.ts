@@ -74,24 +74,51 @@ export async function GET() {
       const businessName = userEmail.split("@")[0] || "User";
       const slug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
+      // Generate unique slug with timestamp to avoid conflicts
+      const uniqueSlug = `${slug}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      
+      const insertData = {
+        id: `client_${crypto.randomUUID()}`,
+        user_id: userId,
+        slug: uniqueSlug,
+        business_name: businessName,
+        owner_name: businessName,
+        contact_email: userEmail,
+        sms_number: "", // Can be updated later
+        inbound_email: `${uniqueSlug}@mg.leadlocker.app`,
+        api_key: crypto.randomBytes(32).toString("hex"),
+      };
+
+      console.log("[AUTH_ME] Attempting to create client with data:", {
+        ...insertData,
+        api_key: "[REDACTED]",
+      });
+
       const { data: newClient, error: createError } = await admin
         .from("clients")
-        .insert({
-          id: `client_${crypto.randomUUID()}`,
-          user_id: userId,
-          slug: `${slug}-${Date.now()}`, // Ensure uniqueness
-          business_name: businessName,
-          owner_name: businessName,
-          contact_email: userEmail,
-          sms_number: "", // Can be updated later
-          inbound_email: `${slug}@mg.leadlocker.app`,
-          api_key: crypto.randomBytes(32).toString("hex"),
-        })
+        .insert(insertData)
         .select()
         .single();
 
-      if (createError || !newClient) {
-        console.error("[AUTH_ME] Failed to auto-create client:", createError);
+      if (createError) {
+        console.error("[AUTH_ME] Failed to auto-create client:", {
+          error: createError,
+          message: createError.message,
+          details: createError.details,
+          hint: createError.hint,
+          code: createError.code,
+        });
+        return NextResponse.json(
+          {
+            error: "Account setup incomplete. Please contact support.",
+            details: createError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      if (!newClient) {
+        console.error("[AUTH_ME] Client insert returned no data");
         return NextResponse.json(
           {
             error: "Account setup incomplete. Please contact support.",
