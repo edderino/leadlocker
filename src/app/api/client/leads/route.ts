@@ -34,34 +34,37 @@ export async function GET(req: NextRequest) {
 
   let orgId = verification.orgId;
 
-  // Fallback: query users table if org_id not in metadata
+  // Fallback: query clients table if org_id not in metadata
   if (!orgId || typeof orgId !== "string") {
-    const { data: userRow, error: userRowError } = await supabaseAdmin
-      .from("users")
-      .select("client_id")
-      .eq("auth_id", verification.user.id)
+    const { data: clientRow, error: clientRowError } = await supabaseAdmin
+      .from("clients")
+      .select("id, slug")
+      .eq("user_id", verification.user.id)
       .maybeSingle();
 
-    if (userRowError || !userRow?.client_id) {
-      // Try by email as fallback
-      if (verification.user.email) {
-        const { data: userByEmail } = await supabaseAdmin
-          .from("users")
-          .select("client_id")
-          .eq("email", verification.user.email)
-          .maybeSingle();
+    if (clientRowError) {
+      console.error("❌ Error querying clients table:", clientRowError);
+      return j(
+        { success: false, error: "Database error resolving client" },
+        { status: 500 }
+      );
+    }
 
-        if (userByEmail?.client_id) {
-          orgId = userByEmail.client_id;
-        }
-      }
-    } else {
-      orgId = userRow.client_id;
+    if (clientRow) {
+      // Use client id as org_id (or slug if preferred)
+      orgId = clientRow.id || clientRow.slug;
+      console.log("📋 Resolved org_id from clients table:", orgId);
     }
   }
 
   if (!orgId || typeof orgId !== "string") {
-    return j({ success: false, error: "No org_id on user" }, { status: 403 });
+    return j(
+      {
+        success: false,
+        error: "No org_id found. Please ensure your account is properly set up.",
+      },
+      { status: 403 }
+    );
   }
 
   console.log("📋 Resolved org_id:", orgId);
