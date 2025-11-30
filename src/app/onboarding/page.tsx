@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 
 export const dynamic = "force-dynamic"; // required for reading cookies
 
@@ -36,7 +37,6 @@ export default async function OnboardingPage() {
   }
 
   // Prepare onboarding data
-  const forwardingAddress = client.inbound_email; // e.g., edco@mg.leadlocker.app
   const firstName = client.owner_name?.split(" ")[0] ?? client.owner_name;
 
   return (
@@ -50,25 +50,8 @@ export default async function OnboardingPage() {
           forwarding so new enquiries instantly turn into Leads + SMS alerts.
         </p>
 
-        {/* --- Onboarding Steps Placeholder (UI comes in next steps) --- */}
-
-        <div className="bg-neutral-900 border border-neutral-700 rounded-xl p-5">
-          <p className="text-lg font-semibold mb-2">
-            Your unique LeadLocker forwarding address:
-          </p>
-
-          <div className="bg-neutral-800 px-4 py-3 rounded-lg font-mono text-sm break-all">
-            {forwardingAddress}
-          </div>
-
-          <p className="text-gray-400 mt-4 text-sm">
-            You'll need this in step 2 when setting up your forwarding rules.
-          </p>
-        </div>
-
-        <div className="mt-10 text-gray-400 text-sm">
-          You'll be guided step-by-step next.
-        </div>
+        {/* Onboarding Wizard Component */}
+        <OnboardingWizard client={client} />
       </div>
     </main>
   );
