@@ -81,6 +81,7 @@ export async function GET() {
         id: `client_${crypto.randomUUID()}`,
         user_id: userId,
         slug: uniqueSlug,
+        name: businessName, // Required field - matches signup route
         business_name: businessName,
         owner_name: businessName,
         contact_email: userEmail,
