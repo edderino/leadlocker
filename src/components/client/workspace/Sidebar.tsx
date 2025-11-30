@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { LayoutDashboard, Users, BarChart3, Settings, ChevronLeft, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface SidebarProps {
   currentSection: string;
@@ -12,6 +12,38 @@ interface SidebarProps {
 
 export default function Sidebar({ currentSection, onSectionChange, orgId }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [clientName, setClientName] = useState<string | null>(null);
+
+  // Load client data to show name instead of ID
+  useEffect(() => {
+    async function loadClient() {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (data.client) {
+          const name = data.client.owner_name || data.client.business_name || data.client.name || orgId;
+          setClientName(name);
+        }
+      } catch (err) {
+        console.error("Failed to load client data:", err);
+        setClientName(orgId); // Fallback to orgId
+      }
+    }
+    loadClient();
+
+    // Listen for custom event when profile is updated
+    const handleClientUpdate = () => {
+      loadClient();
+    };
+    window.addEventListener('clientUpdated', handleClientUpdate);
+
+    return () => {
+      window.removeEventListener('clientUpdated', handleClientUpdate);
+    };
+  }, [orgId]);
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -51,7 +83,9 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#10b981] flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-semibold text-sm">{orgId.slice(0, 2).toUpperCase()}</span>
+            <span className="text-white font-semibold text-sm">
+              {clientName ? clientName.slice(0, 2).toUpperCase() : orgId.slice(0, 2).toUpperCase()}
+            </span>
           </div>
           {!isCollapsed && (
             <motion.div
@@ -59,7 +93,9 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
               animate={{ opacity: 1 }}
               className="overflow-hidden"
             >
-              <div className="text-white text-sm font-medium truncate">{orgId}</div>
+              <div className="text-white text-sm font-medium truncate">
+                {clientName || orgId}
+              </div>
               <div className="text-gray-400 text-xs">Client Portal</div>
             </motion.div>
           )}
