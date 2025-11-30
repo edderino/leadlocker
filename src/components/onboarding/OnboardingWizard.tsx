@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import EmailForwardingWizard from "./EmailForwardingWizard";
+import ForwardingStatus from "./ForwardingStatus";
 
 interface OnboardingWizardProps {
   client: any;
@@ -100,6 +101,7 @@ function Step1({ client }: { client: any }) {
 function Step2({ client }: { client: any }) {
   return (
     <div>
+      <ForwardingStatus clientId={client.id} />
       <EmailForwardingWizard 
         inboundEmail={client.inbound_email} 
         contactEmail={client.contact_email}

@@ -119,6 +119,29 @@ export default function EmailForwardingWizard({
         </button>
       </div>
 
+      {/* Test Forwarding Button */}
+      <button
+        onClick={async () => {
+          try {
+            const res = await fetch("/api/client/send-test-email", {
+              method: "POST",
+              credentials: "include",
+            });
+            if (res.ok) {
+              alert("Test email sent! When it arrives in LeadLocker, your status will update.");
+            } else {
+              alert("Failed to send test email. Please try again.");
+            }
+          } catch (err) {
+            console.error(err);
+            alert("Failed to send test email. Please try again.");
+          }
+        }}
+        className="mt-4 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white transition"
+      >
+        Send Test Email
+      </button>
+
       {/* Instructions */}
       <div className="mt-6">{renderInstructions()}</div>
     </div>
