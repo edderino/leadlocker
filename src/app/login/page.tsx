@@ -30,6 +30,11 @@ export default function LoginPage() {
     try {
       setLoading(true);
 
+      // Clear any old localStorage tokens before logging in
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("ll_token");
+      }
+
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -129,6 +134,31 @@ export default function LoginPage() {
             Create one
           </a>
         </p>
+
+        {/* Debug: Clear all sessions button */}
+        <div className="mt-6 pt-4 border-t border-neutral-800">
+          <button
+            onClick={async () => {
+              try {
+                // Clear server-side cookies
+                await fetch("/api/auth/clear-all-sessions", { method: "POST" });
+                // Clear client-side storage
+                if (typeof window !== "undefined") {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                }
+                alert("All sessions cleared! Please refresh the page.");
+                window.location.reload();
+              } catch (err) {
+                console.error(err);
+                alert("Failed to clear sessions");
+              }
+            }}
+            className="text-xs text-neutral-500 hover:text-neutral-300 underline"
+          >
+            Stuck in wrong account? Clear all sessions
+          </button>
+        </div>
       </div>
     </div>
   );
