@@ -1,9 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Users, MessageSquare, BarChart3, Settings, ChevronLeft, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, Settings, ChevronLeft, LogOut } from 'lucide-react';
 import { useState } from 'react';
-import { supabase } from '@/libs/supabaseClient';
 
 interface SidebarProps {
   currentSection: string;
@@ -17,7 +16,6 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users },
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -103,7 +101,7 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
       <div className="p-4 border-t border-white/10">
         <button
           onClick={async () => {
-            await supabase.auth.signOut();
+            await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
             window.location.href = '/login';
           }}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-all"

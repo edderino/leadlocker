@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { themeOptions, useTheme } from "./ThemeContext";
-import { supabase } from "@/libs/supabaseClient";
 
 export default function Settings() {
   const [smsAlerts, setSmsAlerts] = useState(true);
@@ -18,39 +17,53 @@ export default function Settings() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [loadingClient, setLoadingClient] = useState(true);
+
+  // Load current client data
+  useEffect(() => {
+    async function loadClient() {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (data.client) {
+          setName(data.client.owner_name || data.client.business_name || "");
+          setPhone(data.client.sms_number || "");
+        }
+      } catch (err) {
+        console.error("Failed to load client data:", err);
+      } finally {
+        setLoadingClient(false);
+      }
+    }
+    loadClient();
+  }, []);
 
   async function handleUpdate() {
     try {
       setLoading(true);
       setMessage("");
 
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session?.access_token) {
-        setMessage("Unable to verify session. Please log in again.");
-        return;
-      }
-
-      const user = session.user;
-
-      const response = await fetch("/api/user/update", {
-        method: "POST",
+      const response = await fetch("/api/auth/me", {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
-          user_id: user?.id,
-          name,
-          phone,
+          owner_name: name,
+          sms_number: phone,
         }),
       });
 
       const json = await response.json();
-      setMessage(json.success ? "Profile updated successfully." : json.error);
+      if (response.ok) {
+        setMessage("Profile updated successfully.");
+      } else {
+        setMessage(json.error || "Failed to update profile.");
+      }
     } catch (error: any) {
       setMessage(error?.message || "Failed to update profile.");
     } finally {
@@ -63,16 +76,28 @@ export default function Settings() {
       setLoading(true);
       setMessage("");
 
-      const { error } = await supabase.auth.updateUser({ password });
+      // Call API to change password
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ password }),
+      });
 
-      if (error) {
-        setMessage(error.message);
+      const json = await response.json();
+      
+      if (!response.ok) {
+        setMessage(json.error || "Failed to change password.");
         return;
       }
 
       setMessage("Password changed. Please log in again.");
-      await supabase.auth.signOut();
-      window.location.href = "/login";
+      // Redirect to login after a short delay
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
     } catch (error: any) {
       setMessage(error?.message || "Failed to change password.");
     } finally {
@@ -89,28 +114,38 @@ export default function Settings() {
         <h3 className="text-sm font-semibold uppercase text-neutral-300 mb-4 tracking-wide">
           Profile
         </h3>
-        <div className="space-y-3 text-sm">
-          <input
-            className="w-full p-2 rounded bg-neutral-900 border border-neutral-800 text-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-600"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            className="w-full p-2 rounded bg-neutral-900 border border-neutral-800 text-neutral-200 focus:outline-none focus:ring-1 focus:ring-neutral-600"
-            placeholder="Phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <Button
-            variant="secondary"
-            className="mt-2 text-xs"
-            onClick={handleUpdate}
-            disabled={loading}
-          >
-            {loading ? "Saving..." : "Change Details"}
-          </Button>
-        </div>
+        {loadingClient ? (
+          <p className="text-neutral-400 text-sm">Loading...</p>
+        ) : (
+          <div className="space-y-3 text-sm">
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1">Name</label>
+              <input
+                className="w-full p-2 rounded bg-neutral-900 border border-neutral-800 text-white focus:outline-none focus:ring-1 focus:ring-white focus:border-white transition placeholder:text-neutral-500"
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1">Phone</label>
+              <input
+                className="w-full p-2 rounded bg-neutral-900 border border-neutral-800 text-white focus:outline-none focus:ring-1 focus:ring-white focus:border-white transition placeholder:text-neutral-500"
+                placeholder="+61412345678"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+            <Button
+              variant="secondary"
+              className="mt-2 text-xs"
+              onClick={handleUpdate}
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Update Profile"}
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* Notifications */}
@@ -204,7 +239,7 @@ export default function Settings() {
             variant="destructive" 
             className="text-xs"
             onClick={async () => {
-              await supabase.auth.signOut();
+              await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
               window.location.href = '/login';
             }}
           >
@@ -230,9 +265,13 @@ export default function Settings() {
       </Card>
 
       {message && (
-        <p className="text-xs text-neutral-400">
+        <div className={`p-3 rounded-lg text-sm ${
+          message.includes("successfully") || message.includes("success")
+            ? "bg-green-900/30 text-green-300 border border-green-800"
+            : "bg-red-900/30 text-red-300 border border-red-800"
+        }`}>
           {message}
-        </p>
+        </div>
       )}
     </div>
   );

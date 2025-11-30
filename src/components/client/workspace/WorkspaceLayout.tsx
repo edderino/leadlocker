@@ -5,7 +5,6 @@ import { RefreshCw } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Overview from './Overview';
 import Leads from './Leads';
-import Messages from './Messages';
 import Analytics from './Analytics';
 import Settings from './Settings';
 import { ThemeProvider } from './ThemeContext';
@@ -46,7 +45,6 @@ export default function WorkspaceLayout({ leads: _initialLeads, orgId }: Workspa
   const sectionTitles: Record<string, string> = {
     overview: 'Overview',
     leads: 'Leads',
-    messages: 'Messages',
     analytics: 'Analytics',
     settings: 'Settings',
   };
@@ -57,8 +55,6 @@ export default function WorkspaceLayout({ leads: _initialLeads, orgId }: Workspa
         return <Overview leads={leads} totals={totals} />;
       case 'leads':
         return <Leads leads={leads} />;
-      case 'messages':
-        return <Messages />;
       case 'analytics':
         return <Analytics orgId={orgId} />;
       case 'settings':

@@ -150,4 +150,69 @@ export async function GET() {
   }
 }
 
+export async function PATCH(req: Request) {
+  try {
+    const cookieStore = await cookies();
+    const token =
+      cookieStore.get("ll_session")?.value ||
+      cookieStore.get("sb-access-token")?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+    if (!supabaseUrl || !serviceKey) {
+      return NextResponse.json(
+        { error: "Server auth not configured" },
+        { status: 500 }
+      );
+    }
+
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false },
+    });
+
+    const {
+      data: userRes,
+      error: userErr,
+    } = await admin.auth.getUser(token);
+
+    if (userErr || !userRes?.user) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+    }
+
+    const userId = userRes.user.id;
+    const body = await req.json();
+
+    // Update client row
+    const { data: client, error: updateError } = await admin
+      .from("clients")
+      .update({
+        owner_name: body.owner_name,
+        sms_number: body.sms_number,
+      })
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (updateError || !client) {
+      return NextResponse.json(
+        { error: updateError?.message || "Failed to update client" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ client, success: true });
+  } catch (err) {
+    console.error("AUTH_ME_PATCH_ERR:", err);
+    return NextResponse.json(
+      { error: "Server error" },
+      { status: 500 }
+    );
+  }
+}
+
 
