@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Server-side Supabase client for authenticated operations
@@ -12,7 +12,7 @@ export function createClient() {
     throw new Error("Missing Supabase environment variables");
   }
 
-  return createClient(supabaseUrl, serviceKey, {
+  return createSupabaseClient(supabaseUrl, serviceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
