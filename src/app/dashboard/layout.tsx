@@ -43,7 +43,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     } = await admin.auth.getUser(sessionToken);
 
     if (userErr || !userRes?.user) {
-      console.error("[DashboardLayout] Invalid token:", userErr);
+      console.error("[DashboardLayout] Invalid token:", {
+        error: userErr,
+        message: userErr?.message,
+        status: userErr?.status,
+        hasUser: !!userRes?.user,
+      });
       return redirect("/login");
     }
 
@@ -74,8 +79,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     }
 
     // 🚧 BLOCK dashboard if onboarding not complete
-    if (!client.onboarding_complete) {
-      console.log("[DashboardLayout] Onboarding incomplete, redirecting to /onboarding");
+    // onboarding_complete can be null, false, or true - only allow true
+    if (client.onboarding_complete !== true) {
+      console.log("[DashboardLayout] Onboarding incomplete, redirecting to /onboarding", {
+        onboarding_complete: client.onboarding_complete,
+      });
       return redirect("/onboarding");
     }
 
