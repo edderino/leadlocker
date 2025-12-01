@@ -13,7 +13,7 @@ export default async function OnboardingLayout({
     // ---------------------------
     // 1. READ TOKENS FROM COOKIES
     // ---------------------------
-    const cookieStore = cookies();
+    const cookieStore = await cookies(); // ← FIXED (must await in Next.js 15!)
     const token =
       cookieStore.get("sb-access-token")?.value ||
       cookieStore.get("ll_session")?.value;

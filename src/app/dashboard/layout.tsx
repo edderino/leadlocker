@@ -1,6 +1,4 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { createClient } from "@/libs/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
@@ -9,73 +7,18 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  try {
-    // ---------------------------
-    // 1. READ TOKENS FROM COOKIES
-    // ---------------------------
-    const cookieStore = cookies();
-    const token =
-      cookieStore.get("sb-access-token")?.value ||
-      cookieStore.get("ll_session")?.value;
+  const cookieStore = await cookies(); // ← FIXED (must await in Next.js 15!)
 
-    if (!token) {
-      redirect("/login");
-    }
+  const token =
+    cookieStore.get("sb-access-token")?.value ||
+    cookieStore.get("ll_session")?.value ||
+    null;
 
-    // ---------------------------
-    // 2. VALIDATE TOKEN
-    // ---------------------------
-    const supabase = createClient();
-
-    const { data: authData, error: authError } = await supabase.auth.getUser(
-      token
-    );
-
-    if (authError || !authData?.user) {
-      redirect("/login");
-    }
-
-    const userId = authData.user.id;
-
-    // ---------------------------
-    // 3. FETCH CLIENT ROW
-    // ---------------------------
-    const { data: client, error: clientError } = await supabase
-      .from("clients")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (clientError || !client) {
-      redirect("/login");
-    }
-
-    // ---------------------------
-    // 4. RENDER LAYOUT
-    // ---------------------------
-    // Note: Onboarding check is handled by the dashboard page, not the layout
-    // This allows the layout to always render and the page to decide what to show
-    return (
-      <div className="min-h-screen flex flex-col bg-black text-white">
-        {children}
-      </div>
-    );
-  } catch (err) {
-    // Next.js redirect() throws a NEXT_REDIRECT error - we need to re-throw it
-    const isRedirect =
-      (err instanceof Error && err.message === "NEXT_REDIRECT") ||
-      (err &&
-        typeof err === "object" &&
-        "digest" in err &&
-        typeof err.digest === "string" &&
-        err.digest.startsWith("NEXT_REDIRECT"));
-
-    if (isRedirect) {
-      throw err;
-    }
-
-    // Only log actual errors, not redirects
-    console.error("[DashboardLayout] Error:", err);
-    redirect("/login");
-  }
+  // 🚫 DO NOT redirect here.
+  // Just render the children — onboarding/dashboard pages themselves handle auth on the client.
+  return (
+    <section className="min-h-screen w-full bg-black text-white">
+      {children}
+    </section>
+  );
 }
