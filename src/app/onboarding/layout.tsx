@@ -18,6 +18,7 @@ export default async function OnboardingLayout({
       cookieStore.get("sb-access-token")?.value ||
       cookieStore.get("ll_session")?.value;
 
+    // If no token, user must log in
     if (!token) {
       redirect("/login");
     }
@@ -47,39 +48,20 @@ export default async function OnboardingLayout({
       .maybeSingle();
 
     if (clientError || !client) {
-      redirect("/signup?error=no_client");
+      redirect("/login");
     }
 
     // ---------------------------
-    // 4. CHECK ONBOARDING STATUS
+    // 4. IF ALREADY ONBOARDED → SEND TO DASHBOARD
     // ---------------------------
-    // If onboarding is already complete, redirect to dashboard
     if (client.onboarding_complete === true) {
       redirect("/dashboard");
     }
 
     // ---------------------------
-    // 5. RENDER ONBOARDING
+    // 5. RENDER ONBOARDING FLOW
     // ---------------------------
-    return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center py-12 px-4">
-        <div className="w-full max-w-2xl">
-          <h1 className="text-3xl font-bold text-center mb-10">Get Your Account Set Up</h1>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-xl">
-            {children}
-          </div>
-
-          {/* Step indicator */}
-          <div className="flex justify-center mt-8 space-x-4 text-sm text-gray-400">
-            <span className="opacity-100">Step 1</span>
-            <span>•</span>
-            <span className="opacity-50">Step 2</span>
-            <span>•</span>
-            <span className="opacity-50">Step 3</span>
-          </div>
-        </div>
-      </div>
-    );
+    return <>{children}</>;
   } catch (err) {
     // Next.js redirect() throws a NEXT_REDIRECT error - we need to re-throw it
     const isRedirect =
