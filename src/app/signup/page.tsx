@@ -119,38 +119,14 @@ export default function SignupPage() {
       }
 
       console.log("[SIGNUP PAGE] ✅ Signup successful");
-      console.log("[SIGNUP PAGE] 🍪 Checking cookies before redirect...");
+      console.log("[SIGNUP PAGE] ⏳ Waiting for cookies to be set by browser...");
       
-      // Wait for cookies to be set - check multiple times
-      let cookieCheckCount = 0;
-      const maxChecks = 10;
-      const checkInterval = 100; // 100ms between checks
-      
-      while (cookieCheckCount < maxChecks) {
-        await new Promise(resolve => setTimeout(resolve, checkInterval));
-        const cookies = document.cookie;
-        const hasLlSession = cookies.includes("ll_session=");
-        const hasSbAccessToken = cookies.includes("sb-access-token=");
-        
-        console.log(`[SIGNUP PAGE] 🍪 Cookie check ${cookieCheckCount + 1}/${maxChecks}:`, {
-          hasLlSession,
-          hasSbAccessToken,
-          allCookies: cookies,
-        });
-        
-        if (hasLlSession || hasSbAccessToken) {
-          console.log("[SIGNUP PAGE] ✅ Cookies detected, redirecting...");
-          break;
-        }
-        
-        cookieCheckCount++;
-      }
-      
-      if (cookieCheckCount >= maxChecks) {
-        console.warn("[SIGNUP PAGE] ⚠️ Cookies not detected after waiting, redirecting anyway");
-      }
+      // Wait a moment for browser to process Set-Cookie headers
+      // httpOnly cookies can't be checked via JavaScript, so we just wait
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       console.log("[SIGNUP PAGE] 🔄 Redirecting to:", data.redirect || "/dashboard");
+      // Use window.location.href for full page reload to ensure cookies are sent
       window.location.href = data.redirect || "/dashboard";
     } catch (err) {
       console.error(err);
