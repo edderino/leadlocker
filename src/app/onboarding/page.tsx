@@ -1,11 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, ChevronRight, Mail } from "lucide-react";
 import Link from "next/link";
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
+  const [inboundEmail, setInboundEmail] = useState("");
+
+  // Fetch client data to get inbound_email and store in localStorage
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (data.client?.inbound_email) {
+          setInboundEmail(data.client.inbound_email);
+          localStorage.setItem("ll_inbound_email", data.client.inbound_email);
+        }
+      } catch (err) {
+        console.error("Failed to load client:", err);
+      }
+    }
+    load();
+  }, []);
 
   const next = () => setStep((s) => Math.min(s + 1, 3));
   const prev = () => setStep((s) => Math.max(s - 1, 1));
