@@ -189,6 +189,7 @@ export async function POST(req: Request) {
         id: `client_${crypto.randomUUID()}`,
         user_id,
         slug,
+        name: owner_name, // Required field - use owner_name as the name
         business_name,
         owner_name,
         contact_email,
