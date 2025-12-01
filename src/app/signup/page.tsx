@@ -103,8 +103,10 @@ export default function SignupPage() {
         return;
       }
 
-      // Cookie is set server-side; just go to dashboard
-      router.push("/dashboard");
+      // Cookie is set server-side; wait for cookies to propagate then redirect
+      // Use window.location for full page reload to ensure cookies are read
+      await new Promise(resolve => setTimeout(resolve, 500));
+      window.location.href = "/dashboard";
     } catch (err) {
       console.error(err);
       setApiError("Unexpected error — try again.");
