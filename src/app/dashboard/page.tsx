@@ -1,70 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import DashboardClientRoot from "@/components/client/DashboardClientRoot";
 
+/**
+ * Dashboard Page
+ * 
+ * This page is protected by the dashboard layout which handles:
+ * - Authentication checks
+ * - Onboarding gate
+ * - Client data validation
+ * 
+ * This component only needs to render the dashboard UI.
+ * If this component renders, the user is authenticated and onboarding is complete.
+ */
 export default function DashboardPage() {
-  const router = useRouter();
   const [client, setClient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Fetch client data for UI (orgId, etc.)
+  // Auth is already validated by the layout
   useEffect(() => {
-    async function load() {
+    async function loadClient() {
       try {
-        console.log("[Dashboard] Starting auth check...");
-        
-        // Explicitly include credentials (cookies) in the request
         const res = await fetch("/api/auth/me", {
           credentials: "include",
           cache: "no-store",
         });
 
-        console.log("[Dashboard] Auth check response status:", res.status);
-
-        const data = await res.json();
-        console.log("[Dashboard] Auth check response data:", data);
-
-        if (!res.ok || !data.client) {
-          console.error("[Dashboard] Auth check failed:", {
-            status: res.status,
-            error: data.error || "No client",
-            details: data.details,
-            code: data.code,
-            hint: data.hint,
-            fullResponse: data,
-          });
-          
-          // If no client row exists, redirect to signup with a message
-          if (data.error?.includes("No client") || data.error?.includes("client account")) {
-            console.log("[Dashboard] Redirecting to signup (no client)");
-            router.push("/signup?error=no_client");
-            return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data.client) {
+            setClient(data.client);
           }
-          
-          console.log("[Dashboard] Redirecting to login");
-          router.push("/login");
-          return;
         }
-
-        console.log("[Dashboard] Auth check successful, client:", data.client);
-        
-        // ⬅ NEW: redirect if onboarding incomplete
-        if (!data.client?.onboarding_complete) {
-          router.push("/onboarding");
-          return;
-        }
-        
-        setClient(data.client);
-        setLoading(false);
       } catch (err) {
-        console.error("[Dashboard] Error loading client:", err);
-        router.push("/login");
+        console.error("[Dashboard] Error loading client data:", err);
+        // Don't redirect - layout handles auth failures
+      } finally {
+        setLoading(false);
       }
     }
 
-    load();
-  }, [router]);
+    loadClient();
+  }, []);
 
   if (loading) {
     return (
