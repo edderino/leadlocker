@@ -210,63 +210,53 @@ export async function POST(req: Request) {
     const api_key = crypto.randomBytes(32).toString("hex");
 
     // ---------------------------------------------
-    // 6. Insert into clients table
+    // 6. Insert into clients table (with full error logging)
     // ---------------------------------------------
-    const { data: insertedClient, error: insertError } = await supabaseAdmin
-      .from("clients")
-      .insert({
-        id: `client_${crypto.randomUUID()}`,
-        user_id,
-        slug,
-        name: owner_name, // Required field - use owner_name as the name
-        business_name,
-        owner_name,
-        contact_email,
-        sms_number,
-        inbound_email,
-        api_key,
-      })
-      .select()
-      .single();
+    console.log("[Signup] Attempting to insert client with:", {
+      user_id,
+      slug,
+      inbound_email,
+      business_name,
+      owner_name,
+      contact_email,
+      sms_number,
+    });
 
-    if (insertError) {
-      console.error("[Signup] insert client failed:", insertError);
-      
-      // Provide user-friendly error messages
-      if (insertError.message?.includes("duplicate key") || insertError.message?.includes("unique constraint")) {
-        if (insertError.message?.includes("inbound_email")) {
-          return NextResponse.json(
-            { error: "An account with this email address already exists. Please try logging in instead." },
-            { status: 409 }
-          );
-        }
-        if (insertError.message?.includes("contact_email") || insertError.message?.includes("sms_number")) {
-          return NextResponse.json(
-            { error: "An account already exists with this email or phone number." },
-            { status: 409 }
-          );
-        }
-      }
-      
-      return NextResponse.json(
-        { error: insertError.message || "Failed to create account. Please try again." },
-        { status: 500 }
-      );
-    }
+    const insertPayload = {
+      id: crypto.randomUUID(), // use a real UUID (matches uuid column type)
+      user_id,
+      slug,
+      name: owner_name,
+      business_name,
+      owner_name,
+      contact_email,
+      sms_number,
+      inbound_email,
+      api_key,
+    };
 
-    // Verify the client was actually created
-    if (!insertedClient) {
-      console.error("[Signup] Client insert returned no data");
+    const insertResult = await supabaseAdmin.from("clients").insert(insertPayload);
+
+    console.log("[Signup] Insert result:", insertResult);
+
+    if (insertResult.error) {
+      console.error("[Signup] INSERT CLIENT FAILED:", {
+        message: insertResult.error.message,
+        details: insertResult.error.details,
+        hint: insertResult.error.hint,
+        code: insertResult.error.code,
+      });
+
       return NextResponse.json(
-        { error: "Failed to create client account." },
+        { error: "Failed to create client row.", details: insertResult.error },
         { status: 500 }
       );
     }
 
     console.log("[Signup] Client created successfully:", {
-      id: insertedClient.id,
-      user_id: insertedClient.user_id,
-      slug: insertedClient.slug,
+      id: insertPayload.id,
+      user_id: insertPayload.user_id,
+      slug: insertPayload.slug,
     });
 
     // ==============================
@@ -279,7 +269,7 @@ export async function POST(req: Request) {
         const clientEmail = contact_email.trim();
         const clientName =
           owner_name.trim() || business_name.trim() || "there";
-        const forwardingAddress = insertedClient.inbound_email;
+        const forwardingAddress = inbound_email;
         const appUrl =
           process.env.NEXT_PUBLIC_APP_URL || "https://leadlocker.app";
 
