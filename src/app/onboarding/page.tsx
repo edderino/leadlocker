@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Mail } from "lucide-react";
 import Link from "next/link";
+import EmailProviderInstructions from "./EmailProviderInstructions";
 
 type ForwardingStatus = "not-connected" | "waiting" | "connected";
 
@@ -139,6 +140,11 @@ export default function OnboardingPage() {
         {step === 1 && <Step1 next={next} />}
         {step === 2 && <Step2 next={next} prev={prev} />}
         {step === 3 && <Step3 prev={prev} />}
+      </div>
+
+      {/* Provider-specific instructions */}
+      <div className="w-full max-w-2xl">
+        <EmailProviderInstructions forwardingEmail={inboundEmail} />
       </div>
     </div>
   );
