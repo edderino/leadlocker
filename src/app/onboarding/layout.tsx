@@ -1,103 +1,66 @@
-import { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/libs/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingLayout({ children }: { children: ReactNode }) {
-  console.log("[ONBOARDING LAYOUT] 🚀 Starting auth check");
+export default async function OnboardingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   try {
-    const cookieStore = await cookies();
-    const llSession = cookieStore.get("ll_session");
-    const sbAccessToken = cookieStore.get("sb-access-token");
-    const sessionToken = llSession?.value || sbAccessToken?.value || null;
+    // ---------------------------
+    // 1. READ TOKENS FROM COOKIES
+    // ---------------------------
+    const cookieStore = cookies();
+    const token =
+      cookieStore.get("sb-access-token")?.value ||
+      cookieStore.get("ll_session")?.value;
 
-    console.log("[ONBOARDING LAYOUT] 📋 Cookie check:", {
-      has_ll_session: !!llSession?.value,
-      has_sb_access_token: !!sbAccessToken?.value,
-      has_token: !!sessionToken,
-      all_cookies: cookieStore.getAll().map(c => ({ name: c.name, hasValue: !!c.value })),
-    });
-
-    if (!sessionToken) {
-      console.error("[ONBOARDING LAYOUT] ❌ No session token, redirecting to /login");
-      return redirect("/login");
+    if (!token) {
+      redirect("/login");
     }
 
-    console.log("[ONBOARDING LAYOUT] ✅ Token found, validating...");
+    // ---------------------------
+    // 2. VALIDATE TOKEN
+    // ---------------------------
+    const supabase = createClient();
 
-    // Validate token
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const { data: authData, error: authError } = await supabase.auth.getUser(
+      token
+    );
 
-    console.log("[ONBOARDING LAYOUT] 🔧 Environment check:", {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasServiceKey: !!serviceKey,
-    });
-
-    if (!supabaseUrl || !serviceKey) {
-      console.error("[ONBOARDING LAYOUT] ❌ Missing env vars, redirecting to /login");
-      return redirect("/login");
+    if (authError || !authData?.user) {
+      redirect("/login");
     }
 
-    console.log("[ONBOARDING LAYOUT] 🔐 Creating Supabase admin client...");
-    const admin = createClient(supabaseUrl, serviceKey, {
-      auth: { persistSession: false },
-    });
+    const userId = authData.user.id;
 
-    console.log("[ONBOARDING LAYOUT] 🔍 Validating token...");
-    const {
-      data: userRes,
-      error: userErr,
-    } = await admin.auth.getUser(sessionToken);
-
-    console.log("[ONBOARDING LAYOUT] 📋 Token validation result:", {
-      hasError: !!userErr,
-      errorMessage: userErr?.message,
-      hasUser: !!userRes?.user,
-      userId: userRes?.user?.id,
-    });
-
-    if (userErr || !userRes?.user) {
-      console.error("[ONBOARDING LAYOUT] ❌ Invalid token, redirecting to /login");
-      return redirect("/login");
-    }
-
-    const userId = userRes.user.id;
-    console.log("[ONBOARDING LAYOUT] ✅ Token valid, user ID:", userId);
-
-    // Fetch client row
-    console.log("[ONBOARDING LAYOUT] 🔍 Fetching client row...");
-    const { data: client } = await admin
+    // ---------------------------
+    // 3. FETCH CLIENT ROW
+    // ---------------------------
+    const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("*")
       .eq("user_id", userId)
       .maybeSingle();
 
-    console.log("[ONBOARDING LAYOUT] 📋 Client fetch result:", {
-      hasClient: !!client,
-      clientId: client?.id,
-      onboarding_complete: client?.onboarding_complete,
-    });
-
-    // If client doesn't exist, redirect to signup
-    if (!client) {
-      console.error("[ONBOARDING LAYOUT] ❌ No client found, redirecting to /signup");
-      return redirect("/signup?error=no_client");
+    if (clientError || !client) {
+      redirect("/signup?error=no_client");
     }
 
+    // ---------------------------
+    // 4. CHECK ONBOARDING STATUS
+    // ---------------------------
     // If onboarding is already complete, redirect to dashboard
     if (client.onboarding_complete === true) {
-      console.log("[ONBOARDING LAYOUT] ✅ Onboarding already complete, redirecting to /dashboard");
-      return redirect("/dashboard");
+      redirect("/dashboard");
     }
 
-    console.log("[ONBOARDING LAYOUT] ✅ All checks passed, showing onboarding");
-
-    // User is authenticated and needs onboarding - show onboarding
-    const pathname = "/onboarding"; // Simplified for now
-    
+    // ---------------------------
+    // 5. RENDER ONBOARDING
+    // ---------------------------
     return (
       <div className="min-h-screen bg-black text-white flex flex-col items-center py-12 px-4">
         <div className="w-full max-w-2xl">
@@ -119,19 +82,20 @@ export default async function OnboardingLayout({ children }: { children: ReactNo
     );
   } catch (err) {
     // Next.js redirect() throws a NEXT_REDIRECT error - we need to re-throw it
-    // Check both message and digest (digest is more reliable)
-    const isRedirect = 
+    const isRedirect =
       (err instanceof Error && err.message === "NEXT_REDIRECT") ||
-      (err && typeof err === "object" && "digest" in err && 
-       typeof err.digest === "string" && err.digest.startsWith("NEXT_REDIRECT"));
-    
+      (err &&
+        typeof err === "object" &&
+        "digest" in err &&
+        typeof err.digest === "string" &&
+        err.digest.startsWith("NEXT_REDIRECT"));
+
     if (isRedirect) {
-      console.log("[ONBOARDING LAYOUT] 🔄 Re-throwing redirect error");
       throw err;
     }
-    
-    console.error("[ONBOARDING LAYOUT] ❌ UNEXPECTED ERROR:", err);
-    console.error("[ONBOARDING LAYOUT] ❌ Error stack:", err instanceof Error ? err.stack : "No stack");
-    return redirect("/login");
+
+    // Only log actual errors, not redirects
+    console.error("[OnboardingLayout] Error:", err);
+    redirect("/login");
   }
 }
