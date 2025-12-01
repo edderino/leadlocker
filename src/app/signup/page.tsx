@@ -86,6 +86,7 @@ export default function SignupPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // IMPORTANT: Include cookies in request/response
         body: JSON.stringify({
           owner_name: company,
           business_name: company,
@@ -98,37 +99,16 @@ export default function SignupPage() {
       console.log("[SIGNUP PAGE] 📥 API Response:", {
         ok: res.ok,
         status: res.status,
-        redirected: res.redirected,
-        url: res.url,
-        type: res.type,
         responseHeaders: Object.fromEntries(res.headers.entries()),
       });
 
-      // If it's a redirect response (307/308), the browser should follow it automatically
-      // But fetch() doesn't automatically follow redirects, so we need to check
-      if (res.status === 307 || res.status === 308 || res.redirected) {
-        console.log("[SIGNUP PAGE] ✅ Server returned redirect, following it:", res.url);
-        // The redirect response includes Set-Cookie headers
-        // We need to let the browser handle the redirect to include cookies
-        window.location.href = res.url || "/dashboard";
-        return;
-      }
-
-      // If not a redirect, try to parse as JSON (for errors)
-      let data;
-      try {
-        data = await res.json();
-      } catch (e) {
-        console.error("[SIGNUP PAGE] ❌ Failed to parse response as JSON");
-        setApiError("Unexpected response from server");
-        setLoading(false);
-        return;
-      }
+      const data = await res.json();
 
       console.log("[SIGNUP PAGE] 📥 Parsed JSON response:", {
         dataOk: data.ok,
         hasError: !!data.error,
         error: data.error,
+        redirect: data.redirect,
       });
 
       if (!res.ok || !data.ok) {
@@ -138,10 +118,40 @@ export default function SignupPage() {
         return;
       }
 
-      // Fallback: if we get here and it's successful, redirect manually
-      console.log("[SIGNUP PAGE] ⚠️ Successful but no redirect, redirecting manually");
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait longer for cookies
-      window.location.href = "/dashboard";
+      console.log("[SIGNUP PAGE] ✅ Signup successful");
+      console.log("[SIGNUP PAGE] 🍪 Checking cookies before redirect...");
+      
+      // Wait for cookies to be set - check multiple times
+      let cookieCheckCount = 0;
+      const maxChecks = 10;
+      const checkInterval = 100; // 100ms between checks
+      
+      while (cookieCheckCount < maxChecks) {
+        await new Promise(resolve => setTimeout(resolve, checkInterval));
+        const cookies = document.cookie;
+        const hasLlSession = cookies.includes("ll_session=");
+        const hasSbAccessToken = cookies.includes("sb-access-token=");
+        
+        console.log(`[SIGNUP PAGE] 🍪 Cookie check ${cookieCheckCount + 1}/${maxChecks}:`, {
+          hasLlSession,
+          hasSbAccessToken,
+          allCookies: cookies,
+        });
+        
+        if (hasLlSession || hasSbAccessToken) {
+          console.log("[SIGNUP PAGE] ✅ Cookies detected, redirecting...");
+          break;
+        }
+        
+        cookieCheckCount++;
+      }
+      
+      if (cookieCheckCount >= maxChecks) {
+        console.warn("[SIGNUP PAGE] ⚠️ Cookies not detected after waiting, redirecting anyway");
+      }
+      
+      console.log("[SIGNUP PAGE] 🔄 Redirecting to:", data.redirect || "/dashboard");
+      window.location.href = data.redirect || "/dashboard";
     } catch (err) {
       console.error(err);
       setApiError("Unexpected error — try again.");
