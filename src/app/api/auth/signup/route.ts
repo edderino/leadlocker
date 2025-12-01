@@ -130,6 +130,12 @@ export async function POST(req: Request) {
       email: contact_email,
       password,
       email_confirm: true,
+      user_metadata: {
+        full_name: owner_name,
+        name: owner_name,
+        phone: sms_number,
+      },
+      phone: sms_number, // Also set phone directly for Auth dashboard
     });
 
     if (authError || !authUser?.user) {
