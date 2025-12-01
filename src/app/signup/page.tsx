@@ -95,11 +95,22 @@ export default function SignupPage() {
         }),
       });
 
-      const data = await res.json();
+      // Check if response is a redirect (status 307/308)
+      if (res.redirected || res.status === 307 || res.status === 308) {
+        console.log("[SIGNUP PAGE] ✅ Signup successful, server is redirecting");
+        // Server-side redirect with cookies - just follow it
+        window.location.href = res.url;
+        return;
+      }
+
+      // If not a redirect, try to parse as JSON (for errors)
+      const data = await res.json().catch(() => ({}));
 
       console.log("[SIGNUP PAGE] 📥 API Response:", {
         ok: res.ok,
         status: res.status,
+        redirected: res.redirected,
+        redirectUrl: res.url,
         dataOk: data.ok,
         hasError: !!data.error,
         error: data.error,
@@ -113,14 +124,9 @@ export default function SignupPage() {
         return;
       }
 
-      console.log("[SIGNUP PAGE] ✅ Signup successful, waiting for cookies...");
-      
-      // Cookie is set server-side; wait for cookies to propagate then redirect
-      // Use window.location for full page reload to ensure cookies are read
+      // Fallback: if we get here, redirect manually
+      console.log("[SIGNUP PAGE] ⚠️ No redirect received, redirecting manually");
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      console.log("[SIGNUP PAGE] 🔄 Redirecting to /dashboard");
-      console.log("[SIGNUP PAGE] 📋 Current cookies before redirect:", document.cookie);
       window.location.href = "/dashboard";
     } catch (err) {
       console.error(err);

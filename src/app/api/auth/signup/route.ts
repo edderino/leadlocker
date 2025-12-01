@@ -294,7 +294,11 @@ export async function POST(req: Request) {
     const refreshToken = session.refresh_token;
     const expiresAt = session.expires_at; // seconds since epoch
 
-    const res = NextResponse.json({ ok: true });
+    // Use redirect response instead of JSON - this ensures cookies are set before redirect
+    // Get the base URL from the request
+    const url = new URL(req.url);
+    const baseUrl = `${url.protocol}//${url.host}`;
+    const res = NextResponse.redirect(new URL("/dashboard", baseUrl));
 
     // Set Supabase-style cookies so existing middleware + SSR works
     const nowSec = Math.floor(Date.now() / 1000);
