@@ -118,6 +118,12 @@ export default async function OnboardingLayout({ children }: { children: ReactNo
       </div>
     );
   } catch (err) {
+    // Next.js redirect() throws a NEXT_REDIRECT error - we need to re-throw it
+    if (err instanceof Error && err.message === "NEXT_REDIRECT") {
+      console.log("[ONBOARDING LAYOUT] 🔄 Re-throwing redirect error");
+      throw err;
+    }
+    
     console.error("[ONBOARDING LAYOUT] ❌ UNEXPECTED ERROR:", err);
     console.error("[ONBOARDING LAYOUT] ❌ Error stack:", err instanceof Error ? err.stack : "No stack");
     return redirect("/login");
