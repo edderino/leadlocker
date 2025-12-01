@@ -6,44 +6,66 @@ import { createClient } from "@supabase/supabase-js";
 export const dynamic = "force-dynamic"; // required for using cookies()
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  console.log("[DASHBOARD LAYOUT] 🚀 Starting auth check");
   try {
     const cookieStore = await cookies();
-    const sessionToken =
-      cookieStore.get("ll_session")?.value ||
-      cookieStore.get("sb-access-token")?.value ||
-      null;
+    const llSession = cookieStore.get("ll_session");
+    const sbAccessToken = cookieStore.get("sb-access-token");
+    const sessionToken = llSession?.value || sbAccessToken?.value || null;
 
-    console.log("[DashboardLayout] Session check:", {
-      has_ll_session: !!cookieStore.get("ll_session")?.value,
-      has_sb_access_token: !!cookieStore.get("sb-access-token")?.value,
+    console.log("[DASHBOARD LAYOUT] 📋 Cookie check:", {
+      has_ll_session: !!llSession?.value,
+      ll_session_value: llSession?.value ? `${llSession.value.substring(0, 20)}...` : "none",
+      has_sb_access_token: !!sbAccessToken?.value,
+      sb_access_token_value: sbAccessToken?.value ? `${sbAccessToken.value.substring(0, 20)}...` : "none",
       has_token: !!sessionToken,
+      all_cookies: cookieStore.getAll().map(c => ({ name: c.name, hasValue: !!c.value })),
     });
 
     if (!sessionToken) {
-      console.log("[DashboardLayout] No session token, redirecting to login");
+      console.error("[DASHBOARD LAYOUT] ❌ No session token found, redirecting to /login");
       return redirect("/login");
     }
+
+    console.log("[DASHBOARD LAYOUT] ✅ Token found, validating...");
 
     // Validate token directly using Supabase admin client (no internal fetch needed)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+    console.log("[DASHBOARD LAYOUT] 🔧 Environment check:", {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceKey: !!serviceKey,
+      supabaseUrlPrefix: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : "none",
+    });
+
     if (!supabaseUrl || !serviceKey) {
-      console.error("[DashboardLayout] Missing Supabase env vars");
+      console.error("[DASHBOARD LAYOUT] ❌ Missing Supabase env vars");
       return redirect("/login");
     }
 
+    console.log("[DASHBOARD LAYOUT] 🔐 Creating Supabase admin client...");
     const admin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false },
     });
 
+    console.log("[DASHBOARD LAYOUT] 🔍 Validating token with Supabase...");
     const {
       data: userRes,
       error: userErr,
     } = await admin.auth.getUser(sessionToken);
 
+    console.log("[DASHBOARD LAYOUT] 📋 Token validation result:", {
+      hasError: !!userErr,
+      errorMessage: userErr?.message,
+      errorStatus: userErr?.status,
+      hasUser: !!userRes?.user,
+      userId: userRes?.user?.id,
+      userEmail: userRes?.user?.email,
+    });
+
     if (userErr || !userRes?.user) {
-      console.error("[DashboardLayout] Invalid token:", {
+      console.error("[DASHBOARD LAYOUT] ❌ Invalid token, redirecting to /login:", {
         error: userErr,
         message: userErr?.message,
         status: userErr?.status,
@@ -53,39 +75,55 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     }
 
     const userId = userRes.user.id;
+    console.log("[DASHBOARD LAYOUT] ✅ Token valid, user ID:", userId);
 
     // Fetch client row
+    console.log("[DASHBOARD LAYOUT] 🔍 Fetching client row for user_id:", userId);
     const { data: client, error: clientErr } = await admin
       .from("clients")
       .select("*")
       .eq("user_id", userId)
       .maybeSingle();
 
+    console.log("[DASHBOARD LAYOUT] 📋 Client fetch result:", {
+      hasError: !!clientErr,
+      errorMessage: clientErr?.message,
+      hasClient: !!client,
+      clientId: client?.id,
+      clientSlug: client?.slug,
+      onboarding_complete: client?.onboarding_complete,
+      onboarding_complete_type: typeof client?.onboarding_complete,
+    });
+
     if (clientErr) {
-      console.error("[DashboardLayout] Database error:", clientErr);
+      console.error("[DASHBOARD LAYOUT] ❌ Database error, redirecting to /login:", clientErr);
       return redirect("/login");
     }
 
-    console.log("[DashboardLayout] Client data:", {
-      has_client: !!client,
-      onboarding_complete: client?.onboarding_complete,
-      client_id: client?.id,
-    });
-
     // If no client found, redirect to login
     if (!client) {
-      console.log("[DashboardLayout] No client found, redirecting to login");
+      console.error("[DASHBOARD LAYOUT] ❌ No client found for user_id:", userId, "redirecting to /login");
       return redirect("/login");
     }
 
     // 🚧 BLOCK dashboard if onboarding not complete
     // onboarding_complete can be null, false, or true - only allow true
+    console.log("[DASHBOARD LAYOUT] 🔍 Checking onboarding status:", {
+      onboarding_complete: client.onboarding_complete,
+      onboarding_complete_type: typeof client.onboarding_complete,
+      isTrue: client.onboarding_complete === true,
+      isNotTrue: client.onboarding_complete !== true,
+    });
+
     if (client.onboarding_complete !== true) {
-      console.log("[DashboardLayout] Onboarding incomplete, redirecting to /onboarding", {
+      console.log("[DASHBOARD LAYOUT] ⚠️ Onboarding incomplete, redirecting to /onboarding", {
         onboarding_complete: client.onboarding_complete,
+        type: typeof client.onboarding_complete,
       });
       return redirect("/onboarding");
     }
+
+    console.log("[DASHBOARD LAYOUT] ✅ All checks passed, rendering dashboard");
 
     return (
       <div className="min-h-screen flex flex-col bg-black text-white">
@@ -93,7 +131,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       </div>
     );
   } catch (err) {
-    console.error("DashboardLayout error:", err);
+    console.error("[DASHBOARD LAYOUT] ❌ UNEXPECTED ERROR:", err);
+    console.error("[DASHBOARD LAYOUT] ❌ Error stack:", err instanceof Error ? err.stack : "No stack");
     return redirect("/login");
   }
 }

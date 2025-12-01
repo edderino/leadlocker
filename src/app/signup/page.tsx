@@ -97,15 +97,30 @@ export default function SignupPage() {
 
       const data = await res.json();
 
+      console.log("[SIGNUP PAGE] 📥 API Response:", {
+        ok: res.ok,
+        status: res.status,
+        dataOk: data.ok,
+        hasError: !!data.error,
+        error: data.error,
+        responseHeaders: Object.fromEntries(res.headers.entries()),
+      });
+
       if (!res.ok || !data.ok) {
+        console.error("[SIGNUP PAGE] ❌ Signup failed:", data.error);
         setApiError(data.error || "Something went wrong");
         setLoading(false);
         return;
       }
 
+      console.log("[SIGNUP PAGE] ✅ Signup successful, waiting for cookies...");
+      
       // Cookie is set server-side; wait for cookies to propagate then redirect
       // Use window.location for full page reload to ensure cookies are read
       await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log("[SIGNUP PAGE] 🔄 Redirecting to /dashboard");
+      console.log("[SIGNUP PAGE] 📋 Current cookies before redirect:", document.cookie);
       window.location.href = "/dashboard";
     } catch (err) {
       console.error(err);

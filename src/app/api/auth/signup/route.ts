@@ -326,11 +326,18 @@ export async function POST(req: Request) {
         maxAge: 60 * 60 * 24 * 7,
       });
       
-      console.log("[Signup] Cookies set:", {
+      console.log("[SIGNUP API] ✅ Cookies set successfully:", {
         sb_access_token: "set",
         ll_session: "set",
         secure: isProduction,
         maxAge: accessMaxAge,
+        accessTokenLength: accessToken?.length || 0,
+        accessTokenPrefix: accessToken?.substring(0, 20) || "none",
+        cookieOptions: cookieOptions,
+      });
+      console.log("[SIGNUP API] 📋 Response headers being set:", {
+        hasSetCookie: true,
+        cookieCount: 2,
       });
     }
 
@@ -344,9 +351,10 @@ export async function POST(req: Request) {
       });
     }
 
+    console.log("[SIGNUP API] ✅ Returning response with cookies");
     return res;
   } catch (err: any) {
-    console.error("SIGNUP ERROR:", err);
+    console.error("[SIGNUP API] ❌ ERROR:", err);
     return NextResponse.json(
       { error: "Server error. Try again." },
       { status: 500 }

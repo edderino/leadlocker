@@ -38,25 +38,38 @@ export default function LoginPage() {
 
       const data = await res.json();
 
+      console.log("[LOGIN PAGE] 📥 API Response:", {
+        ok: res.ok,
+        status: res.status,
+        dataOk: data.ok,
+        hasError: !!data.error,
+        error: data.error,
+        hasToken: !!data.token,
+        responseHeaders: Object.fromEntries(res.headers.entries()),
+      });
+
       if (!res.ok || !data.ok) {
+        console.error("[LOGIN PAGE] ❌ Login failed:", data.error);
         setApiError(data.error || "Login failed");
         setLoading(false);
         return;
       }
 
-      console.log("[Login] Success, redirecting to:", from);
+      console.log("[LOGIN PAGE] ✅ Login successful, redirecting to:", from);
 
       if (data.token) {
         localStorage.setItem("ll_token", data.token as string);
+        console.log("[LOGIN PAGE] 💾 Token saved to localStorage");
       }
 
       // Wait longer for cookies to be fully set and propagated
       // This ensures middleware sees the cookies on the next request
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      console.log("[LOGIN PAGE] 🔄 Redirecting to:", from);
+      console.log("[LOGIN PAGE] 📋 Current cookies before redirect:", document.cookie);
       // Use window.location for a full page reload to ensure cookies are read
       // This forces a complete page reload so cookies are definitely sent
-      console.log("[Login] Redirecting to:", from);
       window.location.href = from;
     } catch (err) {
       console.error(err);

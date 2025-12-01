@@ -90,11 +90,18 @@ export async function POST(req: Request) {
         maxAge: 60 * 60 * 24 * 7, // 7 days
       });
       
-      console.log("[Login] Cookies set:", {
+      console.log("[LOGIN API] ✅ Cookies set successfully:", {
         sb_access_token: "set",
         ll_session: "set",
         secure: isProduction,
         maxAge: accessMaxAge,
+        accessTokenLength: accessToken?.length || 0,
+        accessTokenPrefix: accessToken?.substring(0, 20) || "none",
+        cookieOptions: cookieOptions,
+      });
+      console.log("[LOGIN API] 📋 Response headers being set:", {
+        hasSetCookie: true,
+        cookieCount: 2,
       });
     }
 
@@ -108,9 +115,10 @@ export async function POST(req: Request) {
       });
     }
 
+    console.log("[LOGIN API] ✅ Returning response with cookies");
     return res;
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
+    console.error("[LOGIN API] ❌ ERROR:", err);
     return NextResponse.json(
       { error: "Server error. Try again." },
       { status: 500 }
