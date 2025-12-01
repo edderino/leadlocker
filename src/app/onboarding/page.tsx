@@ -109,6 +109,35 @@ export default function OnboardingPage() {
         </p>
       </div>
 
+      {/* Gmail verification code (if we detected Google's email but forwarding not yet active) */}
+      {client?.gmail_forwarding_code && !client?.forwarding_confirmed && (
+        <div className="w-full max-w-2xl mb-8 bg-zinc-900 border border-yellow-600 rounded-xl p-4">
+          <h2 className="text-xl font-semibold mb-2">
+            Gmail forwarding confirmation code detected
+          </h2>
+          <p className="text-gray-300 mb-2">
+            We received Google's email asking you to confirm email forwarding.
+            Copy this code into Gmail to finish the setup:
+          </p>
+          <div className="inline-block mt-2 mb-3 font-mono text-lg bg-black px  -4 py-2 rounded border border-yellow-500">
+            {client.gmail_forwarding_code}
+          </div>
+          <ol className="mt-2 text-gray-300 list-decimal list-inside space-y-1 text-sm">
+            <li>
+              In Gmail, open <strong>Settings</strong> →{" "}
+              <strong>See all settings</strong>.
+            </li>
+            <li>
+              Go to the <strong>Forwarding and POP/IMAP</strong> tab.
+            </li>
+            <li>
+              Next to your LeadLocker address, click <strong>Verify</strong>.
+            </li>
+            <li>Paste the code above into the Gmail dialog and confirm.</li>
+          </ol>
+        </div>
+      )}
+
       {/* Forwarding status display */}
       <div className="mb-8">
         {status === "not-connected" && (
