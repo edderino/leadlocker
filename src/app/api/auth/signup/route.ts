@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/libs/supabaseAdmin";
+import { Resend } from "resend";
 
 /**
  * LeadLocker – Client Signup API
@@ -267,6 +268,78 @@ export async function POST(req: Request) {
       user_id: insertedClient.user_id,
       slug: insertedClient.slug,
     });
+
+    // ==============================
+    // SEND WELCOME + ONBOARDING EMAIL
+    // ==============================
+    try {
+      if (process.env.RESEND_API_KEY) {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+
+        const clientEmail = contact_email.trim();
+        const clientName =
+          owner_name.trim() || business_name.trim() || "there";
+        const forwardingAddress = insertedClient.inbound_email;
+        const appUrl =
+          process.env.NEXT_PUBLIC_APP_URL || "https://leadlocker.app";
+
+        await resend.emails.send({
+          from: "LeadLocker <noreply@mg.leadlocker.app>",
+          to: clientEmail,
+          subject: "Welcome to LeadLocker — Final Setup Step",
+          html: `
+            <div style="font-family:Arial, sans-serif; font-size:16px; line-height:1.6; color:#111;">
+              <h2>Welcome to LeadLocker, ${clientName}!</h2>
+
+              <p>You're almost ready to receive instant SMS alerts for every new lead.</p>
+
+              <p>To activate your account, please forward your business email to:</p>
+
+              <p style="font-size:18px; font-weight:bold; margin:20px 0;">
+                ${forwardingAddress}
+              </p>
+
+              <p>Once forwarding is set up, LeadLocker will immediately start capturing leads and sending you notifications.</p>
+
+              <hr style="margin:24px 0;" />
+
+              <h3>📬 Gmail Setup Instructions</h3>
+
+              <ol>
+                <li>Open Gmail.</li>
+                <li>Click the gear icon → <strong>See all settings</strong>.</li>
+                <li>Select <strong>Forwarding and POP/IMAP</strong>.</li>
+                <li>Click <strong>Add a forwarding address</strong>.</li>
+                <li>Enter: <strong>${forwardingAddress}</strong>.</li>
+                <li>Click <strong>Next → Proceed → OK</strong>.</li>
+                <li>Refresh Gmail and click the confirmation banner when it appears.</li>
+              </ol>
+
+              <hr style="margin:24px 0;" />
+
+              <p>You can finish onboarding anytime here:</p>
+
+              <p>
+                <a href="${appUrl}/onboarding" 
+                   style="font-size:16px; color:#0066ff; text-decoration:none;">
+                  Complete Setup →
+                </a>
+              </p>
+
+              <p>If you have any questions, simply reply to this email.</p>
+
+              <p>— LeadLocker Team</p>
+            </div>
+          `,
+        });
+
+        console.log("📧 Onboarding email sent successfully");
+      } else {
+        console.warn("RESEND_API_KEY not set - skipping onboarding email");
+      }
+    } catch (emailErr) {
+      console.error("❌ Failed to send onboarding email:", emailErr);
+    }
 
     // ---------------------------------------------
     // 7. Auto-login: create a session for them
