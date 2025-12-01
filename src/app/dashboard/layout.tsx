@@ -149,7 +149,13 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     );
   } catch (err) {
     // Next.js redirect() throws a NEXT_REDIRECT error - we need to re-throw it
-    if (err instanceof Error && err.message === "NEXT_REDIRECT") {
+    // Check both message and digest (digest is more reliable)
+    const isRedirect = 
+      (err instanceof Error && err.message === "NEXT_REDIRECT") ||
+      (err && typeof err === "object" && "digest" in err && 
+       typeof err.digest === "string" && err.digest.startsWith("NEXT_REDIRECT"));
+    
+    if (isRedirect) {
       console.log("[DASHBOARD LAYOUT] 🔄 Re-throwing redirect error");
       throw err;
     }
