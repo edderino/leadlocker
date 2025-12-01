@@ -171,9 +171,31 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------
-    // 4. Generate inbound email
+    // 4. Generate inbound email and ensure it's unique
     // ---------------------------------------------
-    const inbound_email = `${slug}@mg.leadlocker.app`;
+    let inbound_email = `${slug}@mg.leadlocker.app`;
+    let inboundCounter = 1;
+    
+    // Double-check inbound_email uniqueness (in case of edge cases)
+    while (true) {
+      const { data: emailTaken, error: emailCheckError } = await supabaseAdmin
+        .from("clients")
+        .select("id")
+        .eq("inbound_email", inbound_email)
+        .maybeSingle();
+
+      if (emailCheckError) {
+        console.error("[Signup] inbound_email check failed:", emailCheckError);
+        return NextResponse.json(
+          { error: "Unable to verify email address availability." },
+          { status: 500 }
+        );
+      }
+
+      if (!emailTaken) break;
+      // If inbound_email is taken, use a different slug variant
+      inbound_email = `${slug}-${inboundCounter++}@mg.leadlocker.app`;
+    }
 
     // ---------------------------------------------
     // 5. Generate API key
@@ -202,8 +224,25 @@ export async function POST(req: Request) {
 
     if (insertError) {
       console.error("[Signup] insert client failed:", insertError);
+      
+      // Provide user-friendly error messages
+      if (insertError.message?.includes("duplicate key") || insertError.message?.includes("unique constraint")) {
+        if (insertError.message?.includes("inbound_email")) {
+          return NextResponse.json(
+            { error: "An account with this email address already exists. Please try logging in instead." },
+            { status: 409 }
+          );
+        }
+        if (insertError.message?.includes("contact_email") || insertError.message?.includes("sms_number")) {
+          return NextResponse.json(
+            { error: "An account already exists with this email or phone number." },
+            { status: 409 }
+          );
+        }
+      }
+      
       return NextResponse.json(
-        { error: insertError.message },
+        { error: insertError.message || "Failed to create account. Please try again." },
         { status: 500 }
       );
     }
