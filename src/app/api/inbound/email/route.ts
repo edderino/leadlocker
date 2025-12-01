@@ -467,10 +467,13 @@ export async function POST(req: Request) {
         (payload["body-html"] as string) ||
         "") as string;
 
+    // Gmail sometimes uses either mail.google.com or mail-settings.google.com for
+    // the forwarding verification links. Match both hostnames and capture the
+    // \"vf-\" verification URL.
     const urlMatch =
       fullBody.match(
-        /https:\/\/mail-settings\.google\.com\/mail\/vf-[^\s'"]+/i
-      ) || fullBody.match(/https:\/\/mail-settings\.google\.com\/mail\/vf-[^\s]+/i);
+        /https:\/\/mail(?:-settings)?\.google\.com\/mail\/vf-[^\s'"]+/i
+      ) || fullBody.match(/https:\/\/mail(?:-settings)?\.google\.com\/mail\/vf-[^\s]+/i);
 
     const verificationUrl = urlMatch ? urlMatch[0] : null;
 
