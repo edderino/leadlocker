@@ -109,19 +109,31 @@ export default function OnboardingPage() {
         </p>
       </div>
 
-      {/* Gmail verification code (if we detected Google's email but forwarding not yet active) */}
+      {/* Gmail verification link/code (if we detected Google's email but forwarding not yet active) */}
       {client?.gmail_forwarding_code && !client?.forwarding_confirmed && (
         <div className="w-full max-w-2xl mb-8 bg-zinc-900 border border-yellow-600 rounded-xl p-4">
           <h2 className="text-xl font-semibold mb-2">
-            Gmail forwarding confirmation code detected
+            Gmail forwarding confirmation detected
           </h2>
           <p className="text-gray-300 mb-2">
             We received Google's email asking you to confirm email forwarding.
-            Copy this code into Gmail to finish the setup:
+            Use the link below in Gmail to finish the setup:
           </p>
-          <div className="inline-block mt-2 mb-3 font-mono text-lg bg-black px  -4 py-2 rounded border border-yellow-500">
-            {client.gmail_forwarding_code}
-          </div>
+          {typeof client.gmail_forwarding_code === "string" &&
+          client.gmail_forwarding_code.startsWith("http") ? (
+            <a
+              href={client.gmail_forwarding_code}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block mt-2 mb-3 font-mono text-sm bg-black px-4 py-2 rounded border border-yellow-500 break-all text-blue-300 hover:text-blue-100"
+            >
+              {client.gmail_forwarding_code}
+            </a>
+          ) : (
+            <div className="inline-block mt-2 mb-3 font-mono text-lg bg-black px-4 py-2 rounded border border-yellow-500">
+              {client.gmail_forwarding_code}
+            </div>
+          )}
           <ol className="mt-2 text-gray-300 list-decimal list-inside space-y-1 text-sm">
             <li>
               In Gmail, open <strong>Settings</strong> →{" "}
@@ -133,7 +145,10 @@ export default function OnboardingPage() {
             <li>
               Next to your LeadLocker address, click <strong>Verify</strong>.
             </li>
-            <li>Paste the code above into the Gmail dialog and confirm.</li>
+            <li>
+              If Gmail asks for a code, paste it from the email. If Gmail shows
+              a link, open the link above and follow the prompts.
+            </li>
           </ol>
         </div>
       )}

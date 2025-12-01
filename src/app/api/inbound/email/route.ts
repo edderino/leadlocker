@@ -375,9 +375,16 @@ export async function POST(req: Request) {
   console.log("📩 [INBOUND] Parsed payload:", payload);
 
   const headerMap = parseHeaderMap(payload["message-headers"]);
-  const { raw: subjectRaw, normalized: subjectNorm } = getCanonicalSubject(payload);
+  const { raw: subjectRaw, normalized: subjectNorm } = getCanonicalSubject(
+    payload
+  );
   const { raw: bodyRaw, normalized: bodyNorm } = getCanonicalBody(payload);
   const { raw: fromHeader, lower: fromLower } = getFromHeader(payload);
+
+  // Detect Gmail forwarding verification emails so we can handle them specially.
+  const isGmailForwardingVerificationEmail =
+    fromLower.includes("forwarding-noreply@google.com") &&
+    subjectNorm.includes("gmail forwarding confirmation");
 
   // Supabase client (service role)
   const supabase = createClient(
@@ -434,12 +441,86 @@ export async function POST(req: Request) {
 
   console.log("🏷 Matched client:", client.id);
 
-  // =====================================
+  // ======================================================
+  // SPECIAL CASE: GMAIL FORWARDING VERIFICATION EMAIL
+  // ======================================================
+  // Gmail sends a \"Gmail Forwarding Confirmation\" email to the destination
+  // address (the LeadLocker inbound address). This email contains a
+  // verification URL that the user must visit in their own Gmail session.
+  //
+  // We should NOT:
+  // - treat this as a real lead
+  // - or mark forwarding as confirmed
+  //
+  // Instead, we extract the URL and store it so the onboarding UI can show the
+  // user a button to complete the step in Gmail.
+  if (isGmailForwardingVerificationEmail) {
+    console.log(
+      "📨 Detected Gmail forwarding verification email for client:",
+      client.id
+    );
+
+    const fullBody =
+      ((payload["stripped-text"] as string) ||
+        (payload["body-plain"] as string) ||
+        (payload["stripped-html"] as string) ||
+        (payload["body-html"] as string) ||
+        "") as string;
+
+    const urlMatch =
+      fullBody.match(
+        /https:\/\/mail-settings\.google\.com\/mail\/vf-[^\s'"]+/i
+      ) || fullBody.match(/https:\/\/mail-settings\.google\.com\/mail\/vf-[^\s]+/i);
+
+    const verificationUrl = urlMatch ? urlMatch[0] : null;
+
+    if (!verificationUrl) {
+      console.warn(
+        "⚠️ Could not find Gmail forwarding verification URL in body for client:",
+        client.id
+      );
+    } else {
+      console.log(
+        "🔗 Extracted Gmail forwarding verification URL:",
+        verificationUrl
+      );
+
+      const { error: updateError } = await supabase
+        .from("clients")
+        .update({
+          // Reuse gmail_forwarding_code column to store the verification URL.
+          // It may contain either a numeric code or a URL; the UI will handle both.
+          gmail_forwarding_code: verificationUrl,
+          gmail_forwarding_verified: false,
+        })
+        .eq("id", client.id);
+
+      if (updateError) {
+        console.error(
+          "❌ Failed to store Gmail forwarding verification URL:",
+          updateError
+        );
+      } else {
+        console.log(
+          "✅ Stored Gmail forwarding verification URL for client:",
+          client.id
+        );
+      }
+    }
+
+    // Do NOT mark forwarding as confirmed yet and do not create a lead.
+    // The user still needs to click this URL in their browser.
+    return NextResponse.json({
+      ok: true,
+      gmail_verification: true,
+    });
+  }
+
+  // ======================================================
   // AUTO-DETECT FORWARDING CONFIRMATION
-  // =====================================
-  // When the FIRST email arrives for a client's inbound address, we mark
-  // forwarding as confirmed. This works for:
-  // - Gmail verification emails
+  // ======================================================
+  // When the FIRST *non-verification* email arrives for a client's inbound
+  // address, we mark forwarding as confirmed. This works for:
   // - Test emails
   // - Any real customer enquiry
   //
@@ -448,7 +529,7 @@ export async function POST(req: Request) {
   //   forwarding_confirmed_at timestamptz
   if (!client.forwarding_confirmed) {
     console.log(
-      "🎉 FIRST EMAIL DETECTED — Marking forwarding as confirmed for client:",
+      "🎉 FIRST REAL EMAIL DETECTED — Marking forwarding as confirmed for client:",
       client.id
     );
 
