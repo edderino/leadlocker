@@ -78,7 +78,16 @@ export async function POST(req: Request) {
         secure: isProduction,
         sameSite: "lax" as const,
         path: "/",
+        // Don't set domain - let it default to current domain
       };
+      
+      console.log("[LOGIN API] 🍪 Setting cookies with options:", {
+        ...cookieOptions,
+        maxAge_access: accessMaxAge,
+        maxAge_session: 60 * 60 * 24 * 7,
+        isProduction,
+        accessTokenLength: accessToken.length,
+      });
       
       res.cookies.set("sb-access-token", accessToken, {
         ...cookieOptions,
@@ -88,6 +97,14 @@ export async function POST(req: Request) {
       res.cookies.set("ll_session", accessToken, {
         ...cookieOptions,
         maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+      
+      // Verify cookies were actually set on the response
+      const setCookieHeaders = res.headers.get("set-cookie");
+      console.log("[LOGIN API] ✅ Set-Cookie headers:", {
+        hasSetCookie: !!setCookieHeaders,
+        setCookieCount: setCookieHeaders ? setCookieHeaders.split(", ").length : 0,
+        setCookiePreview: setCookieHeaders ? setCookieHeaders.substring(0, 200) : "none",
       });
       
       console.log("[LOGIN API] ✅ Cookies set successfully:", {

@@ -7,8 +7,23 @@ export const dynamic = "force-dynamic"; // required for using cookies()
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   console.log("[DASHBOARD LAYOUT] 🚀 Starting auth check");
+  console.log("[DASHBOARD LAYOUT] ⏰ Timestamp:", new Date().toISOString());
   try {
     const cookieStore = await cookies();
+    
+    // Get ALL cookies to see what the server actually received
+    const allCookies = cookieStore.getAll();
+    console.log("[DASHBOARD LAYOUT] 📦 ALL COOKIES RECEIVED BY SERVER:", {
+      totalCookies: allCookies.length,
+      cookieNames: allCookies.map(c => c.name),
+      cookieDetails: allCookies.map(c => ({
+        name: c.name,
+        hasValue: !!c.value,
+        valueLength: c.value?.length || 0,
+        valuePrefix: c.value ? `${c.value.substring(0, 30)}...` : "empty",
+      })),
+    });
+    
     const llSession = cookieStore.get("ll_session");
     const sbAccessToken = cookieStore.get("sb-access-token");
     const sessionToken = llSession?.value || sbAccessToken?.value || null;
@@ -16,10 +31,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     console.log("[DASHBOARD LAYOUT] 📋 Cookie check:", {
       has_ll_session: !!llSession?.value,
       ll_session_value: llSession?.value ? `${llSession.value.substring(0, 20)}...` : "none",
+      ll_session_full_length: llSession?.value?.length || 0,
       has_sb_access_token: !!sbAccessToken?.value,
       sb_access_token_value: sbAccessToken?.value ? `${sbAccessToken.value.substring(0, 20)}...` : "none",
+      sb_access_token_full_length: sbAccessToken?.value?.length || 0,
       has_token: !!sessionToken,
-      all_cookies: cookieStore.getAll().map(c => ({ name: c.name, hasValue: !!c.value })),
+      token_length: sessionToken?.length || 0,
     });
 
     if (!sessionToken) {
