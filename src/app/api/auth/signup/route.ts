@@ -151,6 +151,7 @@ export async function POST(req: Request) {
 
     // ---------------------------------------------
     // 3. Generate unique slug (clean, lowercase)
+    //    and local-part for inbound email
     // ---------------------------------------------
     const baseSlug = slugify(business_name);
     let slug = baseSlug;
@@ -178,9 +179,14 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------
-    // 4. Generate inbound email and ensure it's unique
+    // 4. Generate inbound email (local-part based on business_name)
+    //    and ensure it's unique
     // ---------------------------------------------
-    let inbound_email = `${slug}@mg.leadlocker.app`;
+    const local = business_name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+
+    let inbound_email = `${local}@mg.leadlocker.app`;
     let inboundCounter = 1;
     
     // Double-check inbound_email uniqueness (in case of edge cases)
