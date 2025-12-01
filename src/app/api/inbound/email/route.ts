@@ -434,6 +434,42 @@ export async function POST(req: Request) {
 
   console.log("🏷 Matched client:", client.id);
 
+  // =====================================
+  // AUTO-DETECT FORWARDING CONFIRMATION
+  // =====================================
+  // When the FIRST email arrives for a client's inbound address, we mark
+  // forwarding as confirmed. This works for:
+  // - Gmail verification emails
+  // - Test emails
+  // - Any real customer enquiry
+  //
+  // NOTE: Requires these columns on clients:
+  //   forwarding_confirmed boolean NOT NULL DEFAULT false
+  //   forwarding_confirmed_at timestamptz
+  if (!client.forwarding_confirmed) {
+    console.log(
+      "🎉 FIRST EMAIL DETECTED — Marking forwarding as confirmed for client:",
+      client.id
+    );
+
+    const { error: forwardingUpdateError } = await supabase
+      .from("clients")
+      .update({
+        forwarding_confirmed: true,
+        forwarding_confirmed_at: new Date().toISOString(),
+      })
+      .eq("id", client.id);
+
+    if (forwardingUpdateError) {
+      console.error(
+        "❌ Failed to mark forwarding as confirmed:",
+        forwardingUpdateError
+      );
+    } else {
+      console.log("✅ Forwarding confirmed for client:", client.id);
+    }
+  }
+
   // ======================================================
   // GMAIL VERIFICATION CODE AUTO-DETECTION
   // Check BEFORE hard filters so we can process verification emails
