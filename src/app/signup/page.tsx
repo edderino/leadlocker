@@ -95,26 +95,40 @@ export default function SignupPage() {
         }),
       });
 
-      // Check if response is a redirect (status 307/308)
-      if (res.redirected || res.status === 307 || res.status === 308) {
-        console.log("[SIGNUP PAGE] ✅ Signup successful, server is redirecting");
-        // Server-side redirect with cookies - just follow it
-        window.location.href = res.url;
-        return;
-      }
-
-      // If not a redirect, try to parse as JSON (for errors)
-      const data = await res.json().catch(() => ({}));
-
       console.log("[SIGNUP PAGE] 📥 API Response:", {
         ok: res.ok,
         status: res.status,
         redirected: res.redirected,
-        redirectUrl: res.url,
+        url: res.url,
+        type: res.type,
+        responseHeaders: Object.fromEntries(res.headers.entries()),
+      });
+
+      // If it's a redirect response (307/308), the browser should follow it automatically
+      // But fetch() doesn't automatically follow redirects, so we need to check
+      if (res.status === 307 || res.status === 308 || res.redirected) {
+        console.log("[SIGNUP PAGE] ✅ Server returned redirect, following it:", res.url);
+        // The redirect response includes Set-Cookie headers
+        // We need to let the browser handle the redirect to include cookies
+        window.location.href = res.url || "/dashboard";
+        return;
+      }
+
+      // If not a redirect, try to parse as JSON (for errors)
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        console.error("[SIGNUP PAGE] ❌ Failed to parse response as JSON");
+        setApiError("Unexpected response from server");
+        setLoading(false);
+        return;
+      }
+
+      console.log("[SIGNUP PAGE] 📥 Parsed JSON response:", {
         dataOk: data.ok,
         hasError: !!data.error,
         error: data.error,
-        responseHeaders: Object.fromEntries(res.headers.entries()),
       });
 
       if (!res.ok || !data.ok) {
@@ -124,9 +138,9 @@ export default function SignupPage() {
         return;
       }
 
-      // Fallback: if we get here, redirect manually
-      console.log("[SIGNUP PAGE] ⚠️ No redirect received, redirecting manually");
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Fallback: if we get here and it's successful, redirect manually
+      console.log("[SIGNUP PAGE] ⚠️ Successful but no redirect, redirecting manually");
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait longer for cookies
       window.location.href = "/dashboard";
     } catch (err) {
       console.error(err);
