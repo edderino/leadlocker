@@ -51,15 +51,10 @@ export default async function DashboardLayout({
     }
 
     // ---------------------------
-    // 4. CHECK ONBOARDING
+    // 4. RENDER LAYOUT
     // ---------------------------
-    if (!client.onboarding_complete) {
-      redirect("/onboarding");
-    }
-
-    // ---------------------------
-    // 5. RENDER LAYOUT
-    // ---------------------------
+    // Note: Onboarding check is handled by the dashboard page, not the layout
+    // This allows the layout to always render and the page to decide what to show
     return (
       <div className="min-h-screen flex flex-col bg-black text-white">
         {children}

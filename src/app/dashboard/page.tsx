@@ -3,52 +3,45 @@
 import { useEffect, useState } from "react";
 import DashboardClientRoot from "@/components/client/DashboardClientRoot";
 
-/**
- * Dashboard Page
- * 
- * This page is protected by the dashboard layout which handles:
- * - Authentication checks
- * - Onboarding gate
- * - Client data validation
- * 
- * This component only needs to render the dashboard UI.
- * If this component renders, the user is authenticated and onboarding is complete.
- */
 export default function DashboardPage() {
-  const [client, setClient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [client, setClient] = useState<any>(null);
 
-  // Fetch client data for UI (orgId, etc.)
-  // Auth is already validated by the layout
   useEffect(() => {
-    async function loadClient() {
+    async function load() {
       try {
         const res = await fetch("/api/auth/me", {
+          method: "GET",
           credentials: "include",
-          cache: "no-store",
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data.client) {
-            setClient(data.client);
-          }
+        if (!res.ok) {
+          window.location.href = "/login";
+          return;
         }
+
+        const data = await res.json();
+
+        if (data.client?.onboarding_complete === false) {
+          window.location.href = "/onboarding";
+          return;
+        }
+
+        setClient(data.client);
       } catch (err) {
-        console.error("[Dashboard] Error loading client data:", err);
-        // Don't redirect - layout handles auth failures
+        window.location.href = "/login";
       } finally {
         setLoading(false);
       }
     }
 
-    loadClient();
+    load();
   }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-600">Loading...</p>
+      <div className="text-white flex items-center justify-center h-screen">
+        Loading dashboard…
       </div>
     );
   }

@@ -1,55 +1,59 @@
 import { NextResponse } from "next/server";
-import { NextRequest } from "next/server";
-import { verifyClientSession } from "@/app/api/_lib/verifyClientSession";
+import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
+import { verifyClientSession } from "@/app/api/_lib/verifyClientSession";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const session = await verifyClientSession(req);
-
-    if (session.error || !session.user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    // 1. Verify session
+    const verification = await verifyClientSession(req as any);
+    if (verification.error || !verification.user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
+    const userId = verification.user.id;
+
+    // 2. Supabase admin client
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: { persistSession: false },
-      }
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Get client by user_id
-    const { data: client, error: clientError } = await supabase
+    // 3. Find client row
+    const { data: client, error: fetchErr } = await supabase
       .from("clients")
-      .select("id")
-      .eq("user_id", session.user.id)
+      .select("*")
+      .eq("user_id", userId)
       .maybeSingle();
 
-    if (clientError || !client) {
+    if (fetchErr || !client) {
       return NextResponse.json(
-        { error: "Client not found" },
+        { error: "Client row not found." },
         { status: 404 }
       );
     }
 
-    // Update client to mark onboarding complete
-    const { error } = await supabase
+    // 4. Update onboarding_complete
+    const { error: updateErr } = await supabase
       .from("clients")
       .update({ onboarding_complete: true })
       .eq("id", client.id);
 
-    if (error) {
-      console.error("[OnboardingComplete] DB error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (updateErr) {
+      return NextResponse.json(
+        { error: "Failed to update onboarding status." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    console.error("[OnboardingComplete] Server error:", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json(
+      { error: "Unexpected error", detail: `${err}` },
+      { status: 500 }
+    );
   }
 }
