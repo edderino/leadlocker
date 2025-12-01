@@ -1,12 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Check, ChevronRight, Mail } from "lucide-react";
 import Link from "next/link";
 
+type ForwardingStatus = "not-connected" | "waiting" | "connected";
+
 export default function OnboardingPage() {
+  const router = useRouter();
+
   const [step, setStep] = useState(1);
   const [inboundEmail, setInboundEmail] = useState("");
+  const [client, setClient] = useState<any>(null);
+  const [status, setStatus] = useState<ForwardingStatus>("not-connected");
+  const [checking, setChecking] = useState(false);
 
   // Fetch client data to get inbound_email and store in localStorage
   useEffect(() => {
@@ -17,9 +25,15 @@ export default function OnboardingPage() {
           cache: "no-store",
         });
         const data = await res.json();
-        if (data.client?.inbound_email) {
-          setInboundEmail(data.client.inbound_email);
-          localStorage.setItem("ll_inbound_email", data.client.inbound_email);
+        if (data.client) {
+          setClient(data.client);
+          if (data.client.inbound_email) {
+            setInboundEmail(data.client.inbound_email);
+            localStorage.setItem("ll_inbound_email", data.client.inbound_email);
+          }
+          if (data.client.forwarding_confirmed) {
+            setStatus("connected");
+          }
         }
       } catch (err) {
         console.error("Failed to load client:", err);
@@ -28,17 +42,87 @@ export default function OnboardingPage() {
     load();
   }, []);
 
+  // Real-time polling to detect when forwarding starts working
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | undefined;
+
+    const fetchClient = async () => {
+      setChecking(true);
+
+      try {
+        const res = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        const data = await res.json();
+
+        if (data.client) {
+          setClient(data.client);
+
+          if (data.client.forwarding_confirmed) {
+            setStatus("connected");
+
+            // Allow UI to update for 1 second before redirecting
+            setTimeout(() => {
+              router.push("/dashboard");
+            }, 1000);
+
+            if (interval) {
+              clearInterval(interval);
+            }
+            return; // Don't keep polling
+          } else {
+            setStatus("waiting");
+          }
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+
+      setChecking(false);
+    };
+
+    // Initial load
+    fetchClient();
+
+    // Poll every 5 sec
+    interval = setInterval(fetchClient, 5000);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [router]);
+
   const next = () => setStep((s) => Math.min(s + 1, 3));
   const prev = () => setStep((s) => Math.max(s - 1, 1));
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center px-6 py-16">
       {/* Header */}
-      <div className="text-center mb-16">
+      <div className="text-center mb-8">
         <h1 className="text-4xl font-bold">Let's Get You Set Up</h1>
         <p className="text-gray-400 mt-2">
           Follow these quick steps to start collecting leads instantly.
         </p>
+      </div>
+
+      {/* Forwarding status display */}
+      <div className="mb-8">
+        {status === "not-connected" && (
+          <p className="text-red-400">❌ Forwarding not connected yet.</p>
+        )}
+        {status === "waiting" && (
+          <p className="text-yellow-400">
+            ⏳ Waiting for first forwarded email…
+          </p>
+        )}
+        {status === "connected" && (
+          <p className="text-green-400 text-xl">
+            ✅ Forwarding active — redirecting…
+          </p>
+        )}
       </div>
 
       {/* Step Indicator */}
