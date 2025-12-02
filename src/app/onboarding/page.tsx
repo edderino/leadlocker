@@ -125,9 +125,9 @@ export default function OnboardingPage() {
               href={client.gmail_forwarding_code}
               target="_blank"
               rel="noreferrer"
-              className="inline-block mt-2 mb-3 font-mono text-sm bg-black px-4 py-2 rounded border border-yellow-500 break-all text-blue-300 hover:text-blue-100"
+              className="inline-block mt-2 mb-3 bg-black px-4 py-2 rounded border border-yellow-500 text-blue-300 hover:text-blue-100 underline"
             >
-              {client.gmail_forwarding_code}
+              Click here to open Gmail verification →
             </a>
           ) : (
             <div className="inline-block mt-2 mb-3 font-mono text-lg bg-black px-4 py-2 rounded border border-yellow-500">

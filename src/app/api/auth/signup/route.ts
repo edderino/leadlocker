@@ -239,6 +239,9 @@ export async function POST(req: Request) {
       sms_number,
       inbound_email,
       api_key,
+      // Twilio config per client (global sender, client mobile)
+      twilio_from: "+15074787192",
+      twilio_to: sms_number,
     };
 
     const insertResult = await supabaseAdmin.from("clients").insert(insertPayload);
