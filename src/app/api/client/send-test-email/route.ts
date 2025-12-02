@@ -70,7 +70,7 @@ export async function POST() {
 
     try {
       await resend.emails.send({
-        from: "LeadLocker Test <noreply@leadlocker.app>",
+        from: "LeadLocker <notifications@leadlocker.app>",
         to: testEmailTo,
         subject: "LeadLocker Test Email",
         html: `
