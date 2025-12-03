@@ -675,7 +675,6 @@ export async function POST(req: Request) {
     .from("leads")
     .upsert(
       {
-        user_id: client.user_id,
         client_id: client.id,
         source: "email",
         subject: subjectForDb,
