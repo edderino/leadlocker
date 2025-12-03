@@ -150,14 +150,13 @@ export async function POST(req: Request) {
     const user_id = authUser.user.id;
 
     // ---------------------------------------------
-    // 3. Generate unique slug (clean, lowercase)
-    //    and local-part for inbound email
+    // 3. Generate unique slug (for URLs)
     // ---------------------------------------------
-    const baseSlug = slugify(business_name);
+    const baseSlug = slugify(business_name); // e.g. "red-constructions"
     let slug = baseSlug;
     let counter = 1;
 
-    // ensure uniqueness
+    // ensure slug uniqueness
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const { data: taken, error: slugError } = await supabaseAdmin
@@ -179,17 +178,15 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------
-    // 4. Generate inbound email (local-part based on business_name)
-    //    and ensure it's unique
+    // 4. Generate inbound email (no hyphens)
     // ---------------------------------------------
-    const local = business_name
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
-
-    let inbound_email = `${local}@mg.leadlocker.app`;
+    // Take the slug and remove all non-alphanumerics so users naturally type it
+    const inboundLocalBase = slug.replace(/[^a-z0-9]/g, ""); // "red-constructions" -> "redconstructions"
+    let inboundLocal = inboundLocalBase;
+    let inbound_email = `${inboundLocal}@mg.leadlocker.app`;
     let inboundCounter = 1;
-    
-    // Double-check inbound_email uniqueness (in case of edge cases)
+
+    // ensure inbound_email uniqueness
     while (true) {
       const { data: emailTaken, error: emailCheckError } = await supabaseAdmin
         .from("clients")
@@ -206,8 +203,9 @@ export async function POST(req: Request) {
       }
 
       if (!emailTaken) break;
-      // If inbound_email is taken, use a different slug variant
-      inbound_email = `${slug}-${inboundCounter++}@mg.leadlocker.app`;
+
+      inboundLocal = `${inboundLocalBase}${inboundCounter++}`;
+      inbound_email = `${inboundLocal}@mg.leadlocker.app`;
     }
 
     // ---------------------------------------------
