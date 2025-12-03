@@ -150,8 +150,10 @@ export default function Analytics({ orgId }: AnalyticsProps) {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-neutral-400">
-        <p className="text-sm">Analytics unavailable.</p>
-        <p className="text-xs text-neutral-500">{error}</p>
+        <p className="text-sm">Analytics coming soon.</p>
+        <p className="text-xs text-neutral-500">
+          This section will be activated when Facebook and Instagram lead sources are connected for your account.
+        </p>
       </div>
     );
   }
