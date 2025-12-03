@@ -111,18 +111,24 @@ export default function OnboardingPage() {
 
 
       {/* Forwarding status display */}
-      <div className="mb-8">
+      <div className="mb-8 text-sm text-gray-300">
         {status === "not-connected" && (
-          <p className="text-red-400">❌ Forwarding not connected yet.</p>
+          <p>
+            ❌ Forwarding not connected yet. Follow the steps below in order — you
+            only have to do this once.
+          </p>
         )}
         {status === "waiting" && (
-          <p className="text-yellow-400">
-            ⏳ Waiting for first forwarded email…
+          <p>
+            ⏳ We&apos;re watching for the very first email that Gmail forwards to
+            LeadLocker. As soon as we see it, your setup will be marked as
+            connected.
           </p>
         )}
         {status === "connected" && (
-          <p className="text-green-400 text-xl">
-            ✅ Forwarding active — redirecting…
+          <p className="text-green-400 text-base">
+            ✅ Forwarding is active. Any new enquiry Gmail forwards to your
+            LeadLocker address will become a lead and trigger an SMS.
           </p>
         )}
       </div>
@@ -143,7 +149,7 @@ export default function OnboardingPage() {
         {step === 1 && <Step1 client={client} next={next} />}
         {step === 2 && <Step2 client={client} next={next} prev={prev} />}
         {step === 3 && <Step3 client={client} next={next} prev={prev} />}
-        {step === 4 && <Step4 prev={prev} />}
+        {step === 4 && <Step4 client={client} prev={prev} />}
       </div>
     </div>
   );
@@ -241,9 +247,14 @@ function Step2({
         </button>
         <button
           onClick={next}
-          className="flex items-center bg-white text-black px-5 py-3 rounded-md font-semibold hover:bg-gray-200"
+          disabled={!verificationLink}
+          className={`flex items-center px-5 py-3 rounded-md font-semibold ${
+            verificationLink
+              ? "bg-white text-black hover:bg-gray-200"
+              : "bg-gray-700 text-gray-400 cursor-not-allowed"
+          }`}
         >
-          Continue
+          {verificationLink ? "Continue" : "Waiting for Gmail…"}
           <ChevronRight className="w-5 h-5 ml-2" />
         </button>
       </div>
@@ -307,9 +318,14 @@ function Step3({
         </button>
         <button
           onClick={next}
-          className="flex items-center bg-white text-black px-5 py-3 rounded-md font-semibold hover:bg-gray-200"
+          disabled={!client?.forwarding_confirmed}
+          className={`flex items-center px-5 py-3 rounded-md font-semibold ${
+            client?.forwarding_confirmed
+              ? "bg-white text-black hover:bg-gray-200"
+              : "bg-gray-700 text-gray-400 cursor-not-allowed"
+          }`}
         >
-          Continue
+          {client?.forwarding_confirmed ? "Continue" : "Waiting for first lead…"}
           <ChevronRight className="w-5 h-5 ml-2" />
         </button>
       </div>
@@ -317,13 +333,14 @@ function Step3({
   );
 }
 
-function Step4({ prev }: { prev: () => void }) {
+function Step4({ client, prev }: { client: any; prev: () => void }) {
   return (
     <>
       <h2 className="text-2xl font-semibold mb-4">4. You're Almost Done</h2>
       <p className="text-gray-300 mb-6">
         Once your test email arrives in LeadLocker, you're fully set up. Click
-        below to finish onboarding.
+        below to finish onboarding. You can always adjust forwarding later in
+        your Gmail settings.
       </p>
       <button
         onClick={async () => {
