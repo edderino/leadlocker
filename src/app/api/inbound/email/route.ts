@@ -619,6 +619,33 @@ export async function POST(req: Request) {
     payload,
   });
 
+  // Special case: Allow the very first forwarded email even if empty (to confirm forwarding)
+  // This prevents onboarding from getting stuck when Gmail forwards an email with empty/stripped body
+  if (filterResult.blocked && filterResult.reason === "empty-content" && !client.forwarding_confirmed) {
+    console.log("⚠️ Empty email detected but forwarding not confirmed — using it to confirm forwarding:", client.id);
+    
+    const { error: forwardingUpdateError } = await supabase
+      .from("clients")
+      .update({
+        forwarding_confirmed: true,
+        forwarding_confirmed_at: new Date().toISOString(),
+      })
+      .eq("id", client.id);
+
+    if (forwardingUpdateError) {
+      console.error("❌ Failed to mark forwarding as confirmed:", forwardingUpdateError);
+    } else {
+      console.log("✅ Forwarding confirmed via empty email for client:", client.id);
+    }
+
+    return NextResponse.json({ 
+      ok: true, 
+      forwarding_confirmed: true,
+      note: "Empty email used to confirm forwarding"
+    });
+  }
+
+  // Apply normal hard filters for all other cases
   if (filterResult.blocked) {
     console.log(`🛑 BLOCKED EMAIL – reason: ${filterResult.reason}`);
     return NextResponse.json({
