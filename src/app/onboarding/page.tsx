@@ -11,7 +11,6 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   const [step, setStep] = useState(1);
-  const [inboundEmail, setInboundEmail] = useState("");
   const [client, setClient] = useState<any>(null);
   const [status, setStatus] = useState<ForwardingStatus>("not-connected");
   const [checking, setChecking] = useState(false);
@@ -28,7 +27,6 @@ export default function OnboardingPage() {
         if (data.client) {
           setClient(data.client);
           if (data.client.inbound_email) {
-            setInboundEmail(data.client.inbound_email);
             localStorage.setItem("ll_inbound_email", data.client.inbound_email);
           }
           if (data.client.forwarding_confirmed) {
@@ -61,10 +59,14 @@ export default function OnboardingPage() {
         if (data.client) {
           setClient(data.client);
 
+          // If we've seen the Gmail verification email, move to Step 2
+          if (data.client.gmail_forwarding_code && step < 2) {
+            setStep(2);
+          }
+
+          // If forwarding is confirmed, move to Step 3
           if (data.client.forwarding_confirmed) {
             setStatus("connected");
-            // Auto-advance to step 3 when forwarding is confirmed,
-            // but let the user explicitly click "Finish Setup"
             if (step < 3) {
               setStep(3);
             }
@@ -94,7 +96,7 @@ export default function OnboardingPage() {
     };
   }, [router, step]);
 
-  const next = () => setStep((s) => Math.min(s + 1, 3));
+  const next = () => setStep((s) => Math.min(s + 1, 4));
   const prev = () => setStep((s) => Math.max(s - 1, 1));
 
   return (
@@ -131,14 +133,17 @@ export default function OnboardingPage() {
         <StepLine completed={step > 1} />
         <StepBubble number={2} active={step === 2} completed={step > 2} />
         <StepLine completed={step > 2} />
-        <StepBubble number={3} active={step === 3} completed={false} />
+        <StepBubble number={3} active={step === 3} completed={step > 3} />
+        <StepLine completed={step > 3} />
+        <StepBubble number={4} active={step === 4} completed={false} />
       </div>
 
       {/* Panels */}
       <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-700 rounded-xl p-8 shadow-2xl">
         {step === 1 && <Step1 client={client} next={next} />}
         {step === 2 && <Step2 client={client} next={next} prev={prev} />}
-        {step === 3 && <Step3 prev={prev} />}
+        {step === 3 && <Step3 client={client} next={next} prev={prev} />}
+        {step === 4 && <Step4 prev={prev} />}
       </div>
     </div>
   );
@@ -149,53 +154,6 @@ export default function OnboardingPage() {
 ------------------------------------------------------- */
 
 function Step1({ client, next }: { client: any; next: () => void }) {
-  const verificationLink = client?.gmail_forwarding_code;
-
-  // If we have a Gmail verification link, show it
-  if (verificationLink && typeof verificationLink === "string" && verificationLink.startsWith("http")) {
-    return (
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold mb-4">1. Gmail Forwarding Confirmation</h2>
-        <div className="space-y-4 p-6 bg-gray-900/40 rounded-lg border border-gray-800">
-          <h3 className="text-xl font-semibold">Gmail forwarding confirmation detected</h3>
-          <p className="text-gray-300">
-            We received Google's verification email. Click below to open the Gmail verification page:
-          </p>
-          <a
-            href={verificationLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block text-blue-400 underline hover:text-blue-300"
-          >
-            Click here to open Gmail verification →
-          </a>
-          <ol className="text-gray-400 text-sm space-y-1 mt-3">
-            <li>1. In Gmail, open <strong>Settings → See all settings</strong></li>
-            <li>2. Go to the <strong>Forwarding and POP/IMAP</strong> tab</li>
-            <li>3. Next to your LeadLocker address, click <strong>Verify</strong></li>
-            <li>4. If Gmail asks for a code, paste it from the email</li>
-          </ol>
-          {!client?.forwarding_confirmed && (
-            <p className="text-yellow-400 text-sm mt-4">
-              ⏳ Waiting for Gmail to accept forwarding…
-            </p>
-          )}
-          {client?.forwarding_confirmed && (
-            <p className="text-green-400 text-sm mt-4">✅ Forwarding confirmed!</p>
-          )}
-        </div>
-        <button
-          onClick={next}
-          className="flex items-center bg-white text-black px-5 py-3 rounded-md font-semibold hover:bg-gray-200"
-        >
-          Continue
-          <ChevronRight className="w-5 h-5 ml-2" />
-        </button>
-      </div>
-    );
-  }
-
-  // Default step 1 (no verification link yet)
   return (
     <>
       <h2 className="text-2xl font-semibold mb-4">1. Forward Your Emails</h2>
@@ -236,27 +194,42 @@ function Step2({
   next: () => void;
   prev: () => void;
 }) {
+  const verificationLink = client?.gmail_forwarding_code;
+
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold mb-4">2. Send a Test Email</h2>
+      <h2 className="text-2xl font-semibold mb-4">2. Verify Gmail Forwarding</h2>
       <div className="space-y-4 p-6 bg-gray-900/40 rounded-lg border border-gray-800">
-        <p className="text-gray-300">
-          To confirm your email forwarding is working, send a test email from Gmail to your LeadLocker
-          address.
-        </p>
-        <div>
-          <p className="text-gray-400 mb-1">Your LeadLocker address:</p>
-          <code className="bg-black/40 px-3 py-2 rounded text-blue-300 block">
-            {client?.inbound_email || "Loading..."}
-          </code>
-        </div>
-        {!client?.forwarding_confirmed && (
-          <p className="text-yellow-400 text-sm mt-4">
-            ⏳ Waiting for your test email to arrive…
-          </p>
-        )}
-        {client?.forwarding_confirmed && (
-          <p className="text-green-400 text-sm mt-4">✅ Test email received!</p>
+        {verificationLink && typeof verificationLink === "string" && verificationLink.startsWith("http") ? (
+          <>
+            <p className="text-gray-300">
+              We received Google's verification email. Click below to open the Gmail verification page:
+            </p>
+            <a
+              href={verificationLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-blue-400 underline hover:text-blue-300"
+            >
+              Click here to open Gmail verification →
+            </a>
+            <ol className="text-gray-400 text-sm space-y-1 mt-3">
+              <li>1. In Gmail, open <strong>Settings → See all settings</strong></li>
+              <li>2. Go to the <strong>Forwarding and POP/IMAP</strong> tab</li>
+              <li>3. Next to your LeadLocker address, click <strong>Verify</strong></li>
+              <li>4. If Gmail asks for a code, paste it from the email</li>
+            </ol>
+          </>
+        ) : (
+          <>
+            <p className="text-gray-300">
+              As soon as Gmail sends a forwarding confirmation email to LeadLocker, you'll see a button here
+              to open the verification page.
+            </p>
+            <p className="text-yellow-400 text-sm mt-2">
+              ⏳ Waiting for Gmail to send the verification email…
+            </p>
+          </>
         )}
       </div>
       <div className="flex justify-between">
@@ -278,10 +251,76 @@ function Step2({
   );
 }
 
-function Step3({ prev }: { prev: () => void }) {
+function Step3({
+  client,
+  next,
+  prev,
+}: {
+  client: any;
+  next: () => void;
+  prev: () => void;
+}) {
   return (
     <>
-      <h2 className="text-2xl font-semibold mb-4">3. You're Almost Done</h2>
+      <h2 className="text-2xl font-semibold mb-4">3. Send a Test Email</h2>
+      <p className="text-gray-300 mb-6">
+        After forwarding is confirmed, send a test email so we can detect your first real lead.
+      </p>
+      <div className="space-y-4 p-6 bg-gray-900/40 rounded-lg border border-gray-800 mb-6">
+        <p className="text-gray-300">
+          Send a test email to your regular business inbox. Gmail will forward it to your LeadLocker address
+          automatically.
+        </p>
+        <div>
+          <p className="text-gray-400 mb-1">Your business email:</p>
+          <code className="bg-black/40 px-3 py-2 rounded text-blue-300 block">
+            {client?.contact_email || "Loading..."}
+          </code>
+        </div>
+        <a
+          href={
+            client?.contact_email
+              ? `mailto:${client.contact_email}?subject=Test%20lead&body=This%20is%20a%20test%20lead%20for%20LeadLocker.`
+              : "#"
+          }
+          className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-600"
+        >
+          Send test email →
+        </a>
+        {!client?.forwarding_confirmed && (
+          <p className="text-yellow-400 text-sm mt-4">
+            ⏳ Waiting for your first forwarded email…
+          </p>
+        )}
+        {client?.forwarding_confirmed && (
+          <p className="text-green-400 text-sm mt-4">
+            ✅ We have received at least one forwarded email and created a lead.
+          </p>
+        )}
+      </div>
+      <div className="flex justify-between">
+        <button
+          onClick={prev}
+          className="text-gray-300 hover:text-white underline"
+        >
+          Back
+        </button>
+        <button
+          onClick={next}
+          className="flex items-center bg-white text-black px-5 py-3 rounded-md font-semibold hover:bg-gray-200"
+        >
+          Continue
+          <ChevronRight className="w-5 h-5 ml-2" />
+        </button>
+      </div>
+    </>
+  );
+}
+
+function Step4({ prev }: { prev: () => void }) {
+  return (
+    <>
+      <h2 className="text-2xl font-semibold mb-4">4. You're Almost Done</h2>
       <p className="text-gray-300 mb-6">
         Once your test email arrives in LeadLocker, you're fully set up. Click
         below to finish onboarding.
