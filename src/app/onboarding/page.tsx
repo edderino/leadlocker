@@ -180,14 +180,6 @@ function Step1({ client, next }: { client: any; next: () => void }) {
           Set up Gmail Forwarding
         </Link>
       </div>
-      <p className="text-xs text-gray-400 mt-2">
-        After you add the forwarding address in Gmail,{" "}
-        <span className="font-semibold">refresh this page</span>, make sure your
-        LeadLocker address is shown in Gmail&apos;s forwarding section, and{" "}
-        <span className="font-semibold">scroll to the bottom of Gmail settings</span>{" "}
-        to look for a pink banner that says forwarding has been enabled to your
-        LeadLocker address.
-      </p>
       <button
         onClick={next}
         className="flex items-center bg-white text-black px-5 py-3 rounded-md font-semibold hover:bg-gray-200"
@@ -227,11 +219,20 @@ function Step2({
             >
               Click here to open Gmail verification →
             </a>
-            <ol className="text-gray-400 text-sm space-y-1 mt-3">
-              <li>1. In Gmail, open <strong>Settings → See all settings</strong></li>
-              <li>2. Go to the <strong>Forwarding and POP/IMAP</strong> tab</li>
-              <li>3. Next to your LeadLocker address, click <strong>Verify</strong></li>
-              <li>4. If Gmail asks for a code, paste it from the email</li>
+            <ol className="text-gray-400 text-sm space-y-1 mt-3 list-decimal list-inside">
+              <li>Open Gmail.</li>
+              <li>Click the gear icon → <strong>See all settings</strong>.</li>
+              <li>Go to the <strong>Forwarding and POP/IMAP</strong> tab.</li>
+              <li>Next to your LeadLocker address, click <strong>Verify</strong>.</li>
+              <li>If Gmail asks for a code, paste it from the email.</li>
+              <li>
+                Refresh this LeadLocker page so we can detect the change.
+              </li>
+              <li>
+                In Gmail settings, scroll all the way to the bottom and look for a{" "}
+                <strong>pink banner</strong> saying forwarding has been enabled to your
+                LeadLocker address.
+              </li>
             </ol>
           </>
         ) : (
