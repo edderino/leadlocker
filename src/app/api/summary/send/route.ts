@@ -61,12 +61,6 @@ async function handleSummary(request: NextRequest) {
       .gte("created_at", from.toISOString())
       .lte("created_at", now.toISOString())
       .order("created_at", { ascending: false });
-      .from("leads")
-      .select("*")
-      .eq("client_id", client.id)
-      .gte("created_at", from.toISOString())
-      .lte("created_at", now.toISOString())
-      .order("created_at", { ascending: false });
 
     if (error) {
       log("POST/GET /api/summary/send - Supabase error", error.message);
