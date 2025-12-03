@@ -61,19 +61,13 @@ export default function OnboardingPage() {
         if (data.client) {
           setClient(data.client);
 
-          // Auto-advance steps based on forwarding status
           if (data.client.forwarding_confirmed) {
             setStatus("connected");
-            // Auto-advance to step 3 when forwarding is confirmed
+            // Auto-advance to step 3 when forwarding is confirmed,
+            // but let the user explicitly click "Finish Setup"
             if (step < 3) {
               setStep(3);
             }
-
-            // Allow UI to update for 1 second before redirecting
-            setTimeout(() => {
-              router.push("/dashboard");
-            }, 1000);
-
             if (interval) {
               clearInterval(interval);
             }
