@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   if (!orgId || typeof orgId !== "string") {
     const { data: clientRow, error: clientRowError } = await supabaseAdmin
       .from("clients")
-      .select("id, slug")
+      .select("id")
       .eq("user_id", verification.user.id)
       .maybeSingle();
 
@@ -51,9 +51,11 @@ export async function GET(req: NextRequest) {
     }
 
     if (clientRow) {
-      // Use client id as org_id (or slug if preferred)
-      orgId = clientRow.id || clientRow.slug;
-      console.log("📋 Resolved org_id from clients table:", orgId);
+      // Use client id as org_id so we can join directly on leads.client_id
+      orgId = clientRow.id;
+      console.log("📋 Resolved org_id from clients table (client_id):", orgId);
+    } else {
+      console.warn("⚠️ No client row found for user", verification.user.id);
     }
   }
 
@@ -69,11 +71,11 @@ export async function GET(req: NextRequest) {
 
   console.log("📋 Resolved org_id:", orgId);
 
-  // Fetch leads using admin client (bypasses RLS, but we filter by org_id defensively)
+  // Fetch leads for this client only (using client_id)
   const { data: leads, error } = await supabaseAdmin
     .from("leads")
-    .select("id,name,phone,source,description,status,created_at,org_id")
-    .eq("org_id", orgId)
+    .select("id,name,phone,source,description,status,created_at,client_id")
+    .eq("client_id", orgId)
     .order("created_at", { ascending: false })
     .limit(200);
 
