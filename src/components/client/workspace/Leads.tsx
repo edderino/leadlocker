@@ -131,6 +131,46 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
       });
   }, [leads, sortOrder, sourceFilter]);
 
+  async function updateStatus(id: string, status: Lead["status"]) {
+    try {
+      const res = await fetch("/api/leads/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        console.error("[Leads] Failed to update status:", data.error);
+        return;
+      }
+      setLeads(
+        leads.map((lead) =>
+          lead.id === id ? { ...lead, status } : lead
+        )
+      );
+    } catch (err) {
+      console.error("[Leads] Error updating status:", err);
+    }
+  }
+
+  async function deleteLead(id: string) {
+    try {
+      const res = await fetch("/api/leads/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        console.error("[Leads] Failed to delete lead:", data.error);
+        return;
+      }
+      setLeads(leads.filter((lead) => lead.id !== id));
+    } catch (err) {
+      console.error("[Leads] Error deleting lead:", err);
+    }
+  }
+
   if (isLoading && leads.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-neutral-400">
@@ -221,17 +261,49 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                     {formatSource(lead.source)}
                   </p>
                 </div>
-                <span
-                  className={`px-2 py-1 text-xs font-semibold rounded ${
-                    lead.status === "NEW"
-                      ? "bg-red-600/20 text-red-400"
-                      : lead.status === "COMPLETED"
-                      ? "bg-green-600/20 text-green-400"
-                      : "bg-yellow-600/20 text-yellow-400"
-                  }`}
-                >
-                  {lead.status}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    className={`px-2 py-1 text-xs font-semibold rounded ${
+                      lead.status === "NEW"
+                        ? "bg-red-600/20 text-red-400"
+                        : lead.status === "COMPLETED"
+                        ? "bg-green-600/20 text-green-400"
+                        : "bg-yellow-600/20 text-yellow-400"
+                    }`}
+                  >
+                    {lead.status}
+                  </span>
+                  <div className="flex gap-1">
+                    {lead.status !== "APPROVED" && (
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        className="border-yellow-600/50 text-yellow-400 hover:bg-yellow-600/10"
+                        onClick={() => updateStatus(lead.id, "APPROVED")}
+                      >
+                        Approve
+                      </Button>
+                    )}
+                    {lead.status !== "COMPLETED" && (
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        className="border-green-600/50 text-green-400 hover:bg-green-600/10"
+                        onClick={() => updateStatus(lead.id, "COMPLETED")}
+                      >
+                        Complete
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      className="border-red-600/50 text-red-400 hover:bg-red-600/10"
+                      onClick={() => deleteLead(lead.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
               </div>
               <p className="text-sm text-neutral-300 mt-3 line-clamp-3">{lead.description || 'No description'}</p>
               <p className="text-xs text-neutral-500 mt-4 flex items-center gap-2">
@@ -269,13 +341,45 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                   <TableCell className="text-neutral-400">{formatSource(lead.source)}</TableCell>
                   <TableCell className="text-neutral-400">{lead.description || '-'}</TableCell>
                   <TableCell>
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      lead.status === 'NEW' ? 'bg-red-500/20 text-red-400' :
-                      lead.status === 'APPROVED' ? 'bg-yellow-500/20 text-yellow-400' :
-                      'bg-green-500/20 text-green-400'
-                    }`}>
-                      {lead.status}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        lead.status === 'NEW' ? 'bg-red-500/20 text-red-400' :
+                        lead.status === 'APPROVED' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-green-500/20 text-green-400'
+                      }`}>
+                        {lead.status}
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {lead.status !== "APPROVED" && (
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            className="border-yellow-600/50 text-yellow-400 hover:bg-yellow-600/10"
+                            onClick={() => updateStatus(lead.id, "APPROVED")}
+                          >
+                            Approve
+                          </Button>
+                        )}
+                        {lead.status !== "COMPLETED" && (
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            className="border-green-600/50 text-green-400 hover:bg-green-600/10"
+                            onClick={() => updateStatus(lead.id, "COMPLETED")}
+                          >
+                            Complete
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          className="border-red-600/50 text-red-400 hover:bg-red-600/10"
+                          onClick={() => deleteLead(lead.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="text-neutral-400 text-right whitespace-nowrap">
                     <div className="flex flex-col items-end leading-tight">
