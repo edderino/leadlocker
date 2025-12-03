@@ -62,8 +62,13 @@ export default function OnboardingPage() {
         if (data.client) {
           setClient(data.client);
 
+          // Auto-advance steps based on forwarding status
           if (data.client.forwarding_confirmed) {
             setStatus("connected");
+            // Auto-advance to step 3 when forwarding is confirmed
+            if (step < 3) {
+              setStep(3);
+            }
 
             // Allow UI to update for 1 second before redirecting
             setTimeout(() => {
@@ -94,7 +99,7 @@ export default function OnboardingPage() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [router]);
+  }, [router, step]);
 
   const next = () => setStep((s) => Math.min(s + 1, 3));
   const prev = () => setStep((s) => Math.max(s - 1, 1));
@@ -109,49 +114,6 @@ export default function OnboardingPage() {
         </p>
       </div>
 
-      {/* Gmail verification link/code (if we detected Google's email but forwarding not yet active) */}
-      {client?.gmail_forwarding_code && !client?.forwarding_confirmed && (
-        <div className="w-full max-w-2xl mb-8 bg-zinc-900 border border-yellow-600 rounded-xl p-4">
-          <h2 className="text-xl font-semibold mb-2">
-            Gmail forwarding confirmation detected
-          </h2>
-          <p className="text-gray-300 mb-2">
-            We received Google's email asking you to confirm email forwarding.
-            Use the link below in Gmail to finish the setup:
-          </p>
-          {typeof client.gmail_forwarding_code === "string" &&
-          client.gmail_forwarding_code.startsWith("http") ? (
-            <a
-              href={client.gmail_forwarding_code}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-block mt-2 mb-3 bg-black px-4 py-2 rounded border border-yellow-500 text-blue-300 hover:text-blue-100 underline"
-            >
-              Click here to open Gmail verification →
-            </a>
-          ) : (
-            <div className="inline-block mt-2 mb-3 font-mono text-lg bg-black px-4 py-2 rounded border border-yellow-500">
-              {client.gmail_forwarding_code}
-            </div>
-          )}
-          <ol className="mt-2 text-gray-300 list-decimal list-inside space-y-1 text-sm">
-            <li>
-              In Gmail, open <strong>Settings</strong> →{" "}
-              <strong>See all settings</strong>.
-            </li>
-            <li>
-              Go to the <strong>Forwarding and POP/IMAP</strong> tab.
-            </li>
-            <li>
-              Next to your LeadLocker address, click <strong>Verify</strong>.
-            </li>
-            <li>
-              If Gmail asks for a code, paste it from the email. If Gmail shows
-              a link, open the link above and follow the prompts.
-            </li>
-          </ol>
-        </div>
-      )}
 
       {/* Forwarding status display */}
       <div className="mb-8">
@@ -181,8 +143,8 @@ export default function OnboardingPage() {
 
       {/* Panels */}
       <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-700 rounded-xl p-8 shadow-2xl">
-        {step === 1 && <Step1 next={next} />}
-        {step === 2 && <Step2 next={next} prev={prev} />}
+        {step === 1 && <Step1 client={client} next={next} />}
+        {step === 2 && <Step2 client={client} next={next} prev={prev} />}
         {step === 3 && <Step3 prev={prev} />}
       </div>
 
@@ -198,7 +160,54 @@ export default function OnboardingPage() {
    STEP UI COMPONENTS
 ------------------------------------------------------- */
 
-function Step1({ next }: { next: () => void }) {
+function Step1({ client, next }: { client: any; next: () => void }) {
+  const verificationLink = client?.gmail_forwarding_code;
+
+  // If we have a Gmail verification link, show it
+  if (verificationLink && typeof verificationLink === "string" && verificationLink.startsWith("http")) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-2xl font-semibold mb-4">1. Gmail Forwarding Confirmation</h2>
+        <div className="space-y-4 p-6 bg-gray-900/40 rounded-lg border border-gray-800">
+          <h3 className="text-xl font-semibold">Gmail forwarding confirmation detected</h3>
+          <p className="text-gray-300">
+            We received Google's verification email. Click below to open the Gmail verification page:
+          </p>
+          <a
+            href={verificationLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-blue-400 underline hover:text-blue-300"
+          >
+            Click here to open Gmail verification →
+          </a>
+          <ol className="text-gray-400 text-sm space-y-1 mt-3">
+            <li>1. In Gmail, open <strong>Settings → See all settings</strong></li>
+            <li>2. Go to the <strong>Forwarding and POP/IMAP</strong> tab</li>
+            <li>3. Next to your LeadLocker address, click <strong>Verify</strong></li>
+            <li>4. If Gmail asks for a code, paste it from the email</li>
+          </ol>
+          {!client?.forwarding_confirmed && (
+            <p className="text-yellow-400 text-sm mt-4">
+              ⏳ Waiting for Gmail to accept forwarding…
+            </p>
+          )}
+          {client?.forwarding_confirmed && (
+            <p className="text-green-400 text-sm mt-4">✅ Forwarding confirmed!</p>
+          )}
+        </div>
+        <button
+          onClick={next}
+          className="flex items-center bg-white text-black px-5 py-3 rounded-md font-semibold hover:bg-gray-200"
+        >
+          Continue
+          <ChevronRight className="w-5 h-5 ml-2" />
+        </button>
+      </div>
+    );
+  }
+
+  // Default step 1 (no verification link yet)
   return (
     <>
       <h2 className="text-2xl font-semibold mb-4">1. Forward Your Emails</h2>
@@ -231,40 +240,47 @@ function Step1({ next }: { next: () => void }) {
 }
 
 function Step2({
+  client,
   next,
   prev,
 }: {
+  client: any;
   next: () => void;
   prev: () => void;
 }) {
+  const mailtoUrl = client?.inbound_email
+    ? `mailto:${client.inbound_email}?subject=Test%20Lead&body=This%20is%20a%20test%20lead`
+    : "#";
+
   return (
-    <>
+    <div className="space-y-4">
       <h2 className="text-2xl font-semibold mb-4">2. Send a Test Email</h2>
-      <p className="text-gray-300 mb-6">
-        After forwarding is set up, send a quick test to confirm everything is
-        connected.
-      </p>
-      <button
-        className="bg-white text-black px-5 py-3 rounded-md font-semibold hover:bg-gray-200 mb-6"
-        onClick={async () => {
-          try {
-            const res = await fetch("/api/client/send-test-email", {
-              method: "POST",
-              credentials: "include",
-            });
-            if (res.ok) {
-              alert("Test email sent! Check your forwarding to ensure it arrives.");
-            } else {
-              alert("Failed to send test email. Please try again.");
-            }
-          } catch (err) {
-            console.error(err);
-            alert("Error sending test email. Please try again.");
-          }
-        }}
-      >
-        Send Test Email
-      </button>
+      <div className="space-y-4 p-6 bg-gray-900/40 rounded-lg border border-gray-800">
+        <p className="text-gray-300">
+          To confirm your email forwarding is working, send a test email from Gmail to your LeadLocker
+          address.
+        </p>
+        <div>
+          <p className="text-gray-400 mb-1">Your LeadLocker address:</p>
+          <code className="bg-black/40 px-3 py-2 rounded text-blue-300 block">
+            {client?.inbound_email || "Loading..."}
+          </code>
+        </div>
+        <a
+          href={mailtoUrl}
+          className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Send test email from Gmail →
+        </a>
+        {!client?.forwarding_confirmed && (
+          <p className="text-yellow-400 text-sm mt-4">
+            ⏳ Waiting for your test email to arrive…
+          </p>
+        )}
+        {client?.forwarding_confirmed && (
+          <p className="text-green-400 text-sm mt-4">✅ Test email received!</p>
+        )}
+      </div>
       <div className="flex justify-between">
         <button
           onClick={prev}
@@ -280,7 +296,7 @@ function Step2({
           <ChevronRight className="w-5 h-5 ml-2" />
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
