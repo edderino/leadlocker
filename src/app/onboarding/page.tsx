@@ -242,10 +242,6 @@ function Step2({
   next: () => void;
   prev: () => void;
 }) {
-  const mailtoUrl = client?.inbound_email
-    ? `mailto:${client.inbound_email}?subject=Test%20Lead&body=This%20is%20a%20test%20lead`
-    : "#";
-
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold mb-4">2. Send a Test Email</h2>
@@ -260,12 +256,6 @@ function Step2({
             {client?.inbound_email || "Loading..."}
           </code>
         </div>
-        <a
-          href={mailtoUrl}
-          className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Send test email from Gmail →
-        </a>
         {!client?.forwarding_confirmed && (
           <p className="text-yellow-400 text-sm mt-4">
             ⏳ Waiting for your test email to arrive…
