@@ -180,6 +180,14 @@ function Step1({ client, next }: { client: any; next: () => void }) {
           Set up Gmail Forwarding
         </Link>
       </div>
+      <p className="text-xs text-gray-400 mt-2">
+        After you add the forwarding address in Gmail,{" "}
+        <span className="font-semibold">refresh this page</span>, make sure your
+        LeadLocker address is shown in Gmail&apos;s forwarding section, and{" "}
+        <span className="font-semibold">scroll to the bottom of Gmail settings</span>{" "}
+        to look for a pink banner that says forwarding has been enabled to your
+        LeadLocker address.
+      </p>
       <button
         onClick={next}
         className="flex items-center bg-white text-black px-5 py-3 rounded-md font-semibold hover:bg-gray-200"
