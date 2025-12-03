@@ -277,7 +277,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                     {lead.status !== "APPROVED" && (
                       <Button
                         variant="outline"
-                        size="xs"
+                        size="sm"
                         className="border-yellow-600/50 text-yellow-400 hover:bg-yellow-600/10"
                         onClick={() => updateStatus(lead.id, "APPROVED")}
                       >
@@ -287,7 +287,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                     {lead.status !== "COMPLETED" && (
                       <Button
                         variant="outline"
-                        size="xs"
+                        size="sm"
                         className="border-green-600/50 text-green-400 hover:bg-green-600/10"
                         onClick={() => updateStatus(lead.id, "COMPLETED")}
                       >
@@ -296,7 +296,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                     )}
                     <Button
                       variant="outline"
-                      size="xs"
+                      size="sm"
                       className="border-red-600/50 text-red-400 hover:bg-red-600/10"
                       onClick={() => deleteLead(lead.id)}
                     >
@@ -353,7 +353,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                         {lead.status !== "APPROVED" && (
                           <Button
                             variant="outline"
-                            size="xs"
+                            size="sm"
                             className="border-yellow-600/50 text-yellow-400 hover:bg-yellow-600/10"
                             onClick={() => updateStatus(lead.id, "APPROVED")}
                           >
@@ -363,7 +363,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                         {lead.status !== "COMPLETED" && (
                           <Button
                             variant="outline"
-                            size="xs"
+                            size="sm"
                             className="border-green-600/50 text-green-400 hover:bg-green-600/10"
                             onClick={() => updateStatus(lead.id, "COMPLETED")}
                           >
@@ -372,7 +372,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                         )}
                         <Button
                           variant="outline"
-                          size="xs"
+                          size="sm"
                           className="border-red-600/50 text-red-400 hover:bg-red-600/10"
                           onClick={() => deleteLead(lead.id)}
                         >
