@@ -310,22 +310,31 @@ function Step3({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (client?.contact_email) {
-              const mailtoLink = `mailto:${client.contact_email}?subject=Test%20lead&body=This%20is%20a%20test%20lead%20for%20LeadLocker.`;
-              // Create a temporary link and click it programmatically
-              // This prevents page navigation while opening the email client
-              const link = document.createElement("a");
-              link.href = mailtoLink;
-              link.style.display = "none";
-              document.body.appendChild(link);
-              link.click();
-              // Clean up after a short delay
-              setTimeout(() => {
-                document.body.removeChild(link);
-              }, 100);
-            }
+            if (!client?.contact_email) return;
+            
+            const mailtoLink = `mailto:${client.contact_email}?subject=Test%20lead&body=This%20is%20a%20test%20lead%20for%20LeadLocker.`;
+            
+            // Use a temporary anchor element to trigger mailto
+            // This prevents any page navigation
+            const tempLink = document.createElement("a");
+            tempLink.href = mailtoLink;
+            tempLink.style.position = "absolute";
+            tempLink.style.left = "-9999px";
+            tempLink.style.opacity = "0";
+            tempLink.style.pointerEvents = "none";
+            document.body.appendChild(tempLink);
+            
+            // Trigger click on the hidden link
+            tempLink.click();
+            
+            // Clean up immediately
+            setTimeout(() => {
+              if (document.body.contains(tempLink)) {
+                document.body.removeChild(tempLink);
+              }
+            }, 0);
           }}
-          className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-600"
+          className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-600 cursor-pointer"
         >
           Send test email →
         </button>
