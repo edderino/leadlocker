@@ -312,7 +312,23 @@ function Step3({
             e.stopPropagation();
             if (!client?.contact_email) return;
             
-            const mailtoLink = `mailto:${client.contact_email}?subject=Test%20lead&body=This%20is%20a%20test%20lead%20for%20LeadLocker.`;
+            // Create a realistic test quote for an electrician
+            const emailBody = `Hi there,
+
+I'm looking to get a quote for some electrical work at my property.
+
+Job details:
+- Install 3 new power points in the kitchen
+- Replace old light switches with dimmer switches (5 switches)
+- Install outdoor security lighting at front and back
+
+Property is a 3-bedroom house. Looking to get this done in the next 2-3 weeks if possible.
+
+Please let me know your availability and an estimated quote.
+
+Thanks!`;
+            
+            const mailtoLink = `mailto:${client.contact_email}?subject=Quote%20Request%20-%20Electrical%20Work&body=${encodeURIComponent(emailBody)}`;
             
             // Use a temporary anchor element to trigger mailto
             // This prevents any page navigation
