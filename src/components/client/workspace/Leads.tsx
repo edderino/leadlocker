@@ -154,6 +154,9 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
   }
 
   async function deleteLead(id: string) {
+    if (!confirm("Are you sure you want to delete this lead?")) {
+      return;
+    }
     try {
       const res = await fetch("/api/leads/delete", {
         method: "POST",
