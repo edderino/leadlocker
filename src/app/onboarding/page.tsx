@@ -228,6 +228,20 @@ function Step2({
                 If verification doesn&apos;t show after finalising the verification, refresh the page, ensure your LeadLocker address is in the forwarding box, scroll to the bottom of the page in Gmail and save changes. A pink banner should then show at the top of the page saying &quot;You are forwarding your email to {client?.inbound_email || "yourcompanyname@mg.leadlocker.app"}. This notice will end in 7 days&quot;
               </li>
             </ol>
+            <div className="mt-4 p-4 bg-yellow-900/30 border border-yellow-600/50 rounded-lg">
+              <p className="text-yellow-200 text-sm font-semibold mb-2">⚠️ Important:</p>
+              <p className="text-yellow-100 text-sm">
+                If you&apos;re having trouble, double-check that:
+              </p>
+              <ul className="text-yellow-100 text-sm mt-2 list-disc list-inside space-y-1">
+                <li>The <strong>pink banner</strong> is visible at the top of your Gmail settings page</li>
+                <li><strong>Forwarding is enabled</strong> (the toggle/checkbox is turned on)</li>
+                <li>Your LeadLocker address ({client?.inbound_email || "yourcompanyname@mg.leadlocker.app"}) is listed in the forwarding section</li>
+              </ul>
+              <p className="text-yellow-200 text-sm mt-2">
+                Without the pink banner and forwarding enabled, LeadLocker won&apos;t receive your emails.
+              </p>
+            </div>
           </>
         ) : (
           <>
