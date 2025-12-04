@@ -224,14 +224,8 @@ function Step2({
               <li>Click the gear icon → <strong>See all settings</strong>.</li>
               <li>Go to the <strong>Forwarding and POP/IMAP</strong> tab.</li>
               <li>Next to your LeadLocker address, click <strong>Verify</strong>.</li>
-              <li>If Gmail asks for a code, paste it from the email.</li>
               <li>
-                Refresh this LeadLocker page so we can detect the change.
-              </li>
-              <li>
-                In Gmail settings, scroll all the way to the bottom and look for a{" "}
-                <strong>pink banner</strong> saying forwarding has been enabled to your
-                LeadLocker address.
+                If verification doesn&apos;t show after finalising the verification, refresh the page, ensure your LeadLocker address is in the forwarding box, scroll to the bottom of the page in Gmail and save changes. A pink banner should then show at the top of the page saying &quot;You are forwarding your email to {client?.inbound_email || "yourcompanyname@mg.leadlocker.app"}. This notice will end in 7 days&quot;
               </li>
             </ol>
           </>
