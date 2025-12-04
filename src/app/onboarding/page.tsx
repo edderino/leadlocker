@@ -291,16 +291,30 @@ function Step3({
             {client?.contact_email || "Loading..."}
           </code>
         </div>
-        <a
-          href={
-            client?.contact_email
-              ? `mailto:${client.contact_email}?subject=Test%20lead&body=This%20is%20a%20test%20lead%20for%20LeadLocker.`
-              : "#"
-          }
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (client?.contact_email) {
+              const mailtoLink = `mailto:${client.contact_email}?subject=Test%20lead&body=This%20is%20a%20test%20lead%20for%20LeadLocker.`;
+              // Create a temporary link and click it programmatically
+              // This prevents page navigation while opening the email client
+              const link = document.createElement("a");
+              link.href = mailtoLink;
+              link.style.display = "none";
+              document.body.appendChild(link);
+              link.click();
+              // Clean up after a short delay
+              setTimeout(() => {
+                document.body.removeChild(link);
+              }, 100);
+            }
+          }}
           className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-600"
         >
           Send test email →
-        </a>
+        </button>
         {!client?.forwarding_confirmed && (
           <p className="text-yellow-400 text-sm mt-4">
             ⏳ Waiting for your first forwarded email…
