@@ -330,27 +330,13 @@ You can reach me on 0400 123 456.
 
 Thanks!`;
             
-            const mailtoLink = `mailto:${client.contact_email}?subject=Quote%20Request%20-%20Electrical%20Work&body=${encodeURIComponent(emailBody)}`;
+            // Open Gmail compose in a new tab
+            const subject = encodeURIComponent("Quote Request - Electrical Work");
+            const body = encodeURIComponent(emailBody);
+            const to = encodeURIComponent(client.contact_email);
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
             
-            // Use a temporary anchor element to trigger mailto
-            // This prevents any page navigation
-            const tempLink = document.createElement("a");
-            tempLink.href = mailtoLink;
-            tempLink.style.position = "absolute";
-            tempLink.style.left = "-9999px";
-            tempLink.style.opacity = "0";
-            tempLink.style.pointerEvents = "none";
-            document.body.appendChild(tempLink);
-            
-            // Trigger click on the hidden link
-            tempLink.click();
-            
-            // Clean up immediately
-            setTimeout(() => {
-              if (document.body.contains(tempLink)) {
-                document.body.removeChild(tempLink);
-              }
-            }, 0);
+            window.open(gmailUrl, "_blank", "noopener,noreferrer");
           }}
           className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-600 cursor-pointer"
         >
