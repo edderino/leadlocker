@@ -249,18 +249,18 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
           {displayLeads.map((lead) => (
             <Card
               key={lead.id}
-              className={`p-5 bg-neutral-950 border border-neutral-800 transition-all duration-300 ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}
+              className={`p-5 bg-neutral-950 border border-neutral-800 transition-all duration-300 overflow-hidden ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}
             >
               <div className="flex justify-between items-start mb-3 gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-semibold text-base leading-tight">{lead.name}</p>
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="text-white font-semibold text-base leading-tight truncate">{lead.name}</p>
                   <a
                     href={`tel:${lead.phone}`}
-                    className={`text-neutral-400 text-sm transition-colors ${themeStyles.linkHoverClass}`}
+                    className={`text-neutral-400 text-sm transition-colors break-all ${themeStyles.linkHoverClass}`}
                   >
                     {lead.phone}
                   </a>
-                  <p className="text-neutral-500 text-xs uppercase tracking-wide mt-1">
+                  <p className="text-neutral-500 text-xs uppercase tracking-wide mt-1 truncate">
                     {formatSource(lead.source)}
                   </p>
                 </div>
@@ -317,7 +317,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
           ))}
         </div>
       ) : (
-        <Card className={`border border-neutral-800 bg-neutral-950 transition-all duration-300 ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}>
+        <Card className={`border border-neutral-800 bg-neutral-950 transition-all duration-300 ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass} overflow-x-auto`}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -332,32 +332,34 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
             <TableBody>
               {displayLeads.map((lead) => (
                 <TableRow key={lead.id} className="border-neutral-800/60">
-                  <TableCell className="text-neutral-200">{lead.name}</TableCell>
+                  <TableCell className="text-neutral-200 max-w-[150px] truncate">{lead.name}</TableCell>
                   <TableCell className="text-neutral-400">
                     <a
                       href={`tel:${lead.phone}`}
-                      className={`transition-colors ${themeStyles.linkHoverClass}`}
+                      className={`transition-colors break-all ${themeStyles.linkHoverClass}`}
                     >
                       {lead.phone}
                     </a>
                   </TableCell>
-                  <TableCell className="text-neutral-400">{formatSource(lead.source)}</TableCell>
-                  <TableCell className="text-neutral-400">{lead.description || '-'}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <span className={`text-xs px-2 py-1 rounded ${
+                  <TableCell className="text-neutral-400 max-w-[100px] truncate">{formatSource(lead.source)}</TableCell>
+                  <TableCell className="text-neutral-400 max-w-[200px]">
+                    <p className="truncate" title={lead.description || undefined}>{lead.description || '-'}</p>
+                  </TableCell>
+                  <TableCell className="min-w-[180px] max-w-[250px]">
+                    <div className="flex flex-col gap-2">
+                      <span className={`text-xs px-2 py-1 rounded w-fit ${
                         lead.status === 'NEW' ? 'bg-red-500/20 text-red-400' :
                         lead.status === 'APPROVED' ? 'bg-yellow-500/20 text-yellow-400' :
                         'bg-green-500/20 text-green-400'
                       }`}>
                         {lead.status}
                       </span>
-                      <div className="flex flex-wrap gap-1">
-                        {lead.status !== "APPROVED" && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {lead.status !== "APPROVED" && lead.status !== "COMPLETED" && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-yellow-600/50 text-yellow-400 hover:bg-yellow-600/10"
+                            className="border-yellow-600/50 text-yellow-400 hover:bg-yellow-600/10 text-xs px-2 py-1 h-auto whitespace-nowrap"
                             onClick={() => updateStatus(lead.id, "APPROVED")}
                           >
                             Approve
@@ -367,7 +369,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-green-600/50 text-green-400 hover:bg-green-600/10"
+                            className="border-green-600/50 text-green-400 hover:bg-green-600/10 text-xs px-2 py-1 h-auto whitespace-nowrap"
                             onClick={() => updateStatus(lead.id, "COMPLETED")}
                           >
                             Complete
@@ -376,7 +378,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-red-600/50 text-red-400 hover:bg-red-600/10"
+                          className="border-red-600/50 text-red-400 hover:bg-red-600/10 text-xs px-2 py-1 h-auto whitespace-nowrap"
                           onClick={() => deleteLead(lead.id)}
                         >
                           Delete
@@ -384,10 +386,10 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-neutral-400 text-right whitespace-nowrap">
+                  <TableCell className="text-neutral-400 text-right">
                     <div className="flex flex-col items-end leading-tight">
-                      <span className="text-neutral-200 text-sm">{formatLeadDate(lead.created_at)}</span>
-                      <span className="text-neutral-500 text-xs">{formatLeadTime(lead.created_at)}</span>
+                      <span className="text-neutral-200 text-sm whitespace-nowrap">{formatLeadDate(lead.created_at)}</span>
+                      <span className="text-neutral-500 text-xs whitespace-nowrap">{formatLeadTime(lead.created_at)}</span>
                     </div>
                   </TableCell>
                 </TableRow>
