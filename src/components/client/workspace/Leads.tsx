@@ -201,16 +201,16 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-0 md:p-2">
       <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold text-white">Leads</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 bg-neutral-900/70 border border-neutral-800 rounded-lg px-3 py-1.5 text-sm text-neutral-300">
-            <Filter className="h-4 w-4 text-neutral-500" />
+        <h2 className="text-lg md:text-xl font-semibold text-white px-2 md:px-0">Leads</h2>
+        <div className="flex flex-wrap items-center gap-2 px-2 md:px-0">
+          <div className="flex items-center gap-2 bg-neutral-900/70 border border-neutral-800 rounded-lg px-2 md:px-3 py-2 md:py-1.5 text-sm text-neutral-300 min-h-[44px]">
+            <Filter className="h-4 w-4 text-neutral-500 flex-shrink-0" />
             <select
               value={sourceFilter}
               onChange={(event) => setSourceFilter(event.target.value)}
-              className="bg-transparent focus:outline-none text-sm text-neutral-200"
+              className="bg-transparent focus:outline-none text-sm text-neutral-200 flex-1 min-w-0"
             >
               {sourceOptions.map((option) => (
                 <option key={option.key} value={option.key}>
@@ -222,15 +222,17 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
           <Button
             variant="secondary"
             onClick={() => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 min-h-[44px] text-xs md:text-sm"
           >
-            <ArrowDownUp className="h-4 w-4" />
-            {sortOrder === "desc" ? "Newest → Oldest" : "Oldest → Newest"}
+            <ArrowDownUp className="h-4 w-4 flex-shrink-0" />
+            <span className="hidden sm:inline">{sortOrder === "desc" ? "Newest → Oldest" : "Oldest → Newest"}</span>
+            <span className="sm:hidden">{sortOrder === "desc" ? "New" : "Old"}</span>
           </Button>
           <Button
             variant={view === "cards" ? "default" : "secondary"}
             size="icon"
             onClick={() => setView("cards")}
+            className="min-w-[44px] min-h-[44px]"
           >
             <Grid className="h-4 w-4" />
           </Button>
@@ -238,6 +240,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
             variant={view === "table" ? "default" : "secondary"}
             size="icon"
             onClick={() => setView("table")}
+            className="min-w-[44px] min-h-[44px]"
           >
             <List className="h-4 w-4" />
           </Button>
@@ -245,11 +248,11 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
       </div>
 
       {view === "cards" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 px-2 md:px-0">
           {displayLeads.map((lead) => (
             <Card
               key={lead.id}
-              className={`p-5 bg-neutral-950 border border-neutral-800 transition-all duration-300 overflow-hidden ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}
+              className={`p-4 md:p-5 bg-neutral-950 border border-neutral-800 transition-all duration-300 overflow-hidden ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}
             >
               <div className="flex justify-between items-start mb-3 gap-3">
                 <div className="flex-1 min-w-0 overflow-hidden">
@@ -284,7 +287,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-yellow-600/50 text-yellow-400 hover:bg-yellow-600/10 flex-1 min-w-[80px]"
+                    className="border-yellow-600/50 text-yellow-400 hover:bg-yellow-600/10 flex-1 min-w-[80px] min-h-[44px] text-sm"
                     onClick={() => updateStatus(lead.id, "APPROVED")}
                   >
                     Approve
@@ -294,7 +297,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-green-600/50 text-green-400 hover:bg-green-600/10 flex-1 min-w-[80px]"
+                    className="border-green-600/50 text-green-400 hover:bg-green-600/10 flex-1 min-w-[80px] min-h-[44px] text-sm"
                     onClick={() => updateStatus(lead.id, "COMPLETED")}
                   >
                     Complete
@@ -303,7 +306,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-red-600/50 text-red-400 hover:bg-red-600/10 flex-1 min-w-[80px]"
+                  className="border-red-600/50 text-red-400 hover:bg-red-600/10 flex-1 min-w-[80px] min-h-[44px] text-sm"
                   onClick={() => deleteLead(lead.id)}
                 >
                   Delete

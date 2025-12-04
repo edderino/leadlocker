@@ -68,7 +68,7 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
       initial={false}
       animate={{ width: isCollapsed ? 80 : 240 }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="relative h-screen bg-gradient-to-b from-[#0c0f15] to-[#161b22] border-r border-white/10 flex flex-col"
+      className="relative h-screen bg-gradient-to-b from-[#0c0f15] to-[#161b22] border-r border-white/10 flex flex-col w-64 md:w-auto shadow-xl md:shadow-none"
     >
       {/* Header */}
       <div className="p-6 border-b border-white/10 flex items-center justify-between">
@@ -123,7 +123,7 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
             <button
               key={item.id}
               onClick={() => onSectionChange(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+              className={`w-full flex items-center gap-3 px-4 py-3 md:py-3 min-h-[48px] rounded-lg transition-all ${
                 isActive
                   ? 'bg-white/10 text-white'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
@@ -151,7 +151,7 @@ export default function Sidebar({ currentSection, onSectionChange, orgId }: Side
             await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
             window.location.href = '/login';
           }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3 min-h-[48px] rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-all"
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
           {!isCollapsed && (
