@@ -1,8 +1,8 @@
  "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import DashboardClientRoot from "@/components/client/DashboardClientRoot";
+import OnboardingBanner from "@/components/OnboardingBanner";
 
 export default function DashboardPage() {
   const [client, setClient] = useState<any>(null);
@@ -45,23 +45,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
-      {/* 🔥 SETUP INCOMPLETE BANNER */}
-      {client && client.forwarding_confirmed === false && (
-        <div className="mb-8 p-4 rounded-lg border border-yellow-500 bg-yellow-900/20 text-yellow-300">
-          <p className="font-semibold mb-1">
-            ⚠️ Your email forwarding isn’t active yet.
-          </p>
-          <p className="mb-3">
-            You won’t receive SMS lead alerts until email forwarding is enabled.
-          </p>
-          <Link
-            href="/onboarding"
-            className="underline text-yellow-200 hover:text-white"
-          >
-            Complete setup →
-          </Link>
-        </div>
-      )}
+      <OnboardingBanner />
 
       {/* Main dashboard content */}
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
