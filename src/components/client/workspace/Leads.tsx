@@ -251,8 +251,8 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
               key={lead.id}
               className={`p-5 bg-neutral-950 border border-neutral-800 transition-all duration-300 ${themeStyles.cardBaseClass} ${themeStyles.cardHoverClass}`}
             >
-              <div className="flex justify-between items-start mb-2">
-                <div>
+              <div className="flex justify-between items-start mb-3 gap-3">
+                <div className="flex-1 min-w-0">
                   <p className="text-white font-semibold text-base leading-tight">{lead.name}</p>
                   <a
                     href={`tel:${lead.phone}`}
@@ -260,11 +260,11 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                   >
                     {lead.phone}
                   </a>
-                  <p className="text-neutral-500 text-xs uppercase tracking-wide">
+                  <p className="text-neutral-500 text-xs uppercase tracking-wide mt-1">
                     {formatSource(lead.source)}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex flex-col items-end gap-2 flex-shrink-0">
                   <span
                     className={`px-2 py-1 text-xs font-semibold rounded ${
                       lead.status === "NEW"
@@ -276,39 +276,39 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                   >
                     {lead.status}
                   </span>
-                  <div className="flex gap-1">
-                    {lead.status !== "APPROVED" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-yellow-600/50 text-yellow-400 hover:bg-yellow-600/10"
-                        onClick={() => updateStatus(lead.id, "APPROVED")}
-                      >
-                        Approve
-                      </Button>
-                    )}
-                    {lead.status !== "COMPLETED" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-green-600/50 text-green-400 hover:bg-green-600/10"
-                        onClick={() => updateStatus(lead.id, "COMPLETED")}
-                      >
-                        Complete
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-red-600/50 text-red-400 hover:bg-red-600/10"
-                      onClick={() => deleteLead(lead.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
                 </div>
               </div>
-              <p className="text-sm text-neutral-300 mt-3 line-clamp-3">{lead.description || 'No description'}</p>
+              <p className="text-sm text-neutral-300 mb-4 line-clamp-3">{lead.description || 'No description'}</p>
+              <div className="flex flex-wrap gap-2 pt-3 border-t border-neutral-800">
+                {lead.status !== "APPROVED" && lead.status !== "COMPLETED" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-yellow-600/50 text-yellow-400 hover:bg-yellow-600/10 flex-1 min-w-[80px]"
+                    onClick={() => updateStatus(lead.id, "APPROVED")}
+                  >
+                    Approve
+                  </Button>
+                )}
+                {lead.status !== "COMPLETED" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-green-600/50 text-green-400 hover:bg-green-600/10 flex-1 min-w-[80px]"
+                    onClick={() => updateStatus(lead.id, "COMPLETED")}
+                  >
+                    Complete
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-600/50 text-red-400 hover:bg-red-600/10 flex-1 min-w-[80px]"
+                  onClick={() => deleteLead(lead.id)}
+                >
+                  Delete
+                </Button>
+              </div>
               <p className="text-xs text-neutral-500 mt-4 flex items-center gap-2">
                 <span className="text-neutral-300">{formatLeadDate(lead.created_at)}</span>
                 <span className="text-neutral-600">{formatLeadTime(lead.created_at)}</span>
