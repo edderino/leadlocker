@@ -326,6 +326,8 @@ Property is a 3-bedroom house. Looking to get this done in the next 2-3 weeks if
 
 Please let me know your availability and an estimated quote.
 
+You can reach me on 0400 123 456.
+
 Thanks!`;
             
             const mailtoLink = `mailto:${client.contact_email}?subject=Quote%20Request%20-%20Electrical%20Work&body=${encodeURIComponent(emailBody)}`;
