@@ -160,12 +160,11 @@ export async function POST(request: NextRequest) {
 
     // Delete the lead - use the client_id we already verified
     console.log("POST /api/leads/delete - Deleting lead", payload.id, "for client", clientId);
-    const { error: deleteError, data: deletedRows } = await supabaseAdmin
+    const { error: deleteError } = await supabaseAdmin
       .from("leads")
       .delete()
       .eq("id", payload.id)
-      .eq("client_id", clientId) // Extra safety: ensure we only delete leads from this client
-      .select("id");
+      .eq("client_id", clientId); // Extra safety: ensure we only delete leads from this client
 
     if (deleteError) {
       console.error("POST /api/leads/delete - Supabase delete error:", deleteError);
@@ -176,16 +175,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if anything was actually deleted
-    if (!deletedRows || deletedRows.length === 0) {
-      console.error("POST /api/leads/delete - No rows deleted. Lead may not exist or belong to different client.");
+    // Verify the lead was actually deleted by checking if it still exists
+    const { data: verifyLead, error: verifyError } = await supabaseAdmin
+      .from("leads")
+      .select("id")
+      .eq("id", payload.id)
+      .maybeSingle();
+
+    if (verifyError) {
+      console.error("POST /api/leads/delete - Error verifying deletion:", verifyError);
+      // Don't fail here - the delete might have worked but verification failed
+    }
+
+    if (verifyLead) {
+      console.error("POST /api/leads/delete - Lead still exists after delete attempt");
       return NextResponse.json(
-        { success: false, error: "Lead not found or does not belong to your account" },
-        { status: 404 }
+        { success: false, error: "Lead was not deleted. It may not belong to your account." },
+        { status: 500 }
       );
     }
 
-    console.log("POST /api/leads/delete - Lead deleted successfully:", payload.id, "deleted rows:", deletedRows.length);
+    console.log("POST /api/leads/delete - Lead deleted successfully:", payload.id);
     log("POST /api/leads/delete - Lead deleted successfully", payload.id);
     return NextResponse.json({ success: true });
   } catch (error) {
