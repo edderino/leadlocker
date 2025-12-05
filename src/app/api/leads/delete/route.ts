@@ -144,25 +144,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Delete the lead
+    // Delete the lead - use the client_id we already verified
     console.log("POST /api/leads/delete - Deleting lead", payload.id, "for client", clientId);
-    const { error, data } = await supabaseAdmin
+    const { error: deleteError, data: deletedRows } = await supabaseAdmin
       .from("leads")
       .delete()
       .eq("id", payload.id)
       .eq("client_id", clientId) // Extra safety: ensure we only delete leads from this client
-      .select();
+      .select("id");
 
-    if (error) {
-      console.error("POST /api/leads/delete - Supabase delete error:", error);
-      log("POST /api/leads/delete - Supabase error", error.message);
+    if (deleteError) {
+      console.error("POST /api/leads/delete - Supabase delete error:", deleteError);
+      log("POST /api/leads/delete - Supabase error", deleteError.message);
       return NextResponse.json(
-        { success: false, error: "Failed to delete lead", details: error.message },
+        { success: false, error: "Failed to delete lead", details: deleteError.message },
         { status: 500 }
       );
     }
 
-    console.log("POST /api/leads/delete - Lead deleted successfully:", payload.id, "deleted rows:", data?.length || 0);
+    // Check if anything was actually deleted
+    if (!deletedRows || deletedRows.length === 0) {
+      console.error("POST /api/leads/delete - No rows deleted. Lead may not exist or belong to different client.");
+      return NextResponse.json(
+        { success: false, error: "Lead not found or does not belong to your account" },
+        { status: 404 }
+      );
+    }
+
+    console.log("POST /api/leads/delete - Lead deleted successfully:", payload.id, "deleted rows:", deletedRows.length);
     log("POST /api/leads/delete - Lead deleted successfully", payload.id);
     return NextResponse.json({ success: true });
   } catch (error) {
