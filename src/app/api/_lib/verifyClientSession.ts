@@ -14,9 +14,7 @@ type VerifiedSession =
       error: null;
     };
 
-async function createSupabaseServerClient() {
-  const cookieStore = await cookies();
-
+async function createSupabaseServerClient(cookieStore: Awaited<ReturnType<typeof cookies>>) {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -43,6 +41,9 @@ async function createSupabaseServerClient() {
  * - Returns the Supabase user + org_id (from user/app metadata) when valid
  */
 export async function verifyClientSession(req: NextRequest): Promise<VerifiedSession> {
+  // Get cookies once and reuse
+  const cookieStore = await cookies();
+
   // 1) Try Authorization header
   const authHeader = req.headers.get('authorization');
   let accessToken: string | null = null;
@@ -53,7 +54,6 @@ export async function verifyClientSession(req: NextRequest): Promise<VerifiedSes
 
   // 2) Fallback to cookies (check both sb-access-token and ll_session)
   if (!accessToken) {
-    const cookieStore = await cookies();
     accessToken = 
       cookieStore.get('sb-access-token')?.value ?? 
       cookieStore.get('ll_session')?.value ?? 
@@ -68,7 +68,7 @@ export async function verifyClientSession(req: NextRequest): Promise<VerifiedSes
     };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient(cookieStore);
 
   const { data, error } = await supabase.auth.getUser(accessToken);
 
