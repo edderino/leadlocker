@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import Card from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -161,16 +162,20 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
       const res = await fetch("/api/leads/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ id }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
         console.error("[Leads] Failed to delete lead:", data.error);
+        toast.error(data.error || "Failed to delete lead");
         return;
       }
       setLeads(leads.filter((lead) => lead.id !== id));
-    } catch (err) {
+      toast.success("Lead deleted successfully");
+    } catch (err: any) {
       console.error("[Leads] Error deleting lead:", err);
+      toast.error(err?.message || "Failed to delete lead");
     }
   }
 
