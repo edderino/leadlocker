@@ -158,6 +158,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Delete related events first (foreign key constraint)
+    console.log("POST /api/leads/delete - Deleting related events for lead", payload.id);
+    const { error: eventsDeleteError } = await supabaseAdmin
+      .from("events")
+      .delete()
+      .eq("lead_id", payload.id);
+
+    if (eventsDeleteError) {
+      console.error("POST /api/leads/delete - Error deleting events:", eventsDeleteError);
+      log("POST /api/leads/delete - Error deleting events", eventsDeleteError.message);
+      // Continue anyway - maybe there are no events
+    } else {
+      console.log("POST /api/leads/delete - Events deleted successfully");
+    }
+
     // Delete the lead - use the client_id we already verified
     console.log("POST /api/leads/delete - Deleting lead", payload.id, "for client", clientId);
     const { error: deleteError } = await supabaseAdmin
