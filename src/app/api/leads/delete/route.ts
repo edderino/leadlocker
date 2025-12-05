@@ -127,12 +127,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("POST /api/leads/delete - Lead found:", { leadId: lead.id, leadClientId: lead.client_id, userClientId: clientId });
+    console.log("POST /api/leads/delete - Lead found:", { 
+      leadId: lead.id, 
+      leadClientId: lead.client_id, 
+      leadClientIdType: typeof lead.client_id,
+      userClientId: clientId,
+      userClientIdType: typeof clientId,
+      areEqual: lead.client_id === clientId,
+      areEqualStrict: String(lead.client_id) === String(clientId)
+    });
 
-    if (lead.client_id !== clientId) {
+    // Compare as strings to handle UUID comparison issues
+    const leadClientIdStr = String(lead.client_id || "");
+    const userClientIdStr = String(clientId || "");
+
+    if (leadClientIdStr !== userClientIdStr || !lead.client_id || !clientId) {
       console.error("POST /api/leads/delete - Unauthorized: lead belongs to different client", {
         leadClientId: lead.client_id,
+        leadClientIdStr,
         userClientId: clientId,
+        userClientIdStr,
       });
       log("POST /api/leads/delete - Unauthorized: lead belongs to different client", {
         leadClientId: lead.client_id,
