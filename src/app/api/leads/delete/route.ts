@@ -14,7 +14,18 @@ const DeletePayload = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Authenticate user
-    const verification = await verifyClientSession(request);
+    let verification;
+    try {
+      verification = await verifyClientSession(request);
+    } catch (authErr) {
+      console.error("POST /api/leads/delete - verifyClientSession threw exception:", authErr);
+      const errorMsg = authErr instanceof Error ? authErr.message : String(authErr);
+      return NextResponse.json(
+        { success: false, error: "Authentication failed", details: errorMsg },
+        { status: 500 }
+      );
+    }
+
     if (verification.error) {
       console.error("POST /api/leads/delete - Auth error:", verification.error);
       log("POST /api/leads/delete - Auth error", verification.error);
