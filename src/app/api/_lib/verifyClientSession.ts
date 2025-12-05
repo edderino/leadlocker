@@ -51,17 +51,20 @@ export async function verifyClientSession(req: NextRequest): Promise<VerifiedSes
     accessToken = authHeader.slice('bearer '.length).trim();
   }
 
-  // 2) Fallback to sb-access-token cookie (set by @supabase/ssr)
+  // 2) Fallback to cookies (check both sb-access-token and ll_session)
   if (!accessToken) {
     const cookieStore = await cookies();
-    accessToken = cookieStore.get('sb-access-token')?.value ?? null;
+    accessToken = 
+      cookieStore.get('sb-access-token')?.value ?? 
+      cookieStore.get('ll_session')?.value ?? 
+      null;
   }
 
   if (!accessToken) {
     return {
       user: null,
       orgId: null,
-      error: 'Missing access token (no Authorization header or sb-access-token cookie)',
+      error: 'Missing access token (no Authorization header or session cookie)',
     };
   }
 
