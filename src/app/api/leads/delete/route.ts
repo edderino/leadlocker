@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/libs/supabaseAdmin";
 import { log } from "@/libs/log";
-import { verifyClientSession } from "../_lib/verifyClientSession";
+import { verifyClientSession } from "../../_lib/verifyClientSession";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
