@@ -67,7 +67,7 @@ export default function OnboardingPage() {
           setStatus(data.status);
           setClient(data.client || client);
           
-          // If forwarding is fully enabled, mark onboarding complete
+          // If forwarding is fully enabled AND we've received a test email, mark complete
           if (data.status.forwardingEnabled && data.status.changesSaved && data.client?.forwarding_confirmed) {
             // Auto-complete after a short delay
             setTimeout(() => {
@@ -154,6 +154,17 @@ function Screen1({ inboundEmail, onContinue }: { inboundEmail: string; onContinu
             <code className="block bg-zinc-950 border border-zinc-700 px-4 py-3 rounded-lg text-blue-300 font-mono text-sm">
               {inboundEmail}
             </code>
+          </div>
+          <div className="ml-11 mt-4 p-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-yellow-200 text-sm font-semibold mb-1">⚠️ Warning</p>
+                <p className="text-yellow-100 text-sm">
+                  <strong>Gmail cannot forward from the SAME address you're forwarding to.</strong> Use a different sending address for your leads.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -255,16 +266,35 @@ function Screen2({
               <li>In Gmail settings, click <strong className="text-white">Verify</strong> next to your LeadLocker address</li>
               <li>Turn on <strong className="text-white">Forward a copy</strong> toggle</li>
               <li>Scroll down and click <strong className="text-white">Save Changes</strong></li>
-              <li>Look for a <strong className="text-pink-300">pink banner</strong> at the top of your Gmail settings page that says "You are forwarding your email to {inboundEmail}. This notice will end in 7 days"</li>
             </ol>
-            <p className="text-yellow-200 text-sm mt-3 font-semibold">⚠️ Important:</p>
-            <p className="text-yellow-100 text-sm">
-              If you don't see the pink banner, forwarding is not enabled. Go back and make sure you turned on the "Forward a copy" toggle and clicked "Save Changes".
-            </p>
           </div>
         </div>
       )}
 
+      {/* Forwarding added but disabled - THE COMMON FAILURE */}
+      {status.forwardingDisabled && status.addressAdded && !status.forwardingEnabled && (
+        <div className="bg-orange-900/20 border border-orange-600/30 rounded-xl p-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-orange-400 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <p className="text-orange-200 font-semibold mb-2 text-lg">🔶 Forwarding is added but not enabled.</p>
+              <p className="text-orange-100 text-sm mb-3">
+                Go back to Gmail → turn on <strong>Forward a copy to {inboundEmail}</strong>
+              </p>
+              <p className="text-orange-100 text-sm mb-4">Scroll down → <strong>Save changes</strong>.</p>
+              <a
+                href={gmailForwardingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors shadow-lg"
+              >
+                Open Gmail Forwarding Again
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Self-forwarding detected */}
       {status.selfForwardingDetected && (
@@ -272,9 +302,9 @@ function Screen2({
           <div className="flex items-start gap-3">
             <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-1" />
             <div className="flex-1">
-              <p className="text-red-200 font-semibold mb-2 text-lg">Self-Forwarding Detected</p>
+              <p className="text-red-200 font-semibold mb-2 text-lg">❌ Gmail will not forward emails you send from the same address you're forwarding from.</p>
               <p className="text-red-100 text-sm">
-                Gmail will not forward emails you send from the same address you're forwarding from. Send your leads from a different email address or use your business inbox.
+                Send your leads from a different email address or use your business inbox.
               </p>
             </div>
           </div>
@@ -282,14 +312,14 @@ function Screen2({
       )}
 
       {/* Test Email Step - Show after verification is clicked */}
-      {status.verificationClicked && !status.forwardingEnabled && (
+      {status.verificationClicked && !client?.forwarding_confirmed && (
         <div className="bg-purple-900/20 border border-purple-600/30 rounded-xl p-6">
           <div className="flex items-start gap-3 mb-4">
             <Mail className="w-6 h-6 text-purple-400 flex-shrink-0 mt-1" />
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-purple-200 mb-2">3. Send a Test Email</h3>
+              <h3 className="text-lg font-semibold text-purple-200 mb-2">Send a Test Email</h3>
               <p className="text-purple-100 text-sm mb-4">
-                Now send a test email to your business inbox. Gmail will forward it to LeadLocker, and we'll confirm forwarding is working.
+                Send a test email to your business inbox. Gmail will forward it to LeadLocker, and we'll confirm forwarding is working.
               </p>
               <div className="mb-4">
                 <p className="text-purple-100 text-sm mb-2">Send an email to:</p>
@@ -301,9 +331,9 @@ function Screen2({
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-yellow-200 text-sm font-semibold mb-1">Important Warning</p>
+                    <p className="text-yellow-200 text-sm font-semibold mb-1">⚠️ Warning</p>
                     <p className="text-yellow-100 text-sm">
-                      Gmail cannot forward from the SAME address you're forwarding to. Use a different sending address for your leads.
+                      <strong>Gmail cannot forward from the SAME address you're forwarding to.</strong> Use a different sending address for your leads.
                     </p>
                   </div>
                 </div>
@@ -344,11 +374,9 @@ Thanks!`;
                 Send test email →
                 <ExternalLink className="w-4 h-4" />
               </button>
-              {!status.forwardingEnabled && (
-                <p className="text-purple-200 text-sm mt-4">
-                  ⏳ Waiting for your test email to arrive... This may take a few seconds after sending.
-                </p>
-              )}
+              <p className="text-purple-200 text-sm mt-4">
+                ⏳ Waiting for your test email to arrive... This may take a few seconds after sending.
+              </p>
             </div>
           </div>
         </div>
