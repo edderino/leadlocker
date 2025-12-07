@@ -155,17 +155,6 @@ function Screen1({ inboundEmail, onContinue }: { inboundEmail: string; onContinu
               {inboundEmail}
             </code>
           </div>
-          <div className="ml-11 mt-4 p-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-yellow-200 text-sm font-semibold mb-1">Important Warning</p>
-                <p className="text-yellow-100 text-sm">
-                  Gmail cannot forward from the SAME address you're forwarding to. Use a different sending address for your leads.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="border-t border-zinc-800 pt-6 space-y-3">
@@ -307,6 +296,17 @@ function Screen2({
                 <code className="block bg-zinc-950 border border-zinc-700 px-4 py-2 rounded-lg text-purple-300 font-mono text-sm">
                   {client?.contact_email || "your-business-email@example.com"}
                 </code>
+              </div>
+              <div className="mb-4 p-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-yellow-200 text-sm font-semibold mb-1">Important Warning</p>
+                    <p className="text-yellow-100 text-sm">
+                      Gmail cannot forward from the SAME address you're forwarding to. Use a different sending address for your leads.
+                    </p>
+                  </div>
+                </div>
               </div>
               <button
                 type="button"
