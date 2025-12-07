@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import Card from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ConfirmDialog } from "@/components/ui/Dialog";
 import { List, Grid, ArrowDownUp, Filter } from "lucide-react";
 import { useThemeStyles } from "./ThemeContext";
 import { supabase } from "@/libs/supabaseClient";
@@ -61,6 +62,8 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
   const [view, setView] = useState<"cards" | "table">("cards");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
 
   // Auto-refresh is now handled by DashboardClientRoot, so we just read from the store
   const dateFormatter = useMemo(
@@ -154,16 +157,20 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
     }
   }
 
-  async function deleteLead(id: string) {
-    if (!confirm("Are you sure you want to delete this lead?")) {
-      return;
-    }
+  function handleDeleteClick(id: string) {
+    setLeadToDelete(id);
+    setDeleteConfirmOpen(true);
+  }
+
+  async function deleteLead() {
+    if (!leadToDelete) return;
+    
     try {
       const res = await fetch("/api/leads/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: leadToDelete }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -171,8 +178,9 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
         toast.error(data.error || "Failed to delete lead");
         return;
       }
-      setLeads(leads.filter((lead) => lead.id !== id));
+      setLeads(leads.filter((lead) => lead.id !== leadToDelete));
       toast.success("Lead deleted successfully");
+      setLeadToDelete(null);
     } catch (err: any) {
       console.error("[Leads] Error deleting lead:", err);
       toast.error(err?.message || "Failed to delete lead");
@@ -312,7 +320,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                   variant="outline"
                   size="sm"
                   className="border-red-600/50 text-red-400 hover:bg-red-600/10 flex-1 min-w-[80px] min-h-[44px] text-sm"
-                  onClick={() => deleteLead(lead.id)}
+                  onClick={() => handleDeleteClick(lead.id)}
                 >
                   Delete
                 </Button>
@@ -387,7 +395,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                           variant="outline"
                           size="sm"
                           className="border-red-600/50 text-red-400 hover:bg-red-600/10 text-xs px-2 py-1 h-auto whitespace-nowrap"
-                          onClick={() => deleteLead(lead.id)}
+                          onClick={() => handleDeleteClick(lead.id)}
                         >
                           Delete
                         </Button>
@@ -406,6 +414,20 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
           </Table>
         </Card>
       )}
+      
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setLeadToDelete(null);
+        }}
+        onConfirm={deleteLead}
+        title="Delete Lead"
+        message="Are you sure you want to delete this lead? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   );
 }
