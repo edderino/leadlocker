@@ -442,6 +442,42 @@ export async function POST(req: Request) {
   console.log("🏷 Matched client:", client.id);
 
   // ======================================================
+  // DETECT SELF-FORWARDING (from = to)
+  // ======================================================
+  // Gmail cannot forward emails sent FROM the same address that's being forwarded TO.
+  // This is a common user error that causes forwarding to fail silently.
+  const fromRaw = (payload.from || payload.From || "").toString();
+  const fromEmailCheck = fromRaw.match(/<(.+@.+)>/)?.[1] || fromRaw.trim();
+  const isSelfForwarding = fromEmailCheck?.toLowerCase() === toEmail?.toLowerCase();
+  
+  if (isSelfForwarding) {
+    console.warn(
+      "⚠️ SELF-FORWARDING DETECTED: from_email equals inbound_email for client:",
+      client.id,
+      "from:",
+      fromEmailCheck,
+      "to:",
+      toEmail
+    );
+    
+    // Store this flag so the onboarding UI can show a warning
+    await supabase
+      .from("clients")
+      .update({
+        self_forwarding_detected: true,
+        self_forwarding_detected_at: new Date().toISOString(),
+      })
+      .eq("id", client.id);
+    
+    // Don't create a lead for self-forwarded emails
+    return NextResponse.json({
+      ok: true,
+      blocked: "self-forwarding",
+      message: "Gmail cannot forward emails from the same address",
+    });
+  }
+
+  // ======================================================
   // SPECIAL CASE: GMAIL FORWARDING VERIFICATION EMAIL
   // ======================================================
   // Gmail sends a \"Gmail Forwarding Confirmation\" email to the destination
@@ -619,33 +655,6 @@ export async function POST(req: Request) {
     payload,
   });
 
-  // Special case: Allow the very first forwarded email even if empty (to confirm forwarding)
-  // This prevents onboarding from getting stuck when Gmail forwards an email with empty/stripped body
-  if (filterResult.blocked && filterResult.reason === "empty-content" && !client.forwarding_confirmed) {
-    console.log("⚠️ Empty email detected but forwarding not confirmed — using it to confirm forwarding:", client.id);
-    
-    const { error: forwardingUpdateError } = await supabase
-      .from("clients")
-      .update({
-        forwarding_confirmed: true,
-        forwarding_confirmed_at: new Date().toISOString(),
-      })
-      .eq("id", client.id);
-
-    if (forwardingUpdateError) {
-      console.error("❌ Failed to mark forwarding as confirmed:", forwardingUpdateError);
-    } else {
-      console.log("✅ Forwarding confirmed via empty email for client:", client.id);
-    }
-
-    return NextResponse.json({ 
-      ok: true, 
-      forwarding_confirmed: true,
-      note: "Empty email used to confirm forwarding"
-    });
-  }
-
-  // Apply normal hard filters for all other cases
   if (filterResult.blocked) {
     console.log(`🛑 BLOCKED EMAIL – reason: ${filterResult.reason}`);
     return NextResponse.json({
@@ -675,6 +684,7 @@ export async function POST(req: Request) {
     .from("leads")
     .upsert(
       {
+        user_id: client.user_id,
         client_id: client.id,
         source: "email",
         subject: subjectForDb,
