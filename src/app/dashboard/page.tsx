@@ -34,7 +34,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="p-8 text-white bg-black min-h-screen">
+      <div className="h-screen w-full flex items-center justify-center text-white bg-black">
         <p>Loading your dashboard...</p>
       </div>
     );
@@ -44,15 +44,8 @@ export default function DashboardPage() {
   const orgId = client?.org_id || client?.id || "demo-org";
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
+    <div className="h-screen w-full overflow-hidden relative">
       <OnboardingBanner />
-
-      {/* Main dashboard content */}
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-      <p className="mb-8">
-        Welcome back, {client?.owner_name || client?.business_name || "User"}.
-      </p>
-
       <DashboardClientRoot orgId={orgId} />
     </div>
   );

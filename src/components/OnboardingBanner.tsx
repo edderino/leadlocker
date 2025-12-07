@@ -55,7 +55,7 @@ export default function OnboardingBanner() {
   if (!needsOnboarding) return null;
 
   return (
-    <div className="mb-6 rounded-xl border border-yellow-600/40 bg-yellow-600/10 px-4 py-3 text-yellow-200">
+    <div className="absolute top-0 left-0 right-0 z-50 rounded-b-xl border-b border-yellow-600/40 bg-yellow-600/10 px-4 py-3 text-yellow-200">
       <div className="flex items-center justify-between">
         <div className="text-sm">
           <span className="font-semibold">Email forwarding not fully set up.</span>{" "}
