@@ -37,7 +37,7 @@ export default function OnboardingPage() {
         const data = await res.json();
         if (data.client) {
           setClient(data.client);
-          // Auto-advance to step 2 if verification email detected
+          // Auto-advance to step 2 if verification email detected (after adding address)
           if (data.client.gmail_forwarding_code && currentSubStep === 1) {
             setCurrentSubStep(2);
           }
@@ -49,7 +49,38 @@ export default function OnboardingPage() {
     load();
   }, [currentSubStep]);
 
-  // Poll for forwarding status
+  // Poll for verification link (after address is added)
+  useEffect(() => {
+    if (currentSubStep !== 1) return;
+
+    let interval: ReturnType<typeof setInterval> | undefined;
+
+    const checkForVerificationLink = async () => {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (data.client?.gmail_forwarding_code) {
+          setClient(data.client);
+          // Auto-advance to step 2 when verification link appears
+          setCurrentSubStep(2);
+        }
+      } catch (err) {
+        console.error("Failed to check for verification link:", err);
+      }
+    };
+
+    checkForVerificationLink();
+    interval = setInterval(checkForVerificationLink, 3000);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [currentSubStep]);
+
+  // Poll for forwarding status (starting from step 3 to detect forwarding toggle/save, and step 6 to detect test email)
   useEffect(() => {
     if (currentSubStep < 3) return;
 
@@ -67,9 +98,13 @@ export default function OnboardingPage() {
           setStatus(data.status);
           setClient(data.client || client);
           
-          // Auto-advance when forwarding is enabled
-          if (data.status.forwardingEnabled && data.status.changesSaved && currentSubStep === 4) {
-            setCurrentSubStep(5);
+          // Auto-advance to step 5 when forwarding is enabled (after toggle + save)
+          // Note: forwardingEnabled is only true after test email arrives, so this won't auto-advance
+          // Users will manually advance through steps 3-5
+          
+          // Auto-advance to step 6 when test email is detected (forwarding confirmed)
+          if (data.status.forwardingEnabled && data.status.changesSaved && currentSubStep === 5) {
+            setCurrentSubStep(6);
           }
           
           // Auto-advance to dashboard when forwarding confirmed
@@ -119,6 +154,43 @@ export default function OnboardingPage() {
         {currentSubStep === 1 && (
           <StepCard
             number={1}
+            title="Add forwarding address in Gmail"
+            action={
+              <a
+                href="https://mail.google.com/mail/u/0/#settings/fwdandpop"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg"
+              >
+                Open Gmail Settings →
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            }
+            instruction={
+              <>
+                Go to: Settings → Forwarding and POP/IMAP tab
+                <br />
+                Click <strong className="text-yellow-200">"Add forwarding address"</strong>
+                <br />
+                Paste this address: <code className="bg-black/40 px-2 py-1 rounded text-yellow-300 font-mono">{inboundEmail}</code>
+                <br />
+                Click Continue → Proceed
+                <br />
+                <br />
+                Gmail will send a verification email to LeadLocker. We'll detect it automatically!
+              </>
+            }
+            image="/onboarding/gmail-settings.png"
+            imageAlt="Gmail forwarding settings page"
+            onComplete={() => setCurrentSubStep(2)}
+            waitingMessage="⏳ Waiting for Gmail to send the verification email... We'll detect it automatically"
+            autoDetect={true}
+          />
+        )}
+
+        {currentSubStep === 2 && (
+          <StepCard
+            number={2}
             title="Click the verification link"
             action={
               verificationLink && typeof verificationLink === "string" && verificationLink.startsWith("http") ? (
@@ -140,31 +212,9 @@ export default function OnboardingPage() {
             instruction="Gmail will ask for your password. Enter it and approve. You'll see a confirmation page like this:"
             image="/onboarding/gmail-confirmation.png"
             imageAlt="Gmail forwarding confirmation page"
-            onComplete={() => setCurrentSubStep(2)}
+            onComplete={() => setCurrentSubStep(3)}
             completed={status.verificationClicked}
             disabled={!verificationLink}
-          />
-        )}
-
-        {currentSubStep === 2 && (
-          <StepCard
-            number={2}
-            title="Close that tab, reopen Gmail Settings"
-            action={
-              <a
-                href="https://mail.google.com/mail/u/0/#settings/fwdandpop"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg"
-              >
-                Open Gmail Settings →
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            }
-            instruction="Go to: Settings → Forwarding and POP/IMAP tab. Your forwarding address should already be added (you'll see it in the Forwarding section)."
-            image="/onboarding/gmail-settings.png"
-            imageAlt="Gmail forwarding settings page"
-            onComplete={() => setCurrentSubStep(3)}
           />
         )}
 
