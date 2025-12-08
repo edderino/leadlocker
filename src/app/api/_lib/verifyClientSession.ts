@@ -71,25 +71,46 @@ export async function verifyClientSession(req: NextRequest): Promise<VerifiedSes
 
     const supabase = await createSupabaseServerClient(cookieStore);
 
-    const { data, error } = await supabase.auth.getUser(accessToken);
+    // Use getSession() which automatically handles token refresh via cookies
+    // This is better than getUser(token) because it uses the SSR client's cookie handling
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
-    if (error || !data.user) {
+    if (sessionError || !sessionData?.session?.user) {
+      // If session fails, try getUser with the access token as fallback
+      const { data, error } = await supabase.auth.getUser(accessToken);
+      
+      if (error || !data.user) {
+        return {
+          user: null,
+          orgId: null,
+          error: error?.message ?? 'Invalid or expired session',
+        };
+      }
+
+      // Use the user from getUser fallback
+      const appMeta = (data.user.app_metadata as any) ?? {};
+      const userMeta = (data.user.user_metadata as any) ?? {};
+      const orgId: string | null = appMeta.org_id ?? userMeta.org_id ?? null;
+
       return {
-        user: null,
-        orgId: null,
-        error: error?.message ?? 'Invalid or expired session',
+        user: data.user,
+        orgId,
+        error: null,
       };
     }
 
+    // Use session data (which handles refresh automatically)
+    const user = sessionData.session.user;
+
     // org_id can live in either app_metadata or user_metadata depending on how it was set
-    const appMeta = (data.user.app_metadata as any) ?? {};
-    const userMeta = (data.user.user_metadata as any) ?? {};
+    const appMeta = (user.app_metadata as any) ?? {};
+    const userMeta = (user.user_metadata as any) ?? {};
 
     const orgId: string | null =
       appMeta.org_id ?? userMeta.org_id ?? null;
 
     return {
-      user: data.user,
+      user,
       orgId,
       error: null,
     };
