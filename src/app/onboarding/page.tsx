@@ -310,22 +310,35 @@ function Step3({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (client?.contact_email) {
-              const mailtoLink = `mailto:${client.contact_email}?subject=Test%20lead&body=This%20is%20a%20test%20lead%20for%20LeadLocker.`;
-              // Create a temporary link and click it programmatically
-              // This prevents page navigation while opening the email client
-              const link = document.createElement("a");
-              link.href = mailtoLink;
-              link.style.display = "none";
-              document.body.appendChild(link);
-              link.click();
-              // Clean up after a short delay
-              setTimeout(() => {
-                document.body.removeChild(link);
-              }, 100);
-            }
+            if (!client?.contact_email) return;
+            
+            // Create a realistic test quote for an electrician
+            const emailBody = `Hi there,
+
+I'm looking to get a quote for some electrical work at my property.
+
+Job details:
+- Install 3 new power points in the kitchen
+- Replace old light switches with dimmer switches (5 switches)
+- Install outdoor security lighting at front and back
+
+Property is a 3-bedroom house. Looking to get this done in the next 2-3 weeks if possible.
+
+Please let me know your availability and an estimated quote.
+
+You can reach me on 0400 123 456.
+
+Thanks!`;
+            
+            // Open Gmail compose in a new tab
+            const subject = encodeURIComponent("Quote Request - Electrical Work");
+            const body = encodeURIComponent(emailBody);
+            const to = encodeURIComponent(client.contact_email);
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
+            
+            window.open(gmailUrl, "_blank", "noopener,noreferrer");
           }}
-          className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-600"
+          className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-600 cursor-pointer"
         >
           Send test email →
         </button>
