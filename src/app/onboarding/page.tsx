@@ -411,22 +411,16 @@ function StepCard({
           )}
           {image && (
             <div className="mt-4 rounded-lg overflow-hidden border border-gray-700">
-              <div className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={image}
-                  alt={imageAlt || "Gmail settings"}
-                  className="w-full h-auto"
-                  onError={(e) => {
-                    // Hide image if it fails to load
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-                {/* Blur overlay for email addresses */}
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute top-0 left-0 w-full h-16 bg-black/20 backdrop-blur-sm" />
-                </div>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={image}
+                alt={imageAlt || "Gmail settings"}
+                className="w-full h-auto"
+                onError={(e) => {
+                  // Hide image if it fails to load
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             </div>
           )}
         </div>
