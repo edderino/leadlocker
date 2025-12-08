@@ -137,7 +137,9 @@ export default function OnboardingPage() {
                 </div>
               )
             }
-            instruction="Gmail will ask for your password. Enter it and approve."
+            instruction="Gmail will ask for your password. Enter it and approve. You'll see a confirmation page like this:"
+            image="/onboarding/gmail-confirmation.png"
+            imageAlt="Gmail forwarding confirmation page"
             onComplete={() => setCurrentSubStep(2)}
             completed={status.verificationClicked}
             disabled={!verificationLink}
@@ -159,7 +161,7 @@ export default function OnboardingPage() {
                 <ExternalLink className="w-4 h-4" />
               </a>
             }
-            instruction="Go to: Settings → Forwarding and POP/IMAP tab"
+            instruction="Go to: Settings → Forwarding and POP/IMAP tab. Your forwarding address should already be added (you'll see it in the Forwarding section)."
             image="/onboarding/gmail-settings.png"
             imageAlt="Gmail forwarding settings page"
             onComplete={() => setCurrentSubStep(3)}
