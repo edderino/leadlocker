@@ -63,8 +63,9 @@ async function main() {
     {
       file: 'gmail-confirmation.png',
       regions: [
-        // Blur the email address area (typically center of confirmation page)
-        { x: 100, y: 200, width: 600, height: 50 }, // Email address area
+        // Blur only the specific email address: adrianmorosin02@gmail.com
+        // Adjust coordinates to match the exact position of the email in the image
+        { x: 200, y: 250, width: 250, height: 25 }, // Only blur the email address itself
       ],
     },
     {
