@@ -719,28 +719,80 @@ export async function POST(req: Request) {
   // ======================================================
   // SEND SMS (first time only)
   // ======================================================
+  const smsTo = client.twilio_to || process.env.LL_DEFAULT_USER_PHONE;
+  const smsFrom = client.twilio_from || process.env.TWILIO_FROM_NUMBER;
+
+  if (!smsTo) {
+    console.error("🚨 SMS FAILED: No recipient phone number (twilio_to or LL_DEFAULT_USER_PHONE)");
+    return NextResponse.json(
+      { ok: false, error: "SMS recipient not configured" },
+      { status: 500 }
+    );
+  }
+
+  if (!smsFrom) {
+    console.error("🚨 SMS FAILED: No sender phone number (twilio_from or TWILIO_FROM_NUMBER)");
+    return NextResponse.json(
+      { ok: false, error: "SMS sender not configured" },
+      { status: 500 }
+    );
+  }
+
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+    console.error("🚨 SMS FAILED: Twilio credentials not configured");
+    return NextResponse.json(
+      { ok: false, error: "Twilio not configured" },
+      { status: 500 }
+    );
+  }
+
   try {
     const twilioClient = twilio(
-      process.env.TWILIO_ACCOUNT_SID!,
-      process.env.TWILIO_AUTH_TOKEN!
+      process.env.TWILIO_ACCOUNT_SID,
+      process.env.TWILIO_AUTH_TOKEN
     );
 
     const smsBody =
       `📩 New Lead via Email\n\n` +
       `👤 Name: ${name}\n` +
-      `📞 Phone: ${phone}\n` +
+      `📞 Phone: ${phone || "Not provided"}\n` +
       `✉️ From: ${fromEmail}\n` +
       `📝 Subject: ${subjectForDb || "(no subject)"}`;
 
-    await twilioClient.messages.create({
-      body: smsBody,
-      from: client.twilio_from || process.env.TWILIO_FROM_NUMBER!,
-      to: client.twilio_to || process.env.LL_DEFAULT_USER_PHONE!,
+    console.log("📲 Attempting to send SMS:", {
+      to: smsTo,
+      from: smsFrom,
+      bodyLength: smsBody.length,
+      clientId: client.id,
     });
 
-    console.log("📲 SMS sent!");
+    const message = await twilioClient.messages.create({
+      body: smsBody,
+      from: smsFrom,
+      to: smsTo,
+    });
+
+    console.log("✅ SMS sent successfully!", {
+      messageSid: message.sid,
+      to: smsTo,
+      from: smsFrom,
+    });
   } catch (err: any) {
-    console.error("🚨 SMS Error:", err);
+    console.error("🚨 SMS Error:", {
+      error: err.message,
+      code: err.code,
+      status: err.status,
+      to: smsTo,
+      from: smsFrom,
+      clientId: client.id,
+    });
+    // Don't fail the whole request - lead was created successfully
+    // But log the error so we can debug
+    return NextResponse.json({
+      ok: true,
+      lead_created: true,
+      sms_error: err.message,
+    });
   }
 
   return NextResponse.json({ ok: true });
