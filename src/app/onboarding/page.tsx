@@ -2,20 +2,31 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, Mail } from "lucide-react";
-import Link from "next/link";
+import { Check, ChevronRight, ExternalLink, Mail, AlertCircle } from "lucide-react";
 
-type ForwardingStatus = "not-connected" | "waiting" | "connected";
+type ForwardingStatus = {
+  waitingForVerificationEmail: boolean;
+  addressAdded: boolean;
+  verificationClicked: boolean;
+  forwardingEnabled: boolean;
+  changesSaved: boolean;
+  forwardingDisabled?: boolean;
+  selfForwardingDetected?: boolean;
+};
 
 export default function OnboardingPage() {
   const router = useRouter();
-
-  const [step, setStep] = useState(1);
+  const [currentSubStep, setCurrentSubStep] = useState(1);
   const [client, setClient] = useState<any>(null);
-  const [status, setStatus] = useState<ForwardingStatus>("not-connected");
-  const [checking, setChecking] = useState(false);
+  const [status, setStatus] = useState<ForwardingStatus>({
+    waitingForVerificationEmail: true,
+    addressAdded: false,
+    verificationClicked: false,
+    forwardingEnabled: false,
+    changesSaved: false,
+  });
 
-  // Fetch client data to get inbound_email and store in localStorage
+  // Fetch client data
   useEffect(() => {
     async function load() {
       try {
@@ -26,11 +37,9 @@ export default function OnboardingPage() {
         const data = await res.json();
         if (data.client) {
           setClient(data.client);
-          if (data.client.inbound_email) {
-            localStorage.setItem("ll_inbound_email", data.client.inbound_email);
-          }
-          if (data.client.forwarding_confirmed) {
-            setStatus("connected");
+          // Auto-advance to step 2 if verification email detected
+          if (data.client.gmail_forwarding_code && currentSubStep === 1) {
+            setCurrentSubStep(2);
           }
         }
       } catch (err) {
@@ -38,282 +47,204 @@ export default function OnboardingPage() {
       }
     }
     load();
-  }, []);
+  }, [currentSubStep]);
 
-  // Real-time polling to detect when forwarding starts working
+  // Poll for forwarding status
   useEffect(() => {
+    if (currentSubStep < 3) return;
+
     let interval: ReturnType<typeof setInterval> | undefined;
 
-    const fetchClient = async () => {
-      setChecking(true);
-
+    const checkStatus = async () => {
       try {
-        const res = await fetch("/api/auth/me", {
-          method: "GET",
+        const res = await fetch("/api/onboarding/forwarding-status", {
           credentials: "include",
           cache: "no-store",
         });
-
         const data = await res.json();
-
-        if (data.client) {
-          setClient(data.client);
-
-          // If we've seen the Gmail verification email, move to Step 2
-          if (data.client.gmail_forwarding_code && step < 2) {
-            setStep(2);
+        
+        if (data.status) {
+          setStatus(data.status);
+          setClient(data.client || client);
+          
+          // Auto-advance when forwarding is enabled
+          if (data.status.forwardingEnabled && data.status.changesSaved && currentSubStep === 4) {
+            setCurrentSubStep(5);
           }
-
-          // If forwarding is confirmed, move to Step 3
-          if (data.client.forwarding_confirmed) {
-            setStatus("connected");
-            if (step < 3) {
-              setStep(3);
-            }
-            if (interval) {
-              clearInterval(interval);
-            }
-            return; // Don't keep polling
-          } else {
-            setStatus("waiting");
+          
+          // Auto-advance to dashboard when forwarding confirmed
+          if (data.status.forwardingEnabled && data.status.changesSaved && data.client?.forwarding_confirmed && currentSubStep === 6) {
+            setTimeout(() => {
+              router.push("/dashboard");
+            }, 2000);
           }
         }
       } catch (err) {
-        console.error("Polling error:", err);
+        console.error("Status check error:", err);
       }
-
-      setChecking(false);
     };
 
-    // Initial load
-    fetchClient();
-
-    // Poll every 5 sec
-    interval = setInterval(fetchClient, 5000);
+    checkStatus();
+    interval = setInterval(checkStatus, 3000);
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [router, step]);
+  }, [currentSubStep, client, router]);
 
-  const next = () => setStep((s) => Math.min(s + 1, 4));
-  const prev = () => setStep((s) => Math.max(s - 1, 1));
-
-  return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center px-6 py-16">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold">Let's Get You Set Up</h1>
-        <p className="text-gray-400 mt-2">
-          Follow these quick steps to start collecting leads instantly.
-        </p>
-      </div>
-
-
-      {/* Forwarding status display */}
-      <div className="mb-8 text-sm text-gray-300">
-        {status === "not-connected" && (
-          <p>
-            ❌ Forwarding not connected yet. Follow the steps below in order — you
-            only have to do this once.
-          </p>
-        )}
-        {status === "waiting" && (
-          <p>
-            ⏳ We&apos;re watching for the very first email that Gmail forwards to
-            LeadLocker. As soon as we see it, your setup will be marked as
-            connected.
-          </p>
-        )}
-        {status === "connected" && (
-          <p className="text-green-400 text-base">
-            ✅ Forwarding is active. Any new enquiry Gmail forwards to your
-            LeadLocker address will become a lead and trigger an SMS.
-          </p>
-        )}
-      </div>
-
-      {/* Step Indicator */}
-      <div className="flex items-center space-x-6 mb-12">
-        <StepBubble number={1} active={step === 1} completed={step > 1} />
-        <StepLine completed={step > 1} />
-        <StepBubble number={2} active={step === 2} completed={step > 2} />
-        <StepLine completed={step > 2} />
-        <StepBubble number={3} active={step === 3} completed={step > 3} />
-        <StepLine completed={step > 3} />
-        <StepBubble number={4} active={step === 4} completed={false} />
-      </div>
-
-      {/* Panels */}
-      <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-700 rounded-xl p-8 shadow-2xl">
-        {step === 1 && <Step1 client={client} next={next} />}
-        {step === 2 && <Step2 client={client} next={next} prev={prev} />}
-        {step === 3 && <Step3 client={client} next={next} prev={prev} />}
-        {step === 4 && <Step4 client={client} prev={prev} />}
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------
-   STEP UI COMPONENTS
-------------------------------------------------------- */
-
-function Step1({ client, next }: { client: any; next: () => void }) {
-  return (
-    <>
-      <h2 className="text-2xl font-semibold mb-4">1. Forward Your Emails</h2>
-      <p className="text-gray-300 mb-6">
-        LeadLocker needs your leads forwarded to your unique LeadLocker email.
-        This lets us capture every incoming lead instantly.
-      </p>
-      <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-6 mb-6">
-        <h3 className="text-lg font-medium mb-2">We detected you're using Gmail</h3>
-        <p className="text-gray-400 mb-4">
-          Click below for step-by-step instructions on how to forward emails.
-        </p>
-        <Link
-          href="/onboarding/gmail"
-          className="inline-flex items-center bg-white text-black px-5 py-3 rounded-md font-medium hover:bg-gray-200"
-        >
-          <Mail className="w-5 h-5 mr-2" />
-          Set up Gmail Forwarding
-        </Link>
-      </div>
-      <button
-        onClick={next}
-        className="flex items-center bg-white text-black px-5 py-3 rounded-md font-semibold hover:bg-gray-200"
-      >
-        Continue
-        <ChevronRight className="w-5 h-5 ml-2" />
-      </button>
-    </>
-  );
-}
-
-function Step2({
-  client,
-  next,
-  prev,
-}: {
-  client: any;
-  next: () => void;
-  prev: () => void;
-}) {
+  const inboundEmail = client?.inbound_email || "yourcompanyname@mg.leadlocker.app";
   const verificationLink = client?.gmail_forwarding_code;
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-semibold mb-4">2. Verify Gmail Forwarding</h2>
-      <div className="space-y-4 p-6 bg-gray-900/40 rounded-lg border border-gray-800">
-        {verificationLink && typeof verificationLink === "string" && verificationLink.startsWith("http") ? (
-          <>
-            <p className="text-gray-300">
-              We received Google's verification email. Click below to open the Gmail verification page:
-            </p>
-            <a
-              href={verificationLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block text-blue-400 underline hover:text-blue-300"
-            >
-              Click here to open Gmail verification →
-            </a>
-            <ol className="text-gray-400 text-sm space-y-1 mt-3 list-decimal list-inside">
-              <li>Open Gmail.</li>
-              <li>Click the gear icon → <strong>See all settings</strong>.</li>
-              <li>Go to the <strong>Forwarding and POP/IMAP</strong> tab.</li>
-              <li>Next to your LeadLocker address, click <strong>Verify</strong>.</li>
-              <li>
-                If verification doesn&apos;t show after finalising the verification, refresh the page, ensure your LeadLocker address is in the forwarding box, scroll to the bottom of the page in Gmail and save changes. A pink banner should then show at the top of the page saying &quot;You are forwarding your email to {client?.inbound_email || "yourcompanyname@mg.leadlocker.app"}. This notice will end in 7 days&quot;
-              </li>
-            </ol>
-            <div className="mt-4 p-4 bg-yellow-900/30 border border-yellow-600/50 rounded-lg">
-              <p className="text-yellow-200 text-sm font-semibold mb-2">⚠️ Important:</p>
-              <p className="text-yellow-100 text-sm">
-                If you&apos;re having trouble, double-check that:
-              </p>
-              <ul className="text-yellow-100 text-sm mt-2 list-disc list-inside space-y-1">
-                <li>The <strong>pink banner</strong> is visible at the top of your Gmail settings page</li>
-                <li><strong>Forwarding is enabled</strong> (the toggle/checkbox is turned on)</li>
-                <li>Your LeadLocker address ({client?.inbound_email || "yourcompanyname@mg.leadlocker.app"}) is listed in the forwarding section</li>
-              </ul>
-              <p className="text-yellow-200 text-sm mt-2">
-                Without the pink banner and forwarding enabled, LeadLocker won&apos;t receive your emails.
-              </p>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-gray-300">
-              As soon as Gmail sends a forwarding confirmation email to LeadLocker, you'll see a button here
-              to open the verification page.
-            </p>
-            <p className="text-yellow-400 text-sm mt-2">
-              ⏳ Waiting for Gmail to send the verification email…
-            </p>
-          </>
-        )}
-      </div>
-      <div className="flex justify-between">
-        <button
-          onClick={prev}
-          className="text-gray-300 hover:text-white underline"
-        >
-          Back
-        </button>
-        <button
-          onClick={next}
-          disabled={!verificationLink}
-          className={`flex items-center px-5 py-3 rounded-md font-semibold ${
-            verificationLink
-              ? "bg-white text-black hover:bg-gray-200"
-              : "bg-gray-700 text-gray-400 cursor-not-allowed"
-          }`}
-        >
-          {verificationLink ? "Continue" : "Waiting for Gmail…"}
-          <ChevronRight className="w-5 h-5 ml-2" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Step3({
-  client,
-  next,
-  prev,
-}: {
-  client: any;
-  next: () => void;
-  prev: () => void;
-}) {
-  return (
-    <>
-      <h2 className="text-2xl font-semibold mb-4">3. Send a Test Email</h2>
-      <p className="text-gray-300 mb-6">
-        After forwarding is confirmed, send a test email so we can detect your first real lead.
-      </p>
-      <div className="space-y-4 p-6 bg-gray-900/40 rounded-lg border border-gray-800 mb-6">
-        <p className="text-gray-300">
-          Send a test email to your regular business inbox. Gmail will forward it to your LeadLocker address
-          automatically.
-        </p>
-        <div>
-          <p className="text-gray-400 mb-1">Your business email:</p>
-          <code className="bg-black/40 px-3 py-2 rounded text-blue-300 block">
-            {client?.contact_email || "Loading..."}
-          </code>
+    <div className="min-h-screen bg-gradient-to-br from-[#0c0f15] via-[#161b22] to-[#0c0f15] text-white flex flex-col items-center px-4 py-12">
+      <div className="w-full max-w-4xl">
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex gap-2 mb-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className={`h-2 flex-1 rounded transition-all ${
+                  i <= currentSubStep ? "bg-blue-500" : "bg-gray-700"
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-sm text-gray-400 text-center">
+            Step {currentSubStep} of 6
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (!client?.contact_email) return;
-            
-            // Create a realistic test quote for an electrician
-            const emailBody = `Hi there,
+
+        {/* Step Content */}
+        {currentSubStep === 1 && (
+          <StepCard
+            number={1}
+            title="Click the verification link"
+            action={
+              verificationLink && typeof verificationLink === "string" && verificationLink.startsWith("http") ? (
+                <a
+                  href={verificationLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg"
+                >
+                  Open Gmail Verification →
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              ) : (
+                <div className="text-yellow-400 text-sm">
+                  ⏳ Waiting for Gmail to send the verification email...
+                </div>
+              )
+            }
+            instruction="Gmail will ask for your password. Enter it and approve."
+            onComplete={() => setCurrentSubStep(2)}
+            completed={status.verificationClicked}
+            disabled={!verificationLink}
+          />
+        )}
+
+        {currentSubStep === 2 && (
+          <StepCard
+            number={2}
+            title="Close that tab, reopen Gmail Settings"
+            action={
+              <a
+                href="https://mail.google.com/mail/u/0/#settings/fwdandpop"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg"
+              >
+                Open Gmail Settings →
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            }
+            instruction="Go to: Settings → Forwarding and POP/IMAP tab"
+            image="/onboarding/gmail-settings.png"
+            imageAlt="Gmail forwarding settings page"
+            onComplete={() => setCurrentSubStep(3)}
+          />
+        )}
+
+        {currentSubStep === 3 && (
+          <StepCard
+            number={3}
+            title="⚠️ Turn ON 'Forward a copy' toggle"
+            critical={true}
+            instruction={
+              <>
+                Find your LeadLocker address: <code className="bg-black/40 px-2 py-1 rounded text-yellow-300 font-mono">{inboundEmail}</code>
+                <br />
+                Make sure the toggle/checkbox is <strong className="text-yellow-200">ON</strong>
+              </>
+            }
+            visualHint="Look for: Toggle switch turned ON (blue/green) OR checkbox checked"
+            image="/onboarding/forwarding-toggle-on.png"
+            imageAlt="Gmail forwarding toggle in ON position"
+            onComplete={() => {
+              setCurrentSubStep(4);
+            }}
+            completed={status.forwardingEnabled}
+            autoDetect={true}
+          />
+        )}
+
+        {currentSubStep === 4 && (
+          <StepCard
+            number={4}
+            title="⚠️ Scroll down → Click 'Save Changes'"
+            critical={true}
+            instruction="This button is at the bottom of the Gmail settings page"
+            warning="If you skip this, forwarding won't work!"
+            image="/onboarding/save-changes.png"
+            imageAlt="Save Changes button location"
+            onComplete={() => {
+              setCurrentSubStep(5);
+            }}
+            completed={status.changesSaved}
+          />
+        )}
+
+        {currentSubStep === 5 && (
+          <StepCard
+            number={5}
+            title="✅ Check for pink banner"
+            instruction={
+              <>
+                After saving, a <strong className="text-pink-300">pink banner</strong> should appear at the top.
+                <br />
+                It says: "You are forwarding your email to {inboundEmail}..."
+              </>
+            }
+            image="/onboarding/pink-banner.png"
+            imageAlt="Pink banner confirming forwarding is active"
+            helpText="No pink banner? Go back to step 3 and make sure forwarding is ON"
+            onComplete={() => setCurrentSubStep(6)}
+            completed={status.forwardingEnabled && status.changesSaved}
+          />
+        )}
+
+        {currentSubStep === 6 && (
+          <StepCard
+            number={6}
+            title="Send a Test Email"
+            instruction={
+              <>
+                Send a test email to your business inbox: <code className="bg-black/40 px-2 py-1 rounded text-purple-300 font-mono">{client?.contact_email || "your-business-email@example.com"}</code>
+                <br />
+                Gmail will forward it to LeadLocker automatically.
+              </>
+            }
+            warning="⚠️ Gmail cannot forward from the SAME address you're forwarding to. Use a different sending address."
+            action={
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!client?.contact_email) return;
+                  
+                  const emailBody = `Hi there,
 
 I'm looking to get a quote for some electrical work at my property.
 
@@ -329,133 +260,145 @@ Please let me know your availability and an estimated quote.
 You can reach me on 0400 123 456.
 
 Thanks!`;
-            
-            // Open Gmail compose in a new tab
-            const subject = encodeURIComponent("Quote Request - Electrical Work");
-            const body = encodeURIComponent(emailBody);
-            const to = encodeURIComponent(client.contact_email);
-            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
-            
-            window.open(gmailUrl, "_blank", "noopener,noreferrer");
-          }}
-          className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-600 cursor-pointer"
-        >
-          Send test email →
-        </button>
-        {!client?.forwarding_confirmed && (
-          <p className="text-yellow-400 text-sm mt-4">
-            ⏳ Waiting for your first forwarded email…
-          </p>
-        )}
-        {client?.forwarding_confirmed && (
-          <p className="text-green-400 text-sm mt-4">
-            ✅ We have received at least one forwarded email and created a lead.
-          </p>
-        )}
-      </div>
-      <div className="flex justify-between">
-        <button
-          onClick={prev}
-          className="text-gray-300 hover:text-white underline"
-        >
-          Back
-        </button>
-        <button
-          onClick={next}
-          disabled={!client?.forwarding_confirmed}
-          className={`flex items-center px-5 py-3 rounded-md font-semibold ${
-            client?.forwarding_confirmed
-              ? "bg-white text-black hover:bg-gray-200"
-              : "bg-gray-700 text-gray-400 cursor-not-allowed"
-          }`}
-        >
-          {client?.forwarding_confirmed ? "Continue" : "Waiting for first lead…"}
-          <ChevronRight className="w-5 h-5 ml-2" />
-        </button>
-      </div>
-    </>
-  );
-}
-
-function Step4({ client, prev }: { client: any; prev: () => void }) {
-  return (
-    <>
-      <h2 className="text-2xl font-semibold mb-4">4. You're Almost Done</h2>
-      <p className="text-gray-300 mb-6">
-        Once your test email arrives in LeadLocker, you're fully set up. Click
-        below to finish onboarding. You can always adjust forwarding later in
-        your Gmail settings.
-      </p>
-      <button
-        onClick={async () => {
-          try {
-            const res = await fetch("/api/onboarding/complete", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-            });
-            if (res.ok) {
-              window.location.href = "/dashboard";
-            } else {
-              alert("Failed to complete onboarding. Please try again.");
+                  
+                  const subject = encodeURIComponent("Quote Request - Electrical Work");
+                  const body = encodeURIComponent(emailBody);
+                  const to = encodeURIComponent(client.contact_email);
+                  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
+                  
+                  window.open(gmailUrl, "_blank", "noopener,noreferrer");
+                }}
+                className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg"
+              >
+                Send test email →
+                <ExternalLink className="w-4 h-4" />
+              </button>
             }
-          } catch (err) {
-            console.error(err);
-            alert("Error completing onboarding. Please try again.");
-          }
-        }}
-        className="bg-white text-black px-5 py-3 rounded-md font-semibold hover:bg-gray-200 mb-8"
-      >
-        Finish Setup
-      </button>
-      <button
-        onClick={prev}
-        className="text-gray-300 hover:text-white underline"
-      >
-        Back
-      </button>
-    </>
-  );
-}
-
-/* -------------------------------------------------------
-   STEP COMPONENTS (Bubble + Lines)
-------------------------------------------------------- */
-
-function StepBubble({
-  number,
-  active,
-  completed,
-}: {
-  number: number;
-  active: boolean;
-  completed: boolean;
-}) {
-  return (
-    <div
-      className={`
-        w-10 h-10 flex items-center justify-center rounded-full border-2
-        ${
-          completed
-            ? "bg-white text-black border-white"
-            : active
-            ? "border-white text-white"
-            : "border-gray-600 text-gray-600"
-        }
-      `}
-    >
-      {completed ? <Check className="w-5 h-5" /> : number}
+            onComplete={() => {
+              // Auto-advance handled by polling
+            }}
+            completed={client?.forwarding_confirmed}
+            autoDetect={true}
+            waitingMessage="⏳ Waiting for your test email to arrive... We'll detect it automatically"
+          />
+        )}
+      </div>
     </div>
   );
 }
 
-function StepLine({ completed }: { completed: boolean }) {
+function StepCard({
+  number,
+  title,
+  action,
+  instruction,
+  visualHint,
+  warning,
+  helpText,
+  critical,
+  onComplete,
+  completed,
+  autoDetect,
+  disabled,
+  image,
+  imageAlt,
+  waitingMessage,
+}: {
+  number: number;
+  title: string;
+  action?: React.ReactNode;
+  instruction: React.ReactNode;
+  visualHint?: string;
+  warning?: string;
+  helpText?: string;
+  critical?: boolean;
+  onComplete: () => void;
+  completed?: boolean;
+  autoDetect?: boolean;
+  disabled?: boolean;
+  image?: string;
+  imageAlt?: string;
+  waitingMessage?: string;
+}) {
   return (
     <div
-      className={`
-        w-16 h-1 rounded-full
-        ${completed ? "bg-white" : "bg-gray-600"}
-      `}
-    />
+      className={`p-6 rounded-lg border-2 ${
+        critical
+          ? "bg-yellow-900/30 border-yellow-500/50"
+          : "bg-gray-900/40 border-gray-800"
+      }`}
+    >
+      <div className="flex items-start gap-4 mb-4">
+        <div
+          className={`w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${
+            completed
+              ? "bg-green-600"
+              : critical
+              ? "bg-yellow-500 text-black"
+              : "bg-blue-600"
+          }`}
+        >
+          {completed ? <Check className="w-5 h-5" /> : number}
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold mb-2">{title}</h3>
+          {action && <div className="mb-3">{action}</div>}
+          <p className="text-gray-300 mb-2">{instruction}</p>
+          {visualHint && (
+            <div className="bg-black/40 p-2 rounded text-sm text-gray-400 mb-2">
+              {visualHint}
+            </div>
+          )}
+          {warning && (
+            <div className="bg-red-900/30 p-2 rounded text-sm text-red-200 mb-2">
+              ⚠️ {warning}
+            </div>
+          )}
+          {helpText && (
+            <p className="text-sm text-yellow-300 mt-2">{helpText}</p>
+          )}
+          {image && (
+            <div className="mt-4 rounded-lg overflow-hidden border border-gray-700">
+              <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={image}
+                  alt={imageAlt || "Gmail settings"}
+                  className="w-full h-auto"
+                  onError={(e) => {
+                    // Hide image if it fails to load
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                {/* Blur overlay for email addresses */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute top-0 left-0 w-full h-16 bg-black/20 backdrop-blur-sm" />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {waitingMessage && !completed && (
+        <p className="text-xs text-gray-500 mb-3 text-center">{waitingMessage}</p>
+      )}
+
+      <button
+        onClick={onComplete}
+        disabled={disabled}
+        className={`w-full bg-white text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors ${
+          disabled ? "opacity-50 cursor-not-allowed" : ""
+        }`}
+      >
+        {completed ? "✓ Done" : "I did this →"}
+      </button>
+
+      {autoDetect && !completed && (
+        <p className="text-xs text-gray-500 mt-2 text-center">
+          We're checking automatically... (or click above if done)
+        </p>
+      )}
+    </div>
   );
 }
