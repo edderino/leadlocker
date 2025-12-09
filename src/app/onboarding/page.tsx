@@ -296,7 +296,6 @@ export default function OnboardingPage() {
                 Gmail will forward it to LeadLocker automatically.
               </>
             }
-            warning="⚠️ Gmail cannot forward from the SAME address you're forwarding to. Use a different sending address."
             action={
               <button
                 type="button"
