@@ -191,7 +191,7 @@ export default function OnboardingPage() {
         {currentSubStep === 2 && (
           <StepCard
             number={2}
-            title="Click the verification link"
+            title="Click the verification link and Confirm"
             action={
               verificationLink && typeof verificationLink === "string" && verificationLink.startsWith("http") ? (
                 <a
@@ -209,7 +209,7 @@ export default function OnboardingPage() {
                 </div>
               )
             }
-            instruction="Gmail will ask for your password. Enter it and approve. The page will say: Please confirm forwarding mail of your email to your Lead Locker email."
+            instruction="The next page will say: Please confirm forwarding mail of your business email to your Lead Locker address."
             image="/onboarding/gmail-confirmation.png"
             imageAlt="Gmail forwarding confirmation page"
             onComplete={() => setCurrentSubStep(3)}
