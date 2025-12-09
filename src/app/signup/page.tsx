@@ -232,9 +232,37 @@ export default function SignupPage() {
             <input
               type="tel"
               className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:border-white transition placeholder:text-neutral-500"
-              placeholder="+61412345678"
+              placeholder="04XX XXX XXX or +614XX XXX XXX"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                let value = e.target.value;
+                
+                // Remove all non-digit characters except +
+                const cleaned = value.replace(/[^\d+]/g, '');
+                
+                // If starts with 04, convert to +614
+                if (cleaned.startsWith('04')) {
+                  value = '+61' + cleaned.substring(2);
+                } 
+                // If starts with 4 (without 0), convert to +614
+                else if (cleaned.startsWith('4') && !cleaned.startsWith('+61')) {
+                  value = '+614' + cleaned.substring(1);
+                }
+                // If starts with +61, keep it
+                else if (cleaned.startsWith('+61')) {
+                  value = cleaned;
+                }
+                // If starts with 61 (without +), add +
+                else if (cleaned.startsWith('61') && !cleaned.startsWith('+61')) {
+                  value = '+' + cleaned;
+                }
+                // Otherwise, keep the cleaned value
+                else {
+                  value = cleaned;
+                }
+                
+                setPhone(value);
+              }}
             />
             {errors.phone && (
               <p className="text-red-400 text-sm mt-1">{errors.phone}</p>
