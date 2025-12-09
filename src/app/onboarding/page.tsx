@@ -157,18 +157,18 @@ export default function OnboardingPage() {
             title="Add forwarding address in Gmail"
             action={
               <a
-                href="https://mail.google.com/mail/u/0/#settings/fwdandpop"
+                href="https://mail.google.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg"
               >
-                Open Gmail Settings →
+                Open Gmail →
                 <ExternalLink className="w-4 h-4" />
               </a>
             }
             instruction={
               <>
-                Go to: Settings → Forwarding and POP/IMAP tab
+                Go to: Settings → See all settings → Forwarding and POP/IMAP tab
                 <br />
                 Click <strong className="text-yellow-200">"Add forwarding address"</strong>
                 <br />
