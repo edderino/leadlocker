@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, ExternalLink, Mail, AlertCircle } from "lucide-react";
+import { Check, ChevronRight, ExternalLink, Mail, AlertCircle, ChevronLeft } from "lucide-react";
 
 type ForwardingStatus = {
   waitingForVerificationEmail: boolean;
@@ -213,6 +213,7 @@ export default function OnboardingPage() {
             image="/onboarding/gmail-confirmation.png"
             imageAlt="Gmail forwarding confirmation page"
             onComplete={() => setCurrentSubStep(3)}
+            onBack={() => setCurrentSubStep(1)}
             completed={status.verificationClicked}
             disabled={!verificationLink}
           />
@@ -239,6 +240,7 @@ export default function OnboardingPage() {
             onComplete={() => {
               setCurrentSubStep(4);
             }}
+            onBack={() => setCurrentSubStep(2)}
             completed={status.forwardingEnabled}
             autoDetect={true}
           />
@@ -256,6 +258,7 @@ export default function OnboardingPage() {
             onComplete={() => {
               setCurrentSubStep(5);
             }}
+            onBack={() => setCurrentSubStep(3)}
             completed={status.changesSaved}
           />
         )}
@@ -275,6 +278,7 @@ export default function OnboardingPage() {
             imageAlt="Pink banner confirming forwarding is active"
             helpText="No pink banner? Go back to step 3 and make sure forwarding is ON"
             onComplete={() => setCurrentSubStep(6)}
+            onBack={() => setCurrentSubStep(4)}
             completed={status.forwardingEnabled && status.changesSaved}
           />
         )}
@@ -332,6 +336,7 @@ Thanks!`;
             onComplete={() => {
               // Auto-advance handled by polling
             }}
+            onBack={() => setCurrentSubStep(5)}
             completed={client?.forwarding_confirmed}
             autoDetect={true}
             waitingMessage="⏳ Waiting for your test email to arrive... We'll detect it automatically"
@@ -352,6 +357,7 @@ function StepCard({
   helpText,
   critical,
   onComplete,
+  onBack,
   completed,
   autoDetect,
   disabled,
@@ -368,6 +374,7 @@ function StepCard({
   helpText?: string;
   critical?: boolean;
   onComplete: () => void;
+  onBack?: () => void;
   completed?: boolean;
   autoDetect?: boolean;
   disabled?: boolean;
@@ -433,15 +440,26 @@ function StepCard({
         <p className="text-xs text-gray-500 mb-3 text-center">{waitingMessage}</p>
       )}
 
-      <button
-        onClick={onComplete}
-        disabled={disabled}
-        className={`w-full bg-white text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors ${
-          disabled ? "opacity-50 cursor-not-allowed" : ""
-        }`}
-      >
-        {completed ? "✓ Done" : "I did this →"}
-      </button>
+      <div className="flex gap-3">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex-1 bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
+          </button>
+        )}
+        <button
+          onClick={onComplete}
+          disabled={disabled}
+          className={`${onBack ? 'flex-1' : 'w-full'} bg-white text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors ${
+            disabled ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+        >
+          {completed ? "✓ Done" : "I did this →"}
+        </button>
+      </div>
 
       {autoDetect && !completed && (
         <p className="text-xs text-gray-500 mt-2 text-center">
