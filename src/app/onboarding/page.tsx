@@ -209,7 +209,7 @@ export default function OnboardingPage() {
                 </div>
               )
             }
-            instruction="Gmail will ask for your password. Enter it and approve. The page will say: 'Please confirm forwarding mail of the clients business email to the clients email.'"
+            instruction="Gmail will ask for your password. Enter it and approve. The page will say: Please confirm forwarding mail of your email to your Lead Locker email."
             image="/onboarding/gmail-confirmation.png"
             imageAlt="Gmail forwarding confirmation page"
             onComplete={() => setCurrentSubStep(3)}
