@@ -232,9 +232,11 @@ export default function OnboardingPage() {
                 <br />
                 <br />
                 <strong className="text-yellow-200">Important:</strong> After making changes, close the Gmail tab and reopen it to confirm it's set properly.
+                <br />
+                <br />
+                You must see the pink banner to confirm.
               </>
             }
-            visualHint="Look for the pink banner to confirm"
             image="/onboarding/forwarding-toggle-on.png"
             imageAlt="Gmail forwarding toggle in ON position"
             onComplete={() => {
