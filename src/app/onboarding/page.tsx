@@ -228,9 +228,12 @@ export default function OnboardingPage() {
                 Find your LeadLocker address: <code className="bg-black/40 px-2 py-1 rounded text-yellow-300 font-mono">{inboundEmail}</code>
                 <br />
                 Make sure the toggle/checkbox is <strong className="text-yellow-200">ON</strong>
+                <br />
+                <br />
+                <strong className="text-yellow-200">Important:</strong> After making changes, close the Gmail tab and reopen it to confirm it's set properly.
               </>
             }
-            visualHint="Look for: Toggle switch turned ON (blue/green) OR checkbox checked"
+            visualHint="Look for the pink banner to confirm"
             image="/onboarding/forwarding-toggle-on.png"
             imageAlt="Gmail forwarding toggle in ON position"
             onComplete={() => {

@@ -62,46 +62,27 @@ async function main() {
   const images = [
     {
       file: 'gmail-confirmation.png',
-      regions: [
-        // No blur - image should remain unblurred
-      ],
+      regions: [], // No blur
     },
     {
       file: 'gmail-settings.png',
-      regions: [
-        // Blur any email addresses that might appear (usually in top area or center)
-        { x: 0, y: 0, width: 1200, height: 100 }, // Top banner area
-      ],
+      regions: [], // No blur
     },
     {
       file: 'forwarding-toggle-on.png',
-      regions: [
-        // Blur email in banner and any visible email addresses
-        { x: 0, y: 0, width: 1600, height: 80 }, // Top banner with email
-        { x: 200, y: 300, width: 500, height: 40 }, // Email in forwarding section
-      ],
+      regions: [], // No blur
     },
     {
       file: 'pink-banner.png',
-      regions: [
-        // Blur email in the pink banner
-        { x: 0, y: 0, width: 1600, height: 80 }, // Top banner
-      ],
+      regions: [], // No blur
     },
     {
       file: 'save-changes.png',
-      regions: [
-        // Same as pink-banner since it's the same image
-        { x: 0, y: 0, width: 1600, height: 80 }, // Top banner
-        { x: 200, y: 300, width: 500, height: 40 }, // Email in forwarding section
-      ],
+      regions: [], // No blur
     },
     {
       file: 'gmail-modal.png',
-      regions: [
-        // Blur email in the input field
-        { x: 100, y: 150, width: 500, height: 50 }, // Input field area
-      ],
+      regions: [], // No blur
     },
   ];
 
