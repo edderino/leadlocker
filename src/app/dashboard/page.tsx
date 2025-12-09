@@ -22,6 +22,28 @@ export default function DashboardPage() {
         if (data.client) {
           setClient(data.client);
           
+          // If forwarding is confirmed but onboarding_complete is false, mark it complete
+          if (data.client.forwarding_confirmed && !data.client.onboarding_complete) {
+            try {
+              await fetch("/api/onboarding/complete", {
+                method: "POST",
+                credentials: "include",
+              });
+              // Reload client data after marking complete
+              const reloadRes = await fetch("/api/auth/me", {
+                method: "GET",
+                credentials: "include",
+                cache: "no-store",
+              });
+              const reloadData = await reloadRes.json();
+              if (reloadData.client) {
+                setClient(reloadData.client);
+              }
+            } catch (err) {
+              console.error("Failed to mark onboarding complete:", err);
+            }
+          }
+          
           // Redirect to onboarding if forwarding not confirmed
           if (!data.client.forwarding_confirmed || !data.client.onboarding_complete) {
             router.push("/onboarding");

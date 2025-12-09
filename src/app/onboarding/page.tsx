@@ -109,6 +109,15 @@ export default function OnboardingPage() {
           
           // Auto-advance to dashboard when forwarding confirmed
           if (data.status.forwardingEnabled && data.status.changesSaved && data.client?.forwarding_confirmed && currentSubStep === 6) {
+            // Mark onboarding as complete before redirecting
+            try {
+              await fetch("/api/onboarding/complete", {
+                method: "POST",
+                credentials: "include",
+              });
+            } catch (err) {
+              console.error("Failed to mark onboarding complete:", err);
+            }
             setTimeout(() => {
               router.push("/dashboard");
             }, 2000);
