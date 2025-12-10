@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/libs/supabaseAdmin";
+import { sendSMS } from "@/libs/twilio";
 import { log } from "@/libs/log";
 
 export const dynamic = 'force-dynamic';
@@ -166,39 +167,37 @@ export async function POST(req: NextRequest) {
       log("POST /api/inbound/facebook - Event logging failed (non-fatal)", eventError);
     }
 
-    // 6. Trigger SMS notification via dispatch webhook
-    const smsDispatchWebhook = process.env.SMS_DISPATCH_WEBHOOK;
-    if (smsDispatchWebhook) {
-      try {
-        await fetch(smsDispatchWebhook, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "facebook_lead",
-            name,
-            email,
-            phone,
-            lead_id: data.id,
-          }),
-        });
+    // 6. Send SMS alert via Twilio (same pattern as /api/leads/new)
+    const defaultPhone = process.env.LL_DEFAULT_USER_PHONE;
+    if (defaultPhone) {
+      const rawUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const baseUrl = rawUrl.startsWith('http') ? rawUrl : `http://${rawUrl}`;
+      
+      const smsBody = [
+        `🔔 New Lead — Facebook`,
+        `Name: ${name}`,
+        email ? `Email: ${email}` : undefined,
+        `Call: ${phone}`,
+        `Mark done: ${baseUrl}/api/leads/status?id=${data.id}`
+      ].filter(Boolean).join('\n');
+      
+      await sendSMS(defaultPhone, smsBody);
 
-        // Log SMS event (silent failure)
-        try {
-          await supabaseAdmin.from("events").insert({
-            event_type: "sms.sent",
-            lead_id: data.id,
-            actor_id: user_id,
-            metadata: {
-              message_type: "new_lead_alert",
-              source: "Facebook",
-              via: "sms_dispatch_webhook",
-            },
-          });
-        } catch (eventError) {
-          log("POST /api/inbound/facebook - SMS event logging failed (non-fatal)", eventError);
-        }
-      } catch (webhookError) {
-        log("POST /api/inbound/facebook - SMS dispatch webhook failed (non-fatal)", webhookError);
+      // Log SMS event (silent failure)
+      try {
+        await supabaseAdmin.from("events").insert({
+          event_type: "sms.sent",
+          lead_id: data.id,
+          actor_id: user_id,
+          metadata: {
+            recipient: defaultPhone,
+            message_type: "new_lead_alert",
+            body_length: smsBody.length,
+            source: "Facebook",
+          },
+        });
+      } catch (eventError) {
+        log("POST /api/inbound/facebook - SMS event logging failed (non-fatal)", eventError);
       }
     }
 
