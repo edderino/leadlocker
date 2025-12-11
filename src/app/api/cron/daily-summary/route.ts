@@ -64,7 +64,7 @@ async function handleDailySummaryCron(request: NextRequest) {
     const { data: leads, error } = await supabaseAdmin
       .from("leads")
       .select("*")
-      .eq("client_id", client.id)
+      .eq("user_id", userId)
       .gte("created_at", today.toISOString())
       .order("created_at", { ascending: false });
 
