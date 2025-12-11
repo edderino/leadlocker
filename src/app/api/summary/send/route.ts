@@ -98,7 +98,17 @@ async function handleSummary(request: NextRequest) {
     const recipient =
       client.twilio_to || process.env.LL_DEFAULT_USER_PHONE || null;
     if (recipient) {
-      await sendSMS(recipient, smsBody);
+      const smsResult = await sendSMS(recipient, smsBody);
+      
+      // Check if SMS failed
+      if (smsResult && 'error' in smsResult) {
+        log("POST/GET /api/summary/send - SMS send failed", smsResult.error);
+        return NextResponse.json(
+          { success: false, error: `SMS delivery failed: ${smsResult.error}` },
+          { status: 500 }
+        );
+      }
+      
       log("POST/GET /api/summary/send - SMS sent", {
         length: smsBody.length,
         recipient,
