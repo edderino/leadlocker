@@ -237,10 +237,10 @@ export default function OnboardingPage() {
             imageAlt="Gmail forwarding confirmation page"
             onComplete={() => setCurrentSubStep(3)}
             onBack={() => setCurrentSubStep(1)}
-            completed={status.verificationClicked}
-            disabled={!status.verificationClicked}
+            completed={status.verificationClicked || !!verificationLink}
+            disabled={!verificationLink}
             autoDetect={true}
-            waitingMessage="After you click Confirm in Gmail, this step will unlock automatically (can take up to 30 seconds)."
+            waitingMessage="Once Gmail sends the verification email to LeadLocker, this step will unlock automatically (can take up to 30 seconds)."
           />
         )}
 
