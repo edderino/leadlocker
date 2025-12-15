@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { supabaseAdmin } from '@/libs/supabaseAdmin';
 import { sendSMS } from '@/libs/twilio';
 import { log } from '@/libs/log';
@@ -14,6 +15,13 @@ const LeadPayload = z.object({
   description: z.string().optional(),
   // user_id removed — server will resolve it
 });
+
+function createStatusToken(leadId: string): string | null {
+  const secret = process.env.LEAD_STATUS_SECRET;
+  if (!secret) return null;
+
+  return crypto.createHmac('sha256', secret).update(leadId).digest('hex');
+}
 
 async function resolveDefaultUserId(): Promise<string> {
   // Prefer env if set
@@ -35,6 +43,19 @@ async function resolveDefaultUserId(): Promise<string> {
 export async function POST(request: NextRequest) {
   try {
     console.log("🔥 Lead creation endpoint triggered");
+
+    // Basic auth hardening: require a valid session cookie
+    const token =
+      request.cookies.get("ll_session")?.value ||
+      request.cookies.get("sb-access-token")?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: "Not authenticated" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const payload = LeadPayload.parse(body);
     log("POST /api/leads/new - Lead creation request", payload.source, payload.name);
@@ -66,6 +87,8 @@ export async function POST(request: NextRequest) {
 
     log("POST /api/leads/new - Lead created successfully", data.id);
 
+    const statusToken = createStatusToken(data.id);
+
     // Log event (silent failure)
     try {
       const actorId = data.user_id && typeof data.user_id === "string" ? data.user_id : null;
@@ -93,12 +116,18 @@ export async function POST(request: NextRequest) {
       const rawUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const baseUrl = rawUrl.startsWith('http') ? rawUrl : `http://${rawUrl}`;
       
+      const statusUrl = new URL("/api/leads/status", baseUrl);
+      statusUrl.searchParams.set("id", data.id);
+      if (statusToken) {
+        statusUrl.searchParams.set("token", statusToken);
+      }
+
       const smsBody = [
         `🔔 New Lead — ${payload.source}`,
         payload.name ? `Name: ${payload.name}` : undefined,
         payload.description ? `Job: ${payload.description}` : undefined,
         payload.phone ? `Call: ${payload.phone}` : undefined,
-        `Mark done: ${baseUrl}/api/leads/status?id=${data.id}`
+        `Mark done: ${statusUrl.toString()}`
       ].filter(Boolean).join('\n');
       
       await sendSMS(defaultPhone, smsBody);

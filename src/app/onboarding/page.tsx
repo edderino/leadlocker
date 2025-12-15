@@ -80,9 +80,9 @@ export default function OnboardingPage() {
     };
   }, [currentSubStep]);
 
-  // Poll for forwarding status (starting from step 3 to detect forwarding toggle/save, and step 6 to detect test email)
+  // Poll for forwarding status (starting from step 2 to detect verification + forwarding toggle/save, and step 6 to detect test email)
   useEffect(() => {
-    if (currentSubStep < 3) return;
+    if (currentSubStep < 2) return;
 
     let interval: ReturnType<typeof setInterval> | undefined;
 
@@ -209,7 +209,7 @@ export default function OnboardingPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-lg"
                 >
-                  Open Gmail Verification →
+                  Open your Gmail verification link →
                   <ExternalLink className="w-4 h-4" />
                 </a>
               ) : (
@@ -218,13 +218,29 @@ export default function OnboardingPage() {
                 </div>
               )
             }
-            instruction="The next page will say: Please confirm forwarding mail of your business email to your Lead Locker address."
+            instruction={
+              <>
+                1. Click the big blue button above to open your <strong>Gmail verification link</strong>.
+                <br />
+                2. In Gmail, press <strong>Confirm</strong> on the popup.
+                <br />
+                <br />
+                The page will say: <em>Please confirm forwarding mail of your business email to your Lead Locker address.</em>
+                <br />
+                <br />
+                <strong className="text-yellow-200">
+                  You must press Confirm in Gmail or forwarding will not work.
+                </strong>
+              </>
+            }
             image="/onboarding/gmail-confirmation.png"
             imageAlt="Gmail forwarding confirmation page"
             onComplete={() => setCurrentSubStep(3)}
             onBack={() => setCurrentSubStep(1)}
             completed={status.verificationClicked}
-            disabled={!verificationLink}
+            disabled={!status.verificationClicked}
+            autoDetect={true}
+            waitingMessage="After you click Confirm in Gmail, this step will unlock automatically (can take up to 30 seconds)."
           />
         )}
 

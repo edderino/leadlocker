@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { supabaseAdmin } from '@/libs/supabaseAdmin';
 import { log } from '@/libs/log';
 
@@ -13,10 +14,31 @@ const UpdateStatusPayload = z.object({
   status: LeadStatus,
 });
 
+function verifyStatusToken(leadId: string, token: string | null): boolean {
+  const secret = process.env.LEAD_STATUS_SECRET;
+  if (!secret) {
+    // If no secret is configured, treat all requests as valid (backward compatible)
+    return true;
+  }
+
+  if (!token) return false;
+
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(leadId)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(expected, 'utf8'),
+    Buffer.from(token, 'utf8')
+  );
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
+    const token = searchParams.get('token');
     log("GET /api/leads/status - Status update request", id);
 
     if (!id) {
@@ -24,6 +46,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: 'Missing lead ID' },
         { status: 400 }
+      );
+    }
+
+    if (!verifyStatusToken(id, token)) {
+      log("GET /api/leads/status - Invalid or missing status token", id);
+      return NextResponse.json(
+        { error: 'Invalid or expired link' },
+        { status: 401 }
       );
     }
 
@@ -78,6 +108,17 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const token =
+      request.cookies.get("ll_session")?.value ||
+      request.cookies.get("sb-access-token")?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const payload = UpdateStatusPayload.parse(body);
     
