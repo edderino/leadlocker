@@ -247,19 +247,11 @@ export default function OnboardingPage() {
         {currentSubStep === 3 && (
           <StepCard
             number={3}
-            title="⚠️ Turn ON 'Forward a copy' toggle"
+            title="Close the Gmail tab and re-open it"
             critical={true}
             instruction={
               <>
-                Find your LeadLocker address: <code className="bg-black/40 px-2 py-1 rounded text-yellow-300 font-mono">{inboundEmail}</code>
-                <br />
-                Make sure the toggle/checkbox is <strong className="text-yellow-200">ON</strong>
-                <br />
-                <br />
-                <strong className="text-yellow-200">Important:</strong> After making changes, close the Gmail tab and reopen it to confirm it's set properly.
-                <br />
-                <br />
-                You must see the pink banner to confirm.
+                <strong className="text-yellow-200">Important:</strong> Upon reopening the Gmail tab, ensure the 'Forward a copy' is toggled to your LeadLocker address.
               </>
             }
             image="/onboarding/forwarding-toggle-on.png"
