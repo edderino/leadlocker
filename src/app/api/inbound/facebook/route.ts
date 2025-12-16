@@ -84,42 +84,49 @@ export async function POST(req: NextRequest) {
     log("POST /api/inbound/facebook - Processing lead", { leadId, adId, formId, pageId });
 
     // 1. Fetch actual lead data from Facebook Graph API
-    const pageAccessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
-    if (!pageAccessToken) {
-      log("POST /api/inbound/facebook - Missing FACEBOOK_PAGE_ACCESS_TOKEN");
-      return NextResponse.json(
-        { error: "Facebook Page Access Token not configured" },
-        { status: 500 }
-      );
-    }
+    //    TEMPORARILY DISABLED for testing with hardcoded values.
+    //
+    // const pageAccessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
+    // if (!pageAccessToken) {
+    //   log("POST /api/inbound/facebook - Missing FACEBOOK_PAGE_ACCESS_TOKEN");
+    //   return NextResponse.json(
+    //     { error: "Facebook Page Access Token not configured" },
+    //     { status: 500 }
+    //   );
+    // }
+    //
+    // const graphRes = await fetch(
+    //   `https://graph.facebook.com/v17.0/${leadId}?access_token=${pageAccessToken}`
+    // );
+    //
+    // if (!graphRes.ok) {
+    //   log("POST /api/inbound/facebook - Facebook Graph API error", {
+    //     status: graphRes.status,
+    //     statusText: graphRes.statusText,
+    //   });
+    //   return NextResponse.json(
+    //     { error: "Failed to fetch lead data from Facebook" },
+    //     { status: 500 }
+    //   );
+    // }
+    //
+    // const leadData = await graphRes.json();
+    //
+    // // Extract fields (FB returns an array of {name, values[]})
+    // let name = "";
+    // let email = "";
+    // let phone = "";
+    //
+    // for (const field of leadData.field_data ?? []) {
+    //   if (field.name === "full_name") name = field.values?.[0] || "";
+    //   if (field.name === "email") email = field.values?.[0] || "";
+    //   if (field.name === "phone_number") phone = field.values?.[0] || "";
+    // }
 
-    const graphRes = await fetch(
-      `https://graph.facebook.com/v17.0/${leadId}?access_token=${pageAccessToken}`
-    );
-
-    if (!graphRes.ok) {
-      log("POST /api/inbound/facebook - Facebook Graph API error", {
-        status: graphRes.status,
-        statusText: graphRes.statusText,
-      });
-      return NextResponse.json(
-        { error: "Failed to fetch lead data from Facebook" },
-        { status: 500 }
-      );
-    }
-
-    const leadData = await graphRes.json();
-
-    // Extract fields (FB returns an array of {name, values[]})
-    let name = "";
-    let email = "";
-    let phone = "";
-
-    for (const field of leadData.field_data ?? []) {
-      if (field.name === "full_name") name = field.values?.[0] || "";
-      if (field.name === "email") email = field.values?.[0] || "";
-      if (field.name === "phone_number") phone = field.values?.[0] || "";
-    }
+    // TEMP: Hardcoded test lead values for verification
+    const name = "Test Lead";
+    const email = "test@test.com";
+    const phone = "+61400000000";
 
     // Validate required fields
     if (!name || !phone) {
