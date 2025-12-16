@@ -49,9 +49,15 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  console.log("🔥 [Facebook Webhook] POST handler called at:", new Date().toISOString());
+  console.log("🔥 [Facebook Webhook] Request URL:", req.url);
+  
   try {
     const body = await req.json();
 
+    // Always log to console for Vercel visibility
+    console.log("📩 [Facebook Webhook] POST received");
+    console.log("📩 [Facebook Webhook] Full body:", JSON.stringify(body, null, 2));
     log("POST /api/inbound/facebook - Webhook received", { body });
 
     // Facebook sends multiple types of events; we only care about leadgen.
@@ -59,7 +65,13 @@ export async function POST(req: NextRequest) {
     const changes = entry?.changes?.[0];
     const value = changes?.value;
 
+    console.log("📩 [Facebook Webhook] Entry:", entry ? "exists" : "missing");
+    console.log("📩 [Facebook Webhook] Changes:", changes ? "exists" : "missing");
+    console.log("📩 [Facebook Webhook] Value:", value ? JSON.stringify(value, null, 2) : "missing");
+    console.log("📩 [Facebook Webhook] Field check:", value?.field);
+
     if (!value || value.field !== "leadgen") {
+      console.log("⚠️ [Facebook Webhook] Ignoring non-leadgen event. Field:", value?.field);
       log("POST /api/inbound/facebook - Ignoring non-leadgen event");
       return NextResponse.json({ ok: true, ignored: true });
     }
@@ -210,11 +222,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    console.log("✅ [Facebook Webhook] Successfully processed lead:", data.id);
     return NextResponse.json({ ok: true, lead_id: data.id });
-  } catch (err) {
+  } catch (err: any) {
+    console.error("❌ [Facebook Webhook] Error:", err);
+    console.error("❌ [Facebook Webhook] Error message:", err?.message);
+    console.error("❌ [Facebook Webhook] Error stack:", err?.stack);
     log("POST /api/inbound/facebook - Unexpected error", err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: err?.message },
       { status: 500 }
     );
   }
