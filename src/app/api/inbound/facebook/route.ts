@@ -7,20 +7,13 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 async function resolveDefaultUserId(): Promise<string> {
-  // Prefer env if set
-  if (process.env.LL_DEFAULT_USER_ID) return process.env.LL_DEFAULT_USER_ID;
-
-  // Fallback: first user in DB
-  const { data, error } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw new Error(`Failed to resolve default user: ${error.message}`);
-  if (!data?.id) throw new Error('No users exist. Create one in Supabase or set LL_DEFAULT_USER_ID.');
-  return data.id;
+  const envId = process.env.LL_DEFAULT_USER_ID;
+  if (!envId) {
+    throw new Error(
+      "LL_DEFAULT_USER_ID is not set. Please set it to the UUID of the owner client/auth user in your environment variables."
+    );
+  }
+  return envId;
 }
 
 export async function GET(req: NextRequest) {
@@ -167,27 +160,43 @@ export async function POST(req: NextRequest) {
     const description = descriptionParts.length > 0 ? descriptionParts.join(" | ") : null;
 
     // 4. Insert lead into Supabase
+    const insertPayload = {
+      user_id,
+      org_id: 'demo-org',
+      source: "Facebook",
+      name,
+      phone,
+      description,
+      status: 'NEW',
+    };
+    
+    console.log("💾 [Facebook Webhook] Attempting insert with payload:", JSON.stringify(insertPayload, null, 2));
+    
     const { data, error } = await supabaseAdmin
       .from("leads")
-      .insert({
-        user_id,
-        org_id: 'demo-org',
-        source: "Facebook",
-        name,
-        phone,
-        description,
-        status: 'NEW',
-      })
+      .insert(insertPayload)
       .select('*')
       .single();
 
     if (error) {
+      console.error("❌ [Facebook Webhook] Supabase insert error:", error);
+      console.error("❌ [Facebook Webhook] Error message:", error.message);
+      console.error("❌ [Facebook Webhook] Error code:", error.code);
+      console.error("❌ [Facebook Webhook] Error hint:", error.hint);
+      console.error("❌ [Facebook Webhook] Error details:", error.details);
       log("POST /api/inbound/facebook - Supabase insert error", error.message);
       return NextResponse.json(
-        { error: "Failed to save lead" },
+        { 
+          error: "Failed to save lead",
+          details: error.message,
+          code: error.code,
+          hint: error.hint
+        },
         { status: 500 }
       );
     }
+    
+    console.log("✅ [Facebook Webhook] Lead inserted successfully:", data.id);
 
     log("POST /api/inbound/facebook - Lead created successfully", data.id);
 
