@@ -160,8 +160,9 @@ export async function POST(req: NextRequest) {
     const description = descriptionParts.length > 0 ? descriptionParts.join(" | ") : null;
 
     // 4. Insert lead into Supabase
+    // NOTE: Your production DB `leads` table does NOT have a `user_id` column,
+    // so we do NOT send `user_id` here to avoid PGRST204 errors.
     const insertPayload = {
-      user_id,
       org_id: 'demo-org',
       source: "Facebook",
       name,
