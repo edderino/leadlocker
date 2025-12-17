@@ -98,12 +98,24 @@ export async function POST(req: NextRequest) {
     );
 
     if (!graphRes.ok) {
+      const errorBody = await graphRes.text();
+      console.error("❌ [Facebook Webhook] Graph API error:", {
+        status: graphRes.status,
+        statusText: graphRes.statusText,
+        body: errorBody,
+        leadId,
+      });
       log("POST /api/inbound/facebook - Facebook Graph API error", {
         status: graphRes.status,
         statusText: graphRes.statusText,
+        body: errorBody,
       });
       return NextResponse.json(
-        { error: "Failed to fetch lead data from Facebook" },
+        { 
+          error: "Failed to fetch lead data from Facebook",
+          details: errorBody,
+          status: graphRes.status
+        },
         { status: 500 }
       );
     }
