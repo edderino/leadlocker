@@ -142,7 +142,22 @@ export async function POST(req: NextRequest) {
     log("POST /api/inbound/facebook - Extracted lead data", { name, email, phone });
 
     // 2. Resolve user_id
-    const user_id = await resolveDefaultUserId();
+    console.log("🔍 [Facebook Webhook] Resolving user_id...");
+    let user_id: string;
+    try {
+      user_id = await resolveDefaultUserId();
+      console.log("✅ [Facebook Webhook] Resolved user_id:", user_id);
+    } catch (userIdError: any) {
+      console.error("❌ [Facebook Webhook] Failed to resolve user_id:", userIdError);
+      console.error("❌ [Facebook Webhook] Error message:", userIdError?.message);
+      return NextResponse.json(
+        { 
+          error: "Failed to resolve user_id",
+          details: userIdError?.message || String(userIdError)
+        },
+        { status: 500 }
+      );
+    }
 
     // 3. Build description with email and Facebook metadata
     const descriptionParts = [];
