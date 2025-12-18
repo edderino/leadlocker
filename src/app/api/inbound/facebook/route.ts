@@ -54,20 +54,26 @@ export async function POST(req: NextRequest) {
     log("POST /api/inbound/facebook - Webhook received", { body });
 
     // Facebook sends multiple types of events; we only care about leadgen.
-    const entry = body.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
+    const change = body.entry?.[0]?.changes?.[0];
 
-    console.log("📩 [Facebook Webhook] Entry:", entry ? "exists" : "missing");
-    console.log("📩 [Facebook Webhook] Changes:", changes ? "exists" : "missing");
-    console.log("📩 [Facebook Webhook] Value:", value ? JSON.stringify(value, null, 2) : "missing");
-    console.log("📩 [Facebook Webhook] Field check:", value?.field);
+    console.log(
+      "📩 [Facebook Webhook] Raw change:",
+      change ? JSON.stringify(change, null, 2) : "missing"
+    );
+    console.log("📩 [Facebook Webhook] Field check:", change?.field);
 
-    if (!value || value.field !== "leadgen") {
-      console.log("⚠️ [Facebook Webhook] Ignoring non-leadgen event. Field:", value?.field);
+    if (change?.field !== "leadgen") {
+      console.warn("⚠️ [Facebook Webhook] Ignoring non-leadgen event");
       log("POST /api/inbound/facebook - Ignoring non-leadgen event");
       return NextResponse.json({ ok: true, ignored: true });
     }
+
+    const value = change.value;
+
+    console.log(
+      "📩 [Facebook Webhook] Value:",
+      value ? JSON.stringify(value, null, 2) : "missing"
+    );
 
     const leadId = value.leadgen_id;
     const adId = value.ad_id ?? null;
