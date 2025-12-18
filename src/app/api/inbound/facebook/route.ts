@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
     log("POST /api/inbound/facebook - Webhook received", { body });
 
     // Facebook sends multiple types of events; we only care about leadgen.
-    const change = body.entry?.[0]?.changes?.[0];
+    const entry = body.entry?.[0];
+    const change = entry?.changes?.[0];
 
     console.log(
       "📩 [Facebook Webhook] Raw change:",
@@ -82,13 +83,22 @@ export async function POST(req: NextRequest) {
 
     log("POST /api/inbound/facebook - Processing lead", { leadId, adId, formId, pageId });
 
+    // Detect Meta Lead Ads Testing Tool events (entry.id === "0" on object "page")
+    const isMetaTestToolEvent = body.object === "page" && entry?.id === "0";
+    const isTestMode =
+      process.env.FACEBOOK_WEBHOOK_TEST_MODE === "true" || isMetaTestToolEvent;
+
+    if (isMetaTestToolEvent) {
+      console.log("🧪 [Facebook Webhook] Meta Lead Ads Testing Tool event detected");
+    }
+
     // 1. Fetch actual lead data from Facebook Graph API (or use test mode)
     let name = "";
     let email = "";
     let phone = "";
 
     // Test mode: bypass Graph API and use hardcoded values
-    if (process.env.FACEBOOK_WEBHOOK_TEST_MODE === "true") {
+    if (isTestMode) {
       console.log("🧪 [Facebook Webhook] TEST MODE ENABLED - Using hardcoded test values");
       name = "Test Lead";
       email = "test@test.com";
