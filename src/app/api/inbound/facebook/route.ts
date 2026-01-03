@@ -10,7 +10,17 @@ async function resolveDefaultUserId(): Promise<string> {
   const envId = process.env.LL_DEFAULT_USER_ID;
   if (!envId) {
     throw new Error(
-      "LL_DEFAULT_USER_ID is not set. Please set it to the UUID of the owner client/auth user in your environment variables."
+      "LL_DEFAULT_USER_ID is not set. Please set it to the UUID of the owner auth user in your environment variables."
+    );
+  }
+  return envId;
+}
+
+async function resolveDefaultClientId(): Promise<string> {
+  const envId = process.env.LL_DEFAULT_CLIENT_ID;
+  if (!envId) {
+    throw new Error(
+      "LL_DEFAULT_CLIENT_ID is not set. Please set it to the UUID of the client row (public.clients.id) that should own Facebook leads."
     );
   }
   return envId;
@@ -56,6 +66,14 @@ export async function POST(req: NextRequest) {
     // Facebook sends multiple types of events; we only care about leadgen.
     const entry = body.entry?.[0];
     const change = entry?.changes?.[0];
+
+    // Confirm we're parsing the webhook payload correctly
+    log("meta_webhook_payload", {
+      object: body?.object,
+      entry0: body?.entry?.[0],
+      change0: body?.entry?.[0]?.changes?.[0],
+      leadgen_id: body?.entry?.[0]?.changes?.[0]?.value?.leadgen_id,
+    });
 
     console.log(
       "📩 [Facebook Webhook] Raw change:",
@@ -114,25 +132,58 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const graphRes = await fetch(
-        `https://graph.facebook.com/v17.0/${leadId}?access_token=${pageAccessToken}`
-      );
+      const fields = [
+        "created_time",
+        "ad_id",
+        "adgroup_id",
+        "campaign_id",
+        "form_id",
+        "platform",
+        "is_organic",
+        "field_data",
+      ].join(",");
 
-      if (!graphRes.ok) {
-        log("POST /api/inbound/facebook - Facebook Graph API error", {
-          status: graphRes.status,
-          statusText: graphRes.statusText,
+      const url =
+        `https://graph.facebook.com/v17.0/${leadId}` +
+        `?fields=${encodeURIComponent(fields)}` +
+        `&access_token=${encodeURIComponent(pageAccessToken)}`;
+
+      const resp = await fetch(url);
+      const json = await resp.json();
+
+      // 🔥 NEVER silently continue if Graph call fails
+      if (!resp.ok) {
+        log("meta_graph_fetch_failed", {
+          leadId,
+          status: resp.status,
+          json,
+          url_no_token: url.replace(/access_token=[^&]+/, "access_token=REDACTED"),
         });
         return NextResponse.json(
-          { error: "Failed to fetch lead data from Facebook" },
+          { error: "Graph fetch failed", details: json },
           { status: 500 }
         );
       }
 
-      const leadData = await graphRes.json();
+      log("meta_graph_fetch_ok", {
+        leadId,
+        keys: Object.keys(json || {}),
+        field_data_len: json?.field_data?.length ?? 0,
+      });
+
+      const leadDetails = json;
+
+      // Make the lead insert depend on actually having field_data
+      if (!leadDetails?.field_data?.length) {
+        log("meta_no_field_data", { leadId, leadDetails });
+        return NextResponse.json(
+          { error: "No field_data", leadId, leadDetails },
+          { status: 200 }
+        );
+      }
 
       // Extract fields (FB returns an array of {name, values[]})
-      for (const field of leadData.field_data ?? []) {
+      for (const field of leadDetails.field_data ?? []) {
         if (field.name === "full_name") name = field.values?.[0] || "";
         if (field.name === "email") email = field.values?.[0] || "";
         if (field.name === "phone_number") phone = field.values?.[0] || "";
@@ -168,17 +219,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Build description with email and Facebook metadata
+    // 3. Resolve client_id (so leads show in dashboard)
+    console.log("🔍 [Facebook Webhook] Resolving client_id...");
+    let client_id: string;
+    try {
+      client_id = await resolveDefaultClientId();
+      console.log("✅ [Facebook Webhook] Resolved client_id:", client_id);
+    } catch (clientIdError: any) {
+      console.error("❌ [Facebook Webhook] Failed to resolve client_id:", clientIdError);
+      console.error("❌ [Facebook Webhook] Error message:", clientIdError?.message);
+      return NextResponse.json(
+        {
+          error: "Failed to resolve client_id",
+          details: clientIdError?.message || String(clientIdError),
+        },
+        { status: 500 }
+      );
+    }
+
+    // 4. Build description with email and Facebook metadata
     const descriptionParts = [];
     if (email) descriptionParts.push(`Email: ${email}`);
     if (adId) descriptionParts.push(`Ad ID: ${adId}`);
     if (formId) descriptionParts.push(`Form ID: ${formId}`);
     const description = descriptionParts.length > 0 ? descriptionParts.join(" | ") : null;
 
-    // 4. Insert lead into Supabase
+    // 5. Insert lead into Supabase
     // NOTE: Your production DB `leads` table does NOT have a `user_id` column,
-    // so we do NOT send `user_id` here to avoid PGRST204 errors.
+    // so we do NOT send `user_id` here to avoid PGRST204 errors. We DO send
+    // client_id so the lead appears in the client's dashboard.
     const insertPayload = {
+      client_id,
       org_id: 'demo-org',
       source: "Facebook",
       name,
@@ -217,7 +288,7 @@ export async function POST(req: NextRequest) {
 
     log("POST /api/inbound/facebook - Lead created successfully", data.id);
 
-    // 5. Log event (silent failure)
+    // 6. Log event (silent failure)
     try {
       await supabaseAdmin.from("events").insert({
         event_type: "lead.created",
@@ -238,7 +309,7 @@ export async function POST(req: NextRequest) {
       log("POST /api/inbound/facebook - Event logging failed (non-fatal)", eventError);
     }
 
-    // 6. Send SMS alert via Twilio (same pattern as /api/leads/new)
+    // 7. Send SMS alert via Twilio (same pattern as /api/leads/new)
     const defaultPhone = process.env.LL_DEFAULT_USER_PHONE;
     if (defaultPhone) {
       const rawUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
