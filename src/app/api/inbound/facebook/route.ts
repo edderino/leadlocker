@@ -333,15 +333,11 @@ export async function POST(req: NextRequest) {
     // 7. Send SMS alert via Twilio (same pattern as /api/leads/new)
     const defaultPhone = process.env.LL_DEFAULT_USER_PHONE;
     if (defaultPhone) {
-      const rawUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const baseUrl = rawUrl.startsWith('http') ? rawUrl : `http://${rawUrl}`;
-      
       const smsBody = [
         `🔔 New Lead — Facebook`,
         `Name: ${name}`,
         email ? `Email: ${email}` : undefined,
-        `Call: ${phone}`,
-        `Mark done: ${baseUrl}/api/leads/status?id=${data.id}`
+        `Phone: ${phone}`
       ].filter(Boolean).join('\n');
       
       await sendSMS(defaultPhone, smsBody);
