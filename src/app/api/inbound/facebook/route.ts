@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
       const fields = [
         "created_time",
         "ad_id",
-        "adgroup_id",
+        "adset_id",
         "campaign_id",
         "form_id",
         "platform",
