@@ -365,7 +365,8 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("✅ [Facebook Webhook] Successfully processed lead:", data.id);
-    return NextResponse.json({ ok: true });
+    console.log("✅ [Facebook Webhook] Returning 200 OK");
+    return NextResponse.json({ ok: true, lead_id: data.id });
   } catch (err: any) {
     console.error("❌ [Facebook Webhook] Uncaught error:", err);
     console.error("❌ [Facebook Webhook] Error message:", err?.message);
