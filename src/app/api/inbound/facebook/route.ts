@@ -149,89 +149,62 @@ export async function POST(req: NextRequest) {
         `&access_token=${encodeURIComponent(pageAccessToken)}`;
 
       let resp: Response;
-      let json: any;
-      
+      let rawText = '';
+
       try {
         resp = await fetch(url);
-        
-        // Get raw response text before parsing JSON
-        const rawResponseText = await resp.text();
-        
-        // Log HTTP status, headers, and raw body
-        const headersObj: Record<string, string> = {};
-        resp.headers.forEach((value, key) => {
-          headersObj[key] = value;
-        });
-        
-        log("meta_graph_fetch_response", {
-          leadId,
-          status: resp.status,
-          statusText: resp.statusText,
-          headers: headersObj,
-          rawBody: rawResponseText,
-          url_no_token: url.replace(/access_token=[^&]+/, "access_token=REDACTED"),
-        });
-        
-        // Try to parse JSON
-        try {
-          json = JSON.parse(rawResponseText);
-        } catch (parseError: any) {
-          log("meta_graph_fetch_json_parse_failed", {
+        rawText = await resp.text();
+
+        console.log("🧾 [Facebook Graph] Status:", resp.status);
+        console.log("🧾 [Facebook Graph] Headers:", Object.fromEntries(resp.headers.entries()));
+        console.log("🧾 [Facebook Graph] Raw body:", rawText);
+
+        const json = JSON.parse(rawText);
+
+        if (!resp.ok) {
+          log("meta_graph_fetch_failed", {
             leadId,
             status: resp.status,
-            rawBody: rawResponseText,
-            parseError: parseError?.message || String(parseError),
-            url_no_token: url.replace(/access_token=[^&]+/, "access_token=REDACTED"),
+            json,
           });
-          throw parseError;
+          return NextResponse.json(
+            { error: "Graph fetch failed", details: json },
+            { status: 500 }
+          );
         }
-      } catch (fetchError: any) {
-        // Re-throw after logging
-        log("meta_graph_fetch_error", {
-          leadId,
-          error: fetchError?.message || String(fetchError),
-          stack: fetchError?.stack,
-          url_no_token: url.replace(/access_token=[^&]+/, "access_token=REDACTED"),
-        });
-        throw fetchError;
-      }
 
-      // 🔥 NEVER silently continue if Graph call fails
-      if (!resp.ok) {
-        log("meta_graph_fetch_failed", {
+        log("meta_graph_fetch_ok", {
           leadId,
-          status: resp.status,
-          json,
-          url_no_token: url.replace(/access_token=[^&]+/, "access_token=REDACTED"),
+          keys: Object.keys(json || {}),
         });
+
+        const leadDetails = json;
+
+        // Make the lead insert depend on actually having field_data
+        if (!leadDetails?.field_data?.length) {
+          log("meta_no_field_data", { leadId, leadDetails });
+          return NextResponse.json(
+            { error: "No field_data", leadId, leadDetails },
+            { status: 200 }
+          );
+        }
+
+        // Extract fields (FB returns an array of {name, values[]})
+        for (const field of leadDetails.field_data ?? []) {
+          if (field.name === "full_name") name = field.values?.[0] || "";
+          if (field.name === "email") email = field.values?.[0] || "";
+          if (field.name === "phone_number") phone = field.values?.[0] || "";
+        }
+      } catch (err: any) {
+        console.error("❌ [Facebook Graph] Exception", {
+          message: err?.message,
+          rawText,
+        });
+
         return NextResponse.json(
-          { error: "Graph fetch failed", details: json },
+          { error: "Graph fetch exception", details: err?.message },
           { status: 500 }
         );
-      }
-
-      log("meta_graph_fetch_ok", {
-        leadId,
-        keys: Object.keys(json || {}),
-        field_data_len: json?.field_data?.length ?? 0,
-      });
-
-      const leadDetails = json;
-
-      // Make the lead insert depend on actually having field_data
-      if (!leadDetails?.field_data?.length) {
-        log("meta_no_field_data", { leadId, leadDetails });
-        return NextResponse.json(
-          { error: "No field_data", leadId, leadDetails },
-          { status: 200 }
-        );
-      }
-
-      // Extract fields (FB returns an array of {name, values[]})
-      for (const field of leadDetails.field_data ?? []) {
-        if (field.name === "full_name") name = field.values?.[0] || "";
-        if (field.name === "email") email = field.values?.[0] || "";
-        if (field.name === "phone_number") phone = field.values?.[0] || "";
       }
     }
 
