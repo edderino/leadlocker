@@ -127,8 +127,8 @@ export async function POST(req: NextRequest) {
       if (!pageAccessToken) {
         log("POST /api/inbound/facebook - Missing FACEBOOK_PAGE_ACCESS_TOKEN");
         return NextResponse.json(
-          { error: "Facebook Page Access Token not configured" },
-          { status: 500 }
+          { ok: false, error: "Facebook Page Access Token not configured" },
+          { status: 200 }
         );
       }
 
@@ -168,8 +168,8 @@ export async function POST(req: NextRequest) {
             json,
           });
           return NextResponse.json(
-            { error: "Graph fetch failed", details: json },
-            { status: 500 }
+            { ok: false, error: "Graph fetch failed", details: json },
+            { status: 200 }
           );
         }
 
@@ -202,8 +202,8 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json(
-          { error: "Graph fetch exception", details: err?.message },
-          { status: 500 }
+          { ok: false, error: "Graph fetch exception", details: err?.message },
+          { status: 200 }
         );
       }
     }
@@ -212,8 +212,8 @@ export async function POST(req: NextRequest) {
     if (!name || !phone) {
       log("POST /api/inbound/facebook - Missing required fields", { name, phone });
       return NextResponse.json(
-        { error: "Missing required lead data (name or phone)" },
-        { status: 400 }
+        { ok: false, error: "Missing required lead data (name or phone)" },
+        { status: 200 }
       );
     }
 
@@ -230,10 +230,11 @@ export async function POST(req: NextRequest) {
       console.error("❌ [Facebook Webhook] Error message:", userIdError?.message);
       return NextResponse.json(
         { 
+          ok: false,
           error: "Failed to resolve user_id",
           details: userIdError?.message || String(userIdError)
         },
-        { status: 500 }
+        { status: 200 }
       );
     }
 
@@ -248,10 +249,11 @@ export async function POST(req: NextRequest) {
       console.error("❌ [Facebook Webhook] Error message:", clientIdError?.message);
       return NextResponse.json(
         {
+          ok: false,
           error: "Failed to resolve client_id",
           details: clientIdError?.message || String(clientIdError),
         },
-        { status: 500 }
+        { status: 200 }
       );
     }
 
@@ -293,12 +295,13 @@ export async function POST(req: NextRequest) {
       log("POST /api/inbound/facebook - Supabase insert error", error.message);
       return NextResponse.json(
         { 
+          ok: false,
           error: "Failed to save lead",
           details: error.message,
           code: error.code,
           hint: error.hint
         },
-        { status: 500 }
+        { status: 200 }
       );
     }
     
@@ -362,15 +365,16 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("✅ [Facebook Webhook] Successfully processed lead:", data.id);
-    return NextResponse.json({ ok: true, lead_id: data.id });
+    return NextResponse.json({ ok: true });
   } catch (err: any) {
-    console.error("❌ [Facebook Webhook] Error:", err);
+    console.error("❌ [Facebook Webhook] Uncaught error:", err);
     console.error("❌ [Facebook Webhook] Error message:", err?.message);
     console.error("❌ [Facebook Webhook] Error stack:", err?.stack);
     log("POST /api/inbound/facebook - Unexpected error", err);
+    // IMPORTANT: still return 200 so Meta marks delivery as success
     return NextResponse.json(
-      { error: "Internal server error", details: err?.message },
-      { status: 500 }
+      { ok: false, error: "Internal server error", details: err?.message },
+      { status: 200 }
     );
   }
 }
