@@ -148,8 +148,53 @@ export async function POST(req: NextRequest) {
         `?fields=${encodeURIComponent(fields)}` +
         `&access_token=${encodeURIComponent(pageAccessToken)}`;
 
-      const resp = await fetch(url);
-      const json = await resp.json();
+      let resp: Response;
+      let json: any;
+      
+      try {
+        resp = await fetch(url);
+        
+        // Get raw response text before parsing JSON
+        const rawResponseText = await resp.text();
+        
+        // Log HTTP status, headers, and raw body
+        const headersObj: Record<string, string> = {};
+        resp.headers.forEach((value, key) => {
+          headersObj[key] = value;
+        });
+        
+        log("meta_graph_fetch_response", {
+          leadId,
+          status: resp.status,
+          statusText: resp.statusText,
+          headers: headersObj,
+          rawBody: rawResponseText,
+          url_no_token: url.replace(/access_token=[^&]+/, "access_token=REDACTED"),
+        });
+        
+        // Try to parse JSON
+        try {
+          json = JSON.parse(rawResponseText);
+        } catch (parseError: any) {
+          log("meta_graph_fetch_json_parse_failed", {
+            leadId,
+            status: resp.status,
+            rawBody: rawResponseText,
+            parseError: parseError?.message || String(parseError),
+            url_no_token: url.replace(/access_token=[^&]+/, "access_token=REDACTED"),
+          });
+          throw parseError;
+        }
+      } catch (fetchError: any) {
+        // Re-throw after logging
+        log("meta_graph_fetch_error", {
+          leadId,
+          error: fetchError?.message || String(fetchError),
+          stack: fetchError?.stack,
+          url_no_token: url.replace(/access_token=[^&]+/, "access_token=REDACTED"),
+        });
+        throw fetchError;
+      }
 
       // 🔥 NEVER silently continue if Graph call fails
       if (!resp.ok) {
