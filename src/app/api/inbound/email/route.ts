@@ -677,15 +677,15 @@ export async function POST(req: Request) {
   // Phone extraction from body (raw text, not lowercased)
   const phone = extractPhone(bodyRaw);
 
-  // Create description: subject + body snippet (first 200 chars)
-  const bodySnippet = bodyRaw.trim().slice(0, 200);
-  const description = bodySnippet 
-    ? `${subjectForDb}\n\n${bodySnippet}${bodyRaw.length > 200 ? '...' : ''}`
-    : subjectForDb;
+  // Description should only contain the subject (for card display)
+  // Full body will be stored in 'body' column and shown on expand
+  const description = subjectForDb;
 
   // ======================================================
   // UPSERT LEAD (message_id uniqueness)
   // ======================================================
+  // Note: If 'body' column doesn't exist, add it with:
+  // ALTER TABLE leads ADD COLUMN IF NOT EXISTS body TEXT;
   const { data: inserted, error: upsertError } = await supabase
     .from("leads")
     .upsert(
@@ -696,7 +696,8 @@ export async function POST(req: Request) {
         from_email: fromEmail,
         name,
         phone,
-        description,
+        description, // Only subject for card display
+        body: bodyRaw, // Full email body for expansion (requires body column)
         message_id: messageId,
         status: "NEW",
       },

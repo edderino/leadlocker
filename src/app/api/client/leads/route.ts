@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
   // Fetch leads for this client only (using client_id)
   const { data: leads, error } = await supabaseAdmin
     .from("leads")
-    .select("id,name,phone,source,description,status,created_at,client_id")
+    .select("id,name,phone,source,description,status,created_at,client_id,subject,body")
     .eq("client_id", orgId)
     .order("created_at", { ascending: false })
     .limit(200);

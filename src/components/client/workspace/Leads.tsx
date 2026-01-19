@@ -46,6 +46,8 @@ interface Lead {
   phone: string;
   source: string;
   description: string | null;
+  subject?: string | null;
+  body?: string | null;
   status: 'NEW' | 'APPROVED' | 'COMPLETED';
   created_at: string;
 }
@@ -64,6 +66,7 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
+  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
 
   // Auto-refresh is now handled by DashboardClientRoot, so we just read from the store
   const dateFormatter = useMemo(
@@ -294,7 +297,27 @@ export default function Leads({ leads: _initialLeads, orgId }: LeadsProps) {
                   </span>
                 </div>
               </div>
-              <p className="text-sm text-neutral-300 mb-4 line-clamp-3">{lead.description || 'No description'}</p>
+              <div 
+                className="cursor-pointer mb-4"
+                onClick={() => setExpandedLeadId(expandedLeadId === lead.id ? null : lead.id)}
+              >
+                {/* Show subject in card view */}
+                <p className="text-sm text-neutral-300 font-medium">
+                  {lead.subject || lead.description || 'No subject'}
+                </p>
+                {/* Show full body when expanded */}
+                {expandedLeadId === lead.id && lead.body && (
+                  <div className="mt-3 pt-3 border-t border-neutral-800">
+                    <p className="text-sm text-neutral-400 whitespace-pre-wrap">{lead.body}</p>
+                  </div>
+                )}
+                {/* Show expand/collapse hint */}
+                {lead.body && (
+                  <p className="text-xs text-neutral-500 mt-1">
+                    {expandedLeadId === lead.id ? 'Click to collapse' : 'Click to view email body'}
+                  </p>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2 pt-3 border-t border-neutral-800">
                 {lead.status !== "APPROVED" && lead.status !== "COMPLETED" && (
                   <Button
