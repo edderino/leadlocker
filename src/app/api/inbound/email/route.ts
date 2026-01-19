@@ -677,6 +677,12 @@ export async function POST(req: Request) {
   // Phone extraction from body (raw text, not lowercased)
   const phone = extractPhone(bodyRaw);
 
+  // Create description: subject + body snippet (first 200 chars)
+  const bodySnippet = bodyRaw.trim().slice(0, 200);
+  const description = bodySnippet 
+    ? `${subjectForDb}\n\n${bodySnippet}${bodyRaw.length > 200 ? '...' : ''}`
+    : subjectForDb;
+
   // ======================================================
   // UPSERT LEAD (message_id uniqueness)
   // ======================================================
@@ -685,11 +691,12 @@ export async function POST(req: Request) {
     .upsert(
       {
         client_id: client.id,
-        source: "email",
+        source: "gmail",
         subject: subjectForDb,
         from_email: fromEmail,
         name,
         phone,
+        description,
         message_id: messageId,
         status: "NEW",
       },
