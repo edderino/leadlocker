@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, FormEvent } from "react";
 
 export default function Home() {
@@ -49,7 +50,16 @@ export default function Home() {
       {/* Navigation */}
       <nav className="border-b border-[#2a2a2a]">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="text-xl font-semibold">LeadLocker</div>
+          <div className="flex items-center gap-2">
+            <Image
+              src="/leadlocker-logo.png"
+              alt="LeadLocker"
+              width={28}
+              height={28}
+              className="h-7 w-7"
+            />
+            <span className="sr-only">LeadLocker</span>
+          </div>
           <div className="flex items-center gap-4">
             <a
               href="/login"
@@ -96,6 +106,24 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Simple, practical lead management (moved up) */}
+      <section className="container mx-auto px-6 py-16">
+        <div className="max-w-3xl mx-auto bg-slate-900/50 border-2 border-dashed border-[#2a2a2a] rounded-2xl p-8 md:p-12">
+          <h2 className="mb-6 text-3xl md:text-4xl font-bold">
+            Simple, practical lead management
+          </h2>
+          <p className="mb-4 text-lg text-gray-300">
+            Instead of checking multiple apps and inboxes, everything is kept in one clear
+            dashboard.
+          </p>
+          <p className="text-lg text-gray-300">
+            Leads come in. They’re organised. You’re notified.
+            <br />
+            Nothing slips through the cracks, even on busy days.
+          </p>
+        </div>
+      </section>
+
       {/* When you don't have LeadLocker */}
       <section className="container mx-auto px-6 py-16">
         <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
@@ -128,10 +156,10 @@ export default function Home() {
             You always know:
           </p>
           <ul className="mb-6 space-y-2 text-lg text-gray-300">
-            <li>• who contacted you</li>
-            <li>• how to reach them</li>
-            <li>• where the lead came from</li>
-            <li>• when it came in</li>
+            <li>• Who contacted you</li>
+            <li>• How to reach them</li>
+            <li>• Where the lead came from</li>
+            <li>• When it came in</li>
           </ul>
           <p className="text-lg text-gray-300">
             And you’re notified instantly so you can call back fast.
@@ -186,27 +214,6 @@ export default function Home() {
           <p>✓ Fewer missed enquiries</p>
           <p>✓ Clear visibility of every lead</p>
           <p>✓ Less mental load while you’re working</p>
-        </div>
-        <p className="mt-8 text-center text-gray-400">
-          Facebook and Instagram supported from day one. More channels added over time.
-        </p>
-      </section>
-
-      {/* Simple, practical lead management */}
-      <section className="container mx-auto px-6 py-16">
-        <div className="max-w-3xl mx-auto bg-slate-900/50 border-2 border-dashed border-[#2a2a2a] rounded-2xl p-8 md:p-12">
-          <h2 className="mb-6 text-3xl md:text-4xl font-bold">
-            Simple, practical lead management
-          </h2>
-          <p className="mb-4 text-lg text-gray-300">
-            Instead of checking multiple apps and inboxes, everything is kept in one clear
-            dashboard.
-          </p>
-          <p className="text-lg text-gray-300">
-            Leads come in. They’re organised. You’re notified.
-            <br />
-            Nothing slips through the cracks — even on busy days.
-          </p>
         </div>
       </section>
 
