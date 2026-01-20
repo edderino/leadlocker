@@ -134,7 +134,7 @@ export default function Home() {
       <section className="container mx-auto px-6 py-16">
         <div className="max-w-4xl mx-auto text-center mb-12">
           <h2 className="mb-4 text-3xl md:text-4xl font-bold">Why LeadLocker</h2>
-          <p className="text-xl text-gray-300">Built for Australian trades and local service businesses.</p>
+          <p className="text-xl text-gray-300">Built for trades and local service businesses.</p>
         </div>
         <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-6 md:gap-8">
           <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
