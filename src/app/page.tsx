@@ -107,7 +107,7 @@ export default function Home() {
       </section>
 
       {/* Simple, practical lead management (moved up) */}
-      <section className="container mx-auto px-6 py-16">
+      <section className="container mx-auto px-6 py-16 text-center">
         <div className="max-w-3xl mx-auto bg-slate-900/50 border-2 border-dashed border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-6 text-3xl md:text-4xl font-bold">
             Simple, practical lead management
@@ -125,7 +125,7 @@ export default function Home() {
       </section>
 
       {/* When you don't have LeadLocker */}
-      <section className="container mx-auto px-6 py-16">
+      <section className="container mx-auto px-6 py-16 text-center">
         <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-4 text-2xl md:text-3xl font-bold">
             When you don’t have LeadLocker
@@ -145,7 +145,7 @@ export default function Home() {
       </section>
 
       {/* With LeadLocker */}
-      <section className="container mx-auto px-6 py-16">
+      <section className="container mx-auto px-6 py-16 text-center">
         <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-4 text-2xl md:text-3xl font-bold">With LeadLocker</h2>
           <p className="mb-6 text-lg text-gray-300">
@@ -200,7 +200,7 @@ export default function Home() {
       </section>
 
       {/* What LeadLocker helps with */}
-      <section className="container mx-auto px-6 py-16">
+      <section className="container mx-auto px-6 py-16 text-center">
         <div className="max-w-4xl mx-auto text-center mb-12">
           <h2 className="mb-4 text-3xl md:text-4xl font-bold">
             What LeadLocker helps with
@@ -218,7 +218,7 @@ export default function Home() {
       </section>
 
       {/* Waitlist Section */}
-      <section id="waitlist" className="container mx-auto px-6 py-16">
+      <section id="waitlist" className="container mx-auto px-6 py-16 text-center">
         <div className="max-w-2xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-4 text-3xl md:text-4xl font-bold text-center">
             Join the LeadLocker waitlist
