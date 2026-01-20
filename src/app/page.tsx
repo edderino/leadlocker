@@ -74,10 +74,10 @@ export default function Home() {
             EARLY ACCESS
           </span>
           <h1 className="mb-4 text-4xl md:text-5xl font-bold leading-tight">
-            LeadLocker: all your leads in one place
+            Leadlocker
           </h1>
           <p className="mb-6 text-lg md:text-xl text-gray-300">
-            Instant SMS alerts so you can follow up before the job goes elsewhere.
+            All your leads in one place.
           </p>
           <div className="flex items-center justify-center gap-4">
             <a
