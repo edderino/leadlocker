@@ -73,94 +73,139 @@ export default function Home() {
           <span className="inline-block mb-4 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#5b3fff] bg-[#1f1b3d] rounded-full">
             EARLY ACCESS
           </span>
-          <h1 className="mb-6 text-5xl md:text-6xl font-bold leading-tight">
-            LeadLocker
+          <h1 className="mb-4 text-4xl md:text-5xl font-bold leading-tight">
+            LeadLocker: all your leads in one place
           </h1>
-          <a
-            href="#waitlist"
-            className="inline-block px-8 py-3 bg-[#5b3fff] text-white font-semibold rounded-full hover:bg-[#4a2fcc] transition-colors"
-          >
-            Join the waitlist
-          </a>
+          <p className="mb-6 text-lg md:text-xl text-gray-300">
+            Instant SMS alerts so you can follow up before the job goes elsewhere.
+          </p>
+          <div className="flex items-center justify-center gap-4">
+            <a
+              href="#waitlist"
+              className="inline-block px-8 py-3 bg-[#5b3fff] text-white font-semibold rounded-full hover:bg-[#4a2fcc] transition-colors"
+            >
+              Join the waitlist
+            </a>
+            <a
+              href="#how-it-works"
+              className="inline-block px-6 py-3 text-sm font-medium text-gray-200 border border-[#2a2a2a] rounded-full hover:bg-white/5 transition-colors"
+            >
+              See how it works
+            </a>
+          </div>
         </div>
       </section>
 
-      {/* Problem Section */}
+      {/* When you don't have LeadLocker */}
       <section className="container mx-auto px-6 py-16">
         <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
-          <h2 className="mb-6 text-3xl md:text-4xl font-bold">
-            All your leads in one place.
+          <h2 className="mb-4 text-2xl md:text-3xl font-bold">
+            When you don’t have LeadLocker
           </h2>
+          <p className="mb-6 text-lg text-gray-300">
+            When you’re busy on the tools, enquiries don’t wait.
+          </p>
           <ul className="mb-6 space-y-3 text-lg text-gray-300">
-            <li>• Enquiries come through Facebook, Instagram and Email</li>
+            <li>• Leads come in through Facebook, Instagram and email</li>
             <li>• Messages get buried or forgotten</li>
-            <li>• Late replies mean the job goes to someone else</li>
+            <li>• You reply late and the job goes to someone else</li>
           </ul>
           <p className="text-lg text-gray-300">
-            LeadLocker captures every lead and keeps it organised so nothing gets missed.
+            This is how good work gets lost.
+          </p>
+        </div>
+      </section>
+
+      {/* With LeadLocker */}
+      <section className="container mx-auto px-6 py-16">
+        <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
+          <h2 className="mb-4 text-2xl md:text-3xl font-bold">With LeadLocker</h2>
+          <p className="mb-6 text-lg text-gray-300">
+            LeadLocker captures every enquiry automatically and keeps it organised in one
+            place, so nothing gets missed.
+          </p>
+          <p className="mb-4 text-lg text-gray-300 font-semibold">
+            You always know:
+          </p>
+          <ul className="mb-6 space-y-2 text-lg text-gray-300">
+            <li>• who contacted you</li>
+            <li>• how to reach them</li>
+            <li>• where the lead came from</li>
+            <li>• when it came in</li>
+          </ul>
+          <p className="text-lg text-gray-300">
+            And you’re notified instantly so you can call back fast.
           </p>
         </div>
       </section>
 
       {/* How It Works Section */}
-      <section className="container mx-auto px-6 py-16">
+      <section id="how-it-works" className="container mx-auto px-6 py-16">
         <div className="max-w-4xl mx-auto text-center mb-12">
           <h2 className="mb-4 text-3xl md:text-4xl font-bold">How it works</h2>
-          <p className="text-xl text-gray-300">Simple setup. No CRM learning curve.</p>
+          <p className="text-xl text-gray-300">
+            Simple setup. No complex software to learn.
+          </p>
         </div>
         <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6 md:gap-8">
           <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
             <h3 className="mb-3 text-xl font-semibold">Step 1 — Connect your sources</h3>
             <p className="text-gray-300">
-              Connect Facebook Lead Ads, Instagram and Email in minutes.
+              Connect Facebook Lead Ads, Instagram and email in minutes.
             </p>
           </div>
           <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
-            <h3 className="mb-3 text-xl font-semibold">Step 2 — Leads arrive in one place</h3>
+            <h3 className="mb-3 text-xl font-semibold">Step 2 — Leads are clearly organised</h3>
             <p className="text-gray-300">
-              Each lead shows the name, phone number, source and time it came in, clearly organised in one dashboard.
+              Each lead appears in one dashboard showing the name, phone number, time and
+              source.
             </p>
           </div>
           <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
             <h3 className="mb-3 text-xl font-semibold">Step 3 — Get notified</h3>
             <p className="text-gray-300">
-              Instant SMS alerts so you can call back fast, even while you're on site.
+              You receive an instant SMS alert so you can follow up straight away, even
+              while you’re on site.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
+      {/* What LeadLocker helps with */}
       <section className="container mx-auto px-6 py-16">
         <div className="max-w-4xl mx-auto text-center mb-12">
-          <h2 className="mb-4 text-3xl md:text-4xl font-bold">Why LeadLocker</h2>
-          <p className="text-xl text-gray-300">Built for trades and local service businesses.</p>
+          <h2 className="mb-4 text-3xl md:text-4xl font-bold">
+            What LeadLocker helps with
+          </h2>
+          <p className="text-xl text-gray-300">
+            Built for Australian trades and local service businesses.
+          </p>
         </div>
-        <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-6 md:gap-8">
-          <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
-            <h3 className="text-xl font-semibold mb-2">Reply while the lead is still fresh</h3>
-          </div>
-          <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
-            <h3 className="text-xl font-semibold mb-2">No missed DMs, emails or lead forms</h3>
-          </div>
-          <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
-            <h3 className="text-xl font-semibold mb-2">Clear dashboard, no clutter</h3>
-          </div>
-          <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
-            <h3 className="text-xl font-semibold mb-2">Works on mobile</h3>
-          </div>
+        <div className="max-w-xl mx-auto space-y-3 text-lg text-gray-300">
+          <p>✓ Faster follow-ups</p>
+          <p>✓ Fewer missed enquiries</p>
+          <p>✓ Clear visibility of every lead</p>
+          <p>✓ Less mental load while you’re working</p>
         </div>
+        <p className="mt-8 text-center text-gray-400">
+          Facebook and Instagram supported from day one. More channels added over time.
+        </p>
       </section>
 
-      {/* Trust/Positioning Section */}
+      {/* Simple, practical lead management */}
       <section className="container mx-auto px-6 py-16">
         <div className="max-w-3xl mx-auto bg-slate-900/50 border-2 border-dashed border-[#2a2a2a] rounded-2xl p-8 md:p-12">
-          <h2 className="mb-6 text-3xl md:text-4xl font-bold">Simple, practical lead management</h2>
+          <h2 className="mb-6 text-3xl md:text-4xl font-bold">
+            Simple, practical lead management
+          </h2>
           <p className="mb-4 text-lg text-gray-300">
-            Leads come in. They're organised clearly. You get notified so you can follow up fast.
+            Instead of checking multiple apps and inboxes, everything is kept in one clear
+            dashboard.
           </p>
           <p className="text-lg text-gray-300">
-            Everything lives in one place, so jobs never go missing even on busy days.
+            Leads come in. They’re organised. You’re notified.
+            <br />
+            Nothing slips through the cracks — even on busy days.
           </p>
         </div>
       </section>
@@ -168,13 +213,18 @@ export default function Home() {
       {/* Waitlist Section */}
       <section id="waitlist" className="container mx-auto px-6 py-16">
         <div className="max-w-2xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
-          <h2 className="mb-4 text-3xl md:text-4xl font-bold text-center">Join the LeadLocker waitlist</h2>
+          <h2 className="mb-4 text-3xl md:text-4xl font-bold text-center">
+            Join the LeadLocker waitlist
+          </h2>
           <p className="mb-8 text-center text-lg text-gray-300">
-            Early access for Australian tradies and local businesses.
+            Early access for Australian tradies and local service businesses.
           </p>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+              <label
+                htmlFor="email"
+                className="block mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400"
+              >
                 Email address
               </label>
               <input
@@ -209,33 +259,6 @@ export default function Home() {
               No spam. No sales calls. Just a message when access opens.
             </p>
           </form>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="container mx-auto px-6 py-16">
-        <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
-          <h2 className="mb-8 text-3xl md:text-4xl font-bold">Frequently asked</h2>
-          <div className="space-y-8">
-            <div>
-              <h3 className="mb-2 text-xl font-semibold">Is LeadLocker free right now?</h3>
-              <p className="text-gray-300">
-                Yes. LeadLocker is currently free during early access.
-              </p>
-            </div>
-            <div>
-              <h3 className="mb-2 text-xl font-semibold">What can I connect?</h3>
-              <p className="text-gray-300">
-                Facebook Lead Ads, Instagram and Email at launch.
-              </p>
-            </div>
-            <div>
-              <h3 className="mb-2 text-xl font-semibold">What happens when a lead comes in?</h3>
-              <p className="text-gray-300">
-                It appears in your dashboard with the contact details and source, and you get an SMS so you can follow up straight away.
-              </p>
-            </div>
-          </div>
         </div>
       </section>
 
