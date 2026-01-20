@@ -199,21 +199,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* What LeadLocker helps with */}
+      {/* No lock-in / friction section */}
       <section className="container mx-auto px-6 py-16 text-center">
         <div className="max-w-4xl mx-auto text-center mb-12">
           <h2 className="mb-4 text-3xl md:text-4xl font-bold">
-            What LeadLocker helps with
+            No lock-in. No friction.
           </h2>
-          <p className="text-xl text-gray-300">
-            Built for Australian trades and local service businesses.
-          </p>
         </div>
         <div className="max-w-xl mx-auto space-y-3 text-lg text-gray-300">
-          <p>✓ Faster follow-ups</p>
-          <p>✓ Fewer missed enquiries</p>
-          <p>✓ Clear visibility of every lead</p>
-          <p>✓ Less mental load while you’re working</p>
+          <p>✓ Fast setup</p>
+          <p>✓ Cancel anytime</p>
+          <p>✓ No contracts</p>
+          <p>✓ Australian built and supported</p>
         </div>
       </section>
 
