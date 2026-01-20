@@ -124,23 +124,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* When you don't have LeadLocker */}
+      {/* Without LeadLocker */}
       <section className="container mx-auto px-6 py-16 text-center">
         <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-4 text-2xl md:text-3xl font-bold">
-            When you don’t have LeadLocker
+            Without LeadLocker
           </h2>
-          <p className="mb-6 text-lg text-gray-300">
-            When you’re busy on the tools, enquiries don’t wait.
-          </p>
           <ul className="mb-6 space-y-3 text-lg text-gray-300">
-            <li>• Leads come in through Facebook, Instagram and email</li>
-            <li>• Messages get buried or forgotten</li>
-            <li>• You reply late and the job goes to someone else</li>
+            <li>• Enquiries spread across apps</li>
+            <li>• Slow replies</li>
+            <li>• Missed follow-ups</li>
+            <li>• Lost jobs</li>
           </ul>
-          <p className="text-lg text-gray-300">
-            This is how good work gets lost.
-          </p>
         </div>
       </section>
 
