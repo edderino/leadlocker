@@ -97,7 +97,7 @@ export default function Home() {
             <li>• Late replies mean the job goes to someone else</li>
           </ul>
           <p className="text-lg text-gray-300">
-            LeadLocker captures every enquiry and keeps it organised so nothing gets missed.
+            LeadLocker captures every lead and keeps it organised so nothing gets missed.
           </p>
         </div>
       </section>
