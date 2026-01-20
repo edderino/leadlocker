@@ -69,7 +69,7 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="container mx-auto px-6 py-16 md:py-24">
-        <div className="max-w-3xl">
+        <div className="max-w-3xl mx-auto text-center">
           <span className="inline-block mb-4 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#5b3fff] bg-[#1f1b3d] rounded-full">
             EARLY ACCESS
           </span>
@@ -87,9 +87,9 @@ export default function Home() {
 
       {/* Problem Section */}
       <section className="container mx-auto px-6 py-16">
-        <div className="max-w-3xl bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
+        <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-6 text-3xl md:text-4xl font-bold">
-            All your enquiries in one place, with instant SMS alerts.
+            All your leads in one place.
           </h2>
           <ul className="mb-6 space-y-3 text-lg text-gray-300">
             <li>• Enquiries come through Facebook, Instagram and Email</li>
@@ -104,11 +104,11 @@ export default function Home() {
 
       {/* How It Works Section */}
       <section className="container mx-auto px-6 py-16">
-        <div className="max-w-4xl mb-12">
+        <div className="max-w-4xl mx-auto text-center mb-12">
           <h2 className="mb-4 text-3xl md:text-4xl font-bold">How it works</h2>
           <p className="text-xl text-gray-300">Simple setup. No CRM learning curve.</p>
         </div>
-        <div className="max-w-5xl grid md:grid-cols-3 gap-6 md:gap-8">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6 md:gap-8">
           <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
             <h3 className="mb-3 text-xl font-semibold">Step 1 — Connect your sources</h3>
             <p className="text-gray-300">
@@ -132,11 +132,11 @@ export default function Home() {
 
       {/* Benefits Section */}
       <section className="container mx-auto px-6 py-16">
-        <div className="max-w-4xl mb-12">
+        <div className="max-w-4xl mx-auto text-center mb-12">
           <h2 className="mb-4 text-3xl md:text-4xl font-bold">Why LeadLocker</h2>
           <p className="text-xl text-gray-300">Built for Australian trades and local service businesses.</p>
         </div>
-        <div className="max-w-4xl grid md:grid-cols-2 gap-6 md:gap-8">
+        <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-6 md:gap-8">
           <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
             <h3 className="text-xl font-semibold mb-2">Reply while the lead is still fresh</h3>
           </div>
@@ -154,7 +154,7 @@ export default function Home() {
 
       {/* Trust/Positioning Section */}
       <section className="container mx-auto px-6 py-16">
-        <div className="max-w-3xl bg-slate-900/50 border-2 border-dashed border-[#2a2a2a] rounded-2xl p-8 md:p-12">
+        <div className="max-w-3xl mx-auto bg-slate-900/50 border-2 border-dashed border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-6 text-3xl md:text-4xl font-bold">Simple, practical lead management</h2>
           <p className="mb-4 text-lg text-gray-300">
             Leads come in. They're organised clearly. You get notified so you can follow up fast.
@@ -167,9 +167,9 @@ export default function Home() {
 
       {/* Waitlist Section */}
       <section id="waitlist" className="container mx-auto px-6 py-16">
-        <div className="max-w-2xl bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
-          <h2 className="mb-4 text-3xl md:text-4xl font-bold">Join the LeadLocker waitlist</h2>
-          <p className="mb-8 text-lg text-gray-300">
+        <div className="max-w-2xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
+          <h2 className="mb-4 text-3xl md:text-4xl font-bold text-center">Join the LeadLocker waitlist</h2>
+          <p className="mb-8 text-center text-lg text-gray-300">
             Early access for Australian tradies and local businesses.
           </p>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -205,7 +205,7 @@ export default function Home() {
                 {message.text}
               </div>
             )}
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-center text-gray-400">
               No spam. No sales calls. Just a message when access opens.
             </p>
           </form>
@@ -214,7 +214,7 @@ export default function Home() {
 
       {/* FAQ Section */}
       <section className="container mx-auto px-6 py-16">
-        <div className="max-w-3xl bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
+        <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-8 text-3xl md:text-4xl font-bold">Frequently asked</h2>
           <div className="space-y-8">
             <div>
@@ -241,7 +241,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-[#2a2a2a] py-8">
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-6 text-center">
           <p className="text-gray-400 font-medium">LeadLocker</p>
         </div>
       </footer>
