@@ -52,11 +52,12 @@ export default function Home() {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
-              src="/leadlocker-logo.png"
+              src="/logo/L (7).png"
               alt="LeadLocker"
               width={28}
               height={28}
               className="h-7 w-7"
+              priority
             />
             <span className="sr-only">LeadLocker</span>
           </div>
@@ -84,7 +85,7 @@ export default function Home() {
             EARLY ACCESS
           </span>
           <h1 className="mb-4 text-4xl md:text-5xl font-bold leading-tight">
-            Leadlocker
+            LeadLocker
           </h1>
           <p className="mb-6 text-lg md:text-xl text-gray-300">
             All your leads in one place.
@@ -108,7 +109,7 @@ export default function Home() {
 
       {/* Simple, practical lead management (moved up) */}
       <section className="container mx-auto px-6 py-16 text-center">
-        <div className="max-w-3xl mx-auto bg-slate-900/50 border-2 border-dashed border-[#2a2a2a] rounded-2xl p-8 md:p-12">
+        <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-6 text-3xl md:text-4xl font-bold">
             Simple, practical lead management
           </h2>
@@ -136,6 +137,9 @@ export default function Home() {
             <li>• Missed follow-ups</li>
             <li>• Lost jobs</li>
           </ul>
+          <p className="text-lg text-gray-300">
+            This is how good work gets lost.
+          </p>
         </div>
       </section>
 
