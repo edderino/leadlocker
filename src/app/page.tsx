@@ -113,10 +113,6 @@ export default function Home() {
           <h2 className="mb-6 text-3xl md:text-4xl font-bold">
             Lead Management made Simple.
           </h2>
-          <p className="mb-4 text-lg text-gray-300">
-            Instead of checking multiple apps and inboxes, everything is kept in one clear
-            dashboard.
-          </p>
           <p className="text-lg text-gray-300">
             Leads come in. They're organised. You're notified.
             <br />
@@ -148,7 +144,7 @@ export default function Home() {
         <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-4 text-2xl md:text-3xl font-bold">With LeadLocker</h2>
           <p className="mb-6 text-lg text-gray-300">
-            Automatically captures every lead and keeps it organised in one place.
+            Automatically capture every lead and keep them organised in one place.
           </p>
           <p className="mb-4 text-lg text-gray-300 font-semibold">
             You always know:
