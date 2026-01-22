@@ -54,9 +54,9 @@ export default function Home() {
             <Image
               src="/logo/L (7).png"
               alt="LeadLocker"
-              width={48}
-              height={48}
-              className="h-12 w-12"
+              width={96}
+              height={96}
+              className="h-24 w-24"
               priority
             />
             <span className="sr-only">LeadLocker</span>
@@ -111,14 +111,14 @@ export default function Home() {
       <section className="container mx-auto px-6 py-16 text-center">
         <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-6 text-3xl md:text-4xl font-bold">
-            Simple, practical lead management
+            Lead Management made Simple.
           </h2>
           <p className="mb-4 text-lg text-gray-300">
             Instead of checking multiple apps and inboxes, everything is kept in one clear
             dashboard.
           </p>
           <p className="text-lg text-gray-300">
-            Leads come in. They’re organised. You’re notified.
+            Leads come in. They're organised. You're notified.
             <br />
             Nothing slips through the cracks, even on busy days.
           </p>
@@ -148,8 +148,7 @@ export default function Home() {
         <div className="max-w-3xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
           <h2 className="mb-4 text-2xl md:text-3xl font-bold">With LeadLocker</h2>
           <p className="mb-6 text-lg text-gray-300">
-            LeadLocker captures every enquiry automatically and keeps it organised in one
-            place, so nothing gets missed.
+            Automatically captures every lead and keeps it organised in one place.
           </p>
           <p className="mb-4 text-lg text-gray-300 font-semibold">
             You always know:
@@ -161,7 +160,7 @@ export default function Home() {
             <li>• When it came in</li>
           </ul>
           <p className="text-lg text-gray-300">
-            And you’re notified instantly so you can call back fast.
+            And you're notified instantly so you can call back fast.
           </p>
         </div>
       </section>
@@ -191,8 +190,7 @@ export default function Home() {
           <div className="bg-slate-900/50 border border-[#2a2a2a] rounded-xl p-6 md:p-8">
             <h3 className="mb-3 text-xl font-semibold">Step 3 — Get notified</h3>
             <p className="text-gray-300">
-              You receive an instant SMS alert so you can follow up straight away, even
-              while you’re on site.
+              You receive an instant SMS alert so you can follow up while the job is still hot.
             </p>
           </div>
         </div>
@@ -216,12 +214,9 @@ export default function Home() {
       {/* Waitlist Section */}
       <section id="waitlist" className="container mx-auto px-6 py-16 text-center">
         <div className="max-w-2xl mx-auto bg-slate-900/50 border border-[#2a2a2a] rounded-2xl p-8 md:p-12">
-          <h2 className="mb-4 text-3xl md:text-4xl font-bold text-center">
-            Join the LeadLocker waitlist
+          <h2 className="mb-8 text-3xl md:text-4xl font-bold text-center">
+            Join the LeadLocker waitlist.
           </h2>
-          <p className="mb-8 text-center text-lg text-gray-300">
-            Early access for Australian tradies and local service businesses.
-          </p>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label
