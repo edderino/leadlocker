@@ -54,9 +54,9 @@ export default function Home() {
             <Image
               src="/logo/L (7).png"
               alt="LeadLocker"
-              width={28}
-              height={28}
-              className="h-7 w-7"
+              width={48}
+              height={48}
+              className="h-12 w-12"
               priority
             />
             <span className="sr-only">LeadLocker</span>
